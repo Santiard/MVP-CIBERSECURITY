@@ -232,3 +232,34 @@ Arquitectura Limpia te permite:
 ✔ Escalar a versión 2
 ✔ Agregar más normas ISO
 ✔ Convertirlo en SaaS futuro
+
+
+Resumen Final del Stack
+
+Frontend:
+
+React + TypeScript
+
+Tailwind
+
+Recharts
+
+Backend:
+
+Node.js
+
+NestJS
+
+TypeScript
+
+Prisma
+
+PostgreSQL
+
+JWT
+
+Testing:
+
+Jest
+
+React Testing Library
