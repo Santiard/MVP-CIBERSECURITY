@@ -1,0 +1,48 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: mvp_db
+      POSTGRES_USER: mvp_user
+      POSTGRES_PASSWORD: mvp_pass
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: ./Backend
+    environment:
+      DATABASE_URL: postgres://mvp_user:mvp_pass@db:5432/mvp_db
+      NODE_ENV: development
+      DEV_CMD: npm run dev
+    volumes:
+      - ./Backend:/app:cached
+      - backend_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    command: ["/bin/sh", "/app/docker-entrypoint.sh"]
+
+  frontend:
+    build:
+      context: ./Frontend
+    environment:
+      DEV_CMD: npm run start
+      NODE_ENV: development
+    volumes:
+      - ./Frontend:/app:cached
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    command: ["/bin/sh", "/app/docker-entrypoint.sh"]
+
+volumes:
+  db_data:
+  backend_node_modules:
+  frontend_node_modules:
