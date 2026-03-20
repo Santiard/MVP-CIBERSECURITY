@@ -263,3 +263,246 @@ Testing:
 Jest
 
 React Testing Library
+
+
+
+
+
+CU-01 – Iniciar Sesión
+
+Actor(es): Administrador, Evaluador, Organización
+Descripción: Permite a un usuario autenticarse en el sistema mediante credenciales válidas.
+Precondiciones:
+
+El usuario debe estar previamente registrado.
+
+La cuenta debe estar activa.
+
+Postcondiciones:
+
+El sistema crea una sesión activa.
+
+Se redirige al panel correspondiente según el rol.
+
+Flujo principal:
+
+El actor ingresa correo y contraseña.
+
+El sistema valida credenciales.
+
+El sistema identifica el rol.
+
+Se concede acceso al sistema.
+
+Flujo alterno:
+
+2a. Credenciales inválidas → Se muestra mensaje de error.
+
+👥 CU-02 – Gestionar Usuarios
+
+Actor: Administrador
+Descripción: Permite administrar usuarios del sistema (crear, editar, desactivar y asignar roles).
+Precondiciones:
+
+El administrador debe estar autenticado.
+
+Postcondiciones:
+
+La información del usuario queda actualizada en el sistema.
+
+Flujo principal:
+
+El administrador accede al módulo de usuarios.
+
+Selecciona acción (crear, editar o desactivar).
+
+Ingresa o modifica información.
+
+El sistema valida datos.
+
+El sistema guarda cambios.
+
+📋 CU-03 – Gestionar Cuestionarios
+
+Actor: Administrador
+Descripción: Permite crear y administrar cuestionarios, dimensiones y preguntas de evaluación.
+Precondiciones:
+
+Administrador autenticado.
+
+Postcondiciones:
+
+El cuestionario queda disponible para evaluación.
+
+Flujo principal:
+
+El administrador accede al módulo de cuestionarios.
+
+Crea o edita dimensiones.
+
+Agrega preguntas.
+
+Activa cuestionario.
+
+🏢 CU-04 – Gestionar Organizaciones
+
+Actor(es): Administrador, Evaluador
+Descripción: Permite registrar y actualizar información de organizaciones evaluadas.
+Precondiciones:
+
+Actor autenticado.
+
+Postcondiciones:
+
+Organización registrada o actualizada correctamente.
+
+Flujo principal:
+
+Actor accede al módulo organizaciones.
+
+Selecciona registrar o editar.
+
+Ingresa información requerida.
+
+El sistema valida y guarda.
+
+📝 CU-05 – Iniciar Evaluación
+
+Actor: Evaluador
+Descripción: Permite iniciar una nueva evaluación para una organización.
+Precondiciones:
+
+Evaluador autenticado.
+
+La organización debe existir.
+
+Debe existir un cuestionario activo.
+
+Postcondiciones:
+
+Se crea una evaluación en estado “En proceso”.
+
+Flujo principal:
+
+El evaluador selecciona organización.
+
+Selecciona cuestionario activo.
+
+El sistema crea evaluación.
+
+Se habilita el formulario de respuestas.
+
+📝 CU-06 – Registrar Respuestas
+
+Actor: Evaluador
+Descripción: Permite registrar las respuestas del cuestionario.
+
+Precondiciones:
+
+Evaluación en estado “En proceso”.
+
+Postcondiciones:
+
+Respuestas guardadas temporalmente.
+
+Flujo principal:
+
+El evaluador responde cada pregunta.
+
+El sistema valida formato.
+
+El sistema guarda respuestas.
+
+🧮 CU-07 – Finalizar Evaluación
+
+Actor: Evaluador
+Descripción: Permite cerrar la evaluación y ejecutar el cálculo de madurez.
+
+Precondiciones:
+
+Todas las preguntas deben estar respondidas.
+
+Postcondiciones:
+
+Evaluación cambia a estado “Finalizada”.
+
+Se calcula nivel de madurez.
+
+Se almacenan resultados.
+
+Flujo principal:
+
+Evaluador selecciona “Finalizar evaluación”.
+
+El sistema valida que no existan preguntas sin responder.
+
+El sistema ejecuta cálculo de madurez.
+
+El sistema guarda resultados.
+
+Se genera reporte.
+
+Relaciones:
+
+<<include>> Calcular Madurez
+
+<<include>> Guardar Evaluación
+
+📊 CU-08 – Ver Reporte
+
+Actor(es): Evaluador, Organización
+Descripción: Permite visualizar el resultado de una evaluación.
+
+Precondiciones:
+
+Debe existir evaluación finalizada.
+
+Postcondiciones:
+
+Se muestran resultados gráficos por dimensión.
+
+Flujo principal:
+
+Actor accede a evaluación finalizada.
+
+El sistema genera gráficos.
+
+Se muestran niveles y porcentajes.
+
+📈 CU-09 – Consultar Historial
+
+Actor(es): Evaluador, Organización
+Descripción: Permite visualizar evaluaciones anteriores.
+
+Precondiciones:
+
+Debe existir al menos una evaluación registrada.
+
+Postcondiciones:
+
+Se muestra lista histórica.
+
+📊 CU-10 – Comparar Evaluaciones
+
+Actor(es): Evaluador, Organización
+Descripción: Permite comparar resultados entre evaluaciones históricas.
+
+Precondiciones:
+
+Deben existir mínimo dos evaluaciones.
+
+Postcondiciones:
+
+Se muestran variaciones porcentuales y evolución gráfica.
+
+Flujo principal:
+
+Actor selecciona dos evaluaciones.
+
+El sistema calcula diferencias.
+
+Se muestra comparativa gráfica.
+
+Relación:
+
+<<extend>> Consultar Historial
