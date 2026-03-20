@@ -5,10 +5,10 @@ type Props = { status: string };
 
 const mapStatus = (status: string) => {
   const s = status.toLowerCase();
-  if (s.includes('final')) return { bg: 'var(--success)', color: '#042913' };
-  if (s.includes('progr')) return { bg: 'var(--warning)', color: '#3B2B00' };
-  if (s.includes('cancel') || s.includes('fail')) return { bg: 'var(--danger)', color: '#3A0B0B' };
-  return { bg: 'var(--info)', color: '#001A1F' };
+  if (s.includes('final')) return { bg: 'var(--success)', color: 'var(--on-success)' };
+  if (s.includes('progr')) return { bg: 'var(--warning)', color: 'var(--on-warning)' };
+  if (s.includes('cancel') || s.includes('fail')) return { bg: 'var(--danger)', color: 'var(--on-danger)' };
+  return { bg: 'var(--info)', color: 'var(--on-info)' };
 };
 
 const Badge: React.FC<Props> = ({ status }) => {

@@ -49,6 +49,31 @@
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
+
+  /* On colors (text placed on semantic backgrounds) */
+  --on-success-light: #042913;
+  --on-warning-light: #3B2B00;
+  --on-danger-light: #3A0B0B;
+  --on-info-light: #001A1F;
+
+  --on-success-dark: #E6FFF1;
+  --on-warning-dark: #FFF6E0;
+  --on-danger-dark: #FFEDED;
+  --on-info-dark: #E8FFFF;
+
+  --on-success: var(--on-success-light);
+  --on-warning: var(--on-warning-light);
+  --on-danger: var(--on-danger-light);
+  --on-info: var(--on-info-light);
+
+  /* Borders & muted text that adapt to theme */
+  --border-light: var(--gray-200);
+  --border-dark: rgba(255,255,255,0.06);
+  --border: var(--border-light);
+
+  --muted-light: var(--gray-600);
+  --muted-dark: rgba(255,255,255,0.75);
+  --muted: var(--muted-light);
 }
 
 /* Light theme helpers */
@@ -56,7 +81,13 @@
   --bg-page: var(--bg-light);
   --surface: var(--surface-light);
   --text-primary: var(--text-on-light);
-  --muted: var(--text-muted);
+  --muted: var(--muted-light);
+  --border: var(--border-light);
+
+  --on-success: var(--on-success-light);
+  --on-warning: var(--on-warning-light);
+  --on-danger: var(--on-danger-light);
+  --on-info: var(--on-info-light);
 }
 
 /* Dark theme helpers */
@@ -64,7 +95,29 @@
   --bg-page: var(--bg-dark);
   --surface: var(--surface-dark);
   --text-primary: var(--text-on-dark);
-  --muted: var(--text-muted);
+  --muted: var(--muted-dark);
+  --border: var(--border-dark);
+
+  --on-success: var(--on-success-dark);
+  --on-warning: var(--on-warning-dark);
+  --on-danger: var(--on-danger-dark);
+  --on-info: var(--on-info-dark);
+}
+
+/* Respect user OS preference by default */
+@media (prefers-color-scheme: dark) {
+  :root{
+    --bg-page: var(--bg-dark);
+    --surface: var(--surface-dark);
+    --text-primary: var(--text-on-dark);
+    --muted: var(--muted-dark);
+    --border: var(--border-dark);
+
+    --on-success: var(--on-success-dark);
+    --on-warning: var(--on-warning-dark);
+    --on-danger: var(--on-danger-dark);
+    --on-info: var(--on-info-dark);
+  }
 }
 
 /* Basic layout */

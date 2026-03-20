@@ -37,7 +37,7 @@ const EvaluationsTable: React.FC = () => {
       <div style={{overflowX:'auto'}}>
         <table style={{width:'100%', borderCollapse:'collapse'}}>
           <thead>
-            <tr style={{textAlign:'left', color:'var(--gray-600)'}}>
+            <tr style={{textAlign:'left', color:'var(--muted)'}}>
               <th style={{padding:'12px 8px'}}>Organización</th>
               <th style={{padding:'12px 8px'}}>Fecha</th>
               <th style={{padding:'12px 8px'}}>Resultado</th>
@@ -48,11 +48,11 @@ const EvaluationsTable: React.FC = () => {
           <tbody>
             {rows.map(r => (
               <tr key={r.id} style={{background:'transparent'}}>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--gray-200)'}}>{r.organization}</td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--gray-200)'}}>{r.date}</td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--gray-200)'}}>{r.result}</td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--gray-200)'}}><Badge status={r.status} /></td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--gray-200)'}}>
+                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.organization}</td>
+                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.date}</td>
+                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.result}</td>
+                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}><Badge status={r.status} /></td>
+                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>
                   <button className="btn btn-primary" style={{padding:'8px 12px', borderRadius:8}}>VER</button>
                 </td>
               </tr>

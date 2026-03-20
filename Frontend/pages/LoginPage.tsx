@@ -24,8 +24,8 @@ const LoginPage: React.FC = () => {
     }}>
       <form onSubmit={submit} style={{width:420, maxWidth:'92%', background:'var(--surface-light)', padding:28, borderRadius:12, boxShadow:'var(--shadow-md)', textAlign:'center'}}>
         <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:12, marginBottom:6}}>
-          <img src={logo} alt="ROY logo" style={{width:64, height:64, borderRadius:10, objectFit:'cover'}} />
-          <div style={{fontWeight:800, color:'var(--gray-900)'}}>ROY: Cyber-Madurez Core</div>
+          <img src={logo} alt="RAY logo" style={{width:64, height:64, borderRadius:10, objectFit:'cover'}} />
+          <div style={{fontWeight:800, color:'var(--gray-900)'}}>RAY: Cyber-Madurez Core</div>
           <div style={{fontSize:13, color:'var(--gray-600)'}}>Plataforma de Evaluación</div>
         </div>
 

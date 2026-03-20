@@ -20,8 +20,8 @@ const RecoverPage: React.FC = () => {
       background: 'var(--bg-light)'
     }}>
       <div style={{position:'absolute', top:20, left:20, display:'flex', alignItems:'center', gap:12}}>
-        <img src={logo} alt="ROY logo" style={{width:42, height:42, borderRadius:8, objectFit:'cover'}} />
-        <div style={{fontWeight:800, color:'var(--gray-900)'}}>ROY: Cyber-Madurez Core</div>
+        <img src={logo} alt="RAY logo" style={{width:42, height:42, borderRadius:8, objectFit:'cover'}} />
+        <div style={{fontWeight:800, color:'var(--gray-900)'}}>RAY: Cyber-Madurez Core</div>
       </div>
 
       <form onSubmit={submit} style={{width:420, maxWidth:'92%', background:'var(--surface-light)', padding:28, borderRadius:12, boxShadow:'var(--shadow-md)', textAlign:'center'}}>
