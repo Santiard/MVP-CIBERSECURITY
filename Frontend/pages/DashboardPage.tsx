@@ -1,11 +1,13 @@
 // Placeholder Dashboard page
 import React from 'react';
+import Layout from '../src/components/Layout';
+import EvaluationsTable from '../src/components/EvaluationsTable';
 
 export const DashboardPage: React.FC = () => {
   return (
-    <main>
-      <h1>Dashboard (placeholder)</h1>
-    </main>
+    <Layout>
+      <EvaluationsTable />
+    </Layout>
   );
 };
 
