@@ -75,7 +75,7 @@ const Sidebar: React.FC = () => {
         <ul style={{listStyle:'none', padding:0, margin:0}}>
           <li><Link to="/DashboardPage" style={linkStyle}>Dashboard</Link></li>
           <li><Link to="/organizations" style={linkStyle}>Organizaciones</Link></li>
-          <li><Link to="/DashboardPage" style={{...linkStyle, background:'var(--blue-500)', boxShadow:'var(--shadow-sm)'}}>Evaluaciones</Link></li>
+          <li><Link to="/evaluations" style={{...linkStyle, background:'var(--blue-500)', boxShadow:'var(--shadow-sm)'}}>Evaluaciones</Link></li>
           <li><Link to="/users" style={linkStyle}>Usuarios</Link></li>
         </ul>
       </nav>

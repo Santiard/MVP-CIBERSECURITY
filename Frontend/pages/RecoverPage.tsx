@@ -41,7 +41,7 @@ const RecoverPage: React.FC = () => {
         <button type="submit" className="btn btn-primary" style={{width:'100%'}}>Enviar enlace</button>
 
         <div style={{marginTop:14}}>
-          <a href="/LoginPage" style={{color:'var(--blue-700)', textDecoration:'none', fontSize:13}}>Volver al inicio de sesión</a>
+          <a href="/LoginPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Volver al inicio de sesión</a>
         </div>
       </form>
     </div>

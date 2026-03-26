@@ -24,6 +24,8 @@
   --text-on-dark: var(--white);
   --text-on-light: var(--gray-900);
   --text-muted: var(--gray-600);
+  /* Link / accent text (semantic) */
+  --link-color: var(--blue-700);
 
   /* Buttons */
   --btn-primary-bg: var(--blue-500);
@@ -84,6 +86,9 @@
   --muted: var(--muted-light);
   --border: var(--border-light);
 
+  /* Links / accents in light theme */
+  --link-color: var(--blue-700);
+
   --on-success: var(--on-success-light);
   --on-warning: var(--on-warning-light);
   --on-danger: var(--on-danger-light);
@@ -102,6 +107,9 @@
   --on-warning: var(--on-warning-dark);
   --on-danger: var(--on-danger-dark);
   --on-info: var(--on-info-dark);
+
+  /* Links / accents in dark theme - ensure contrast */
+  --link-color: var(--white);
 }
 
 /* Respect user OS preference by default */

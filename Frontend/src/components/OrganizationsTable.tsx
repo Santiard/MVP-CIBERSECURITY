@@ -5,7 +5,7 @@ import OrganizationForm from './OrganizationForm';
 
 type Org = { id: string; name: string; email?: string; nit?: string; address?: string; phone?: string };
 
-const OrganizationsTable: React.FC = () => {
+const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode = 'admin' }) => {
   const [rows, setRows] = useState<Org[]>([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,8 +61,14 @@ const OrganizationsTable: React.FC = () => {
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.address}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.phone}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
-                  <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
-                  <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)}>Eliminar</button>
+                  {/* Ver siempre disponible */}
+                  <a href={`/organizations/${r.id}`} className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 12px', borderRadius: 8, color: 'var(--white)' }}>VER</a>
+                  {mode === 'admin' && (
+                    <>
+                      <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }} style={{ marginLeft: 8 }}>Editar</button>
+                      <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)}>Eliminar</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

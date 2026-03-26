@@ -54,8 +54,8 @@ const LoginPage: React.FC = () => {
         <button type="submit" className="btn btn-primary" style={{width:'100%'}}>Ingresar</button>
 
         <div style={{marginTop:14, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-          <a href="/RecoverPage" style={{color:'var(--blue-700)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>
-          <a href="/HomePage" style={{color:'var(--gray-600)', textDecoration:'none', fontSize:13}}>Entrar como invitado</a>
+          <a href="/RecoverPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>
+          <a href="/HomePage" style={{color:'var(--muted)', textDecoration:'none', fontSize:13}}>Entrar como invitado</a>
         </div>
       </form>
     </div>

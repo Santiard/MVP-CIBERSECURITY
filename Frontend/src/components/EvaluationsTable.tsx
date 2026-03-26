@@ -1,4 +1,5 @@
 import React, {useMemo, useState} from 'react';
+import { Link } from 'react-router-dom';
 import '../styles/theme.css';
 import Badge from './Badge';
 import FilterInput from './FilterInput';
@@ -53,7 +54,7 @@ const EvaluationsTable: React.FC = () => {
                 <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.result}</td>
                 <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}><Badge status={r.status} /></td>
                 <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>
-                  <button className="btn btn-primary" style={{padding:'8px 12px', borderRadius:8}}>VER</button>
+                  <Link to={`/reports/${r.id}`} className="btn btn-primary" style={{padding:'8px 12px', borderRadius:8, textDecoration:'none', display:'inline-block'}}>VER</Link>
                 </td>
               </tr>
             ))}
