@@ -12,6 +12,12 @@ import OrganizationsPage from './pages/OrganizationsPage';
 import ReportDetailPage from './pages/ReportDetailPage';
 import OrganizationDetailPage from './pages/OrganizationDetailPage';
 import EvaluationsPage from './pages/EvaluationsPage';
+import ReportViewPage from './pages/ReportViewPage';
+import VulnerabilitiesPage from './pages/VulnerabilitiesPage';
+import AdminDashboardPage from '../pages/AdminDashboardPage';
+import QuestionnairesPage from './pages/QuestionnairesPage';
+import RegisterUserPage from './pages/RegisterUserPage';
+import RegisterOrganizationPage from './pages/RegisterOrganizationPage';
 
 function AppRoutes() {
   return (
@@ -22,10 +28,16 @@ function AppRoutes() {
         <Route path="/RecoverPage" element={<RecoverPage />} />
         <Route path="/DashboardPage" element={<DashboardPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/users/new" element={<RegisterUserPage />} />
         <Route path="/organizations" element={<OrganizationsPage />} />
         <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
+        <Route path="/organizations/new" element={<RegisterOrganizationPage />} />
         <Route path="/reports/:id" element={<ReportDetailPage />} />
+        <Route path="/reports/:id/report" element={<ReportViewPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
+        <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
+        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/questionnaires" element={<QuestionnairesPage />} />
         <Route path="/" element={<Navigate to="/LoginPage" replace />} />
       </Routes>
     </BrowserRouter>

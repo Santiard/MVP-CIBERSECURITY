@@ -69,13 +69,15 @@ const Sidebar: React.FC = () => {
             </button>
           </div>
           <div style={{fontSize:12, color:'var(--muted)'}}>Plataforma de Evaluación</div>
-        </div>
-      </div>
+               <li><Link to="/admin" style={linkStyle}>Dashboard</Link></li>
+               <li><Link to="/questionnaires" style={linkStyle}>Cuestionarios</Link></li>
       <nav>
         <ul style={{listStyle:'none', padding:0, margin:0}}>
-          <li><Link to="/DashboardPage" style={linkStyle}>Dashboard</Link></li>
+          <li><Link to="/admin" style={linkStyle}>Dashboard</Link></li>
           <li><Link to="/organizations" style={linkStyle}>Organizaciones</Link></li>
           <li><Link to="/evaluations" style={{...linkStyle, background:'var(--blue-500)', boxShadow:'var(--shadow-sm)'}}>Evaluaciones</Link></li>
+          <li><Link to="/reports" style={linkStyle}>Reportes</Link></li>
+          <li><Link to="/vulnerabilities" style={linkStyle}>Vulnerabilidades</Link></li>
           <li><Link to="/users" style={linkStyle}>Usuarios</Link></li>
         </ul>
       </nav>

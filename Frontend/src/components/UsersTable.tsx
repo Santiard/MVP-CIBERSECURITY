@@ -3,7 +3,7 @@ import '../styles/theme.css';
 import dataService from '../services/dataService';
 import UserForm from './UserForm';
 
-type User = { id: string; name: string; email: string; phone?: string; role: string };
+type User = { id: string; name: string; email: string; phone?: string; role: string; active?: boolean };
 
 const UsersTable: React.FC = () => {
   const [rows, setRows] = useState<User[]>([]);
@@ -69,7 +69,20 @@ const UsersTable: React.FC = () => {
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.email}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.phone}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.role}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center' }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!r.active}
+                      onChange={async () => {
+                        await dataService.toggleUserActive(r.id);
+                        await load();
+                      }}
+                      aria-checked={!!r.active}
+                      aria-label={r.active ? 'Desactivar usuario' : 'Activar usuario'}
+                    />
+                    <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
+                  </label>
                   <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
                   <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleResetPassword(r.id)}>Reset pwd</button>
                   <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)}>Eliminar</button>
