@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/theme.css';
-import logo from '../images/logoRAY.png';
 
 const linkStyle: React.CSSProperties = {
   display: 'block',
@@ -14,7 +13,7 @@ const linkStyle: React.CSSProperties = {
 };
 
 const Sidebar: React.FC = () => {
-  const [theme, setTheme] = useState<'light'|'dark'>(() => {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       const stored = localStorage.getItem('theme');
       if (stored === 'light' || stored === 'dark') return stored;
@@ -47,35 +46,27 @@ const Sidebar: React.FC = () => {
       top: 0,
       borderRight: '4px solid var(--blue-500)'
     }}>
-      <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:20}}>
-        <img src={logo} alt="RAY logo" style={{
-          width:44,
-          height:44,
-          borderRadius:8,
-          objectFit: 'cover',
-          boxShadow: 'var(--shadow-md)'
-        }} />
-        <div style={{color:'var(--text-primary)', display:'flex', flexDirection:'column'}}>
-          <div style={{fontWeight:800, fontSize:14, display:'flex', alignItems:'center', gap:8}}>
-            RAY: Cyber-Madurez Core
-            <button
-              aria-label="Alternar tema claro/oscuro"
-              title={theme === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro'}
-              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-              style={{ marginLeft: 8, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: 'var(--muted)' }}
-              className="focus-ring"
-            >
-              {theme === 'dark' ? '🌞' : '🌙'}
-            </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>
+            RAY: Cyber-Madurez
           </div>
-          <div style={{fontSize:12, color:'var(--muted)'}}>Plataforma de Evaluación</div>
-               <li><Link to="/admin" style={linkStyle}>Dashboard</Link></li>
-               <li><Link to="/questionnaires" style={linkStyle}>Cuestionarios</Link></li>
+          <button
+            onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1.2rem' }}
+          >
+            {theme === 'dark' ? '🌞' : '🌙'}
+          </button>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Plataforma de Evaluación</div>
+      </div>
+
       <nav>
-        <ul style={{listStyle:'none', padding:0, margin:0}}>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           <li><Link to="/admin" style={linkStyle}>Dashboard</Link></li>
           <li><Link to="/organizations" style={linkStyle}>Organizaciones</Link></li>
-          <li><Link to="/evaluations" style={{...linkStyle, background:'var(--blue-500)', boxShadow:'var(--shadow-sm)'}}>Evaluaciones</Link></li>
+          <li><Link to="/questionnaires" style={linkStyle}>Cuestionarios</Link></li>
+          <li><Link to="/evaluations" style={{ ...linkStyle, background: 'var(--blue-500)' }}>Evaluaciones</Link></li>
           <li><Link to="/reports" style={linkStyle}>Reportes</Link></li>
           <li><Link to="/vulnerabilities" style={linkStyle}>Vulnerabilidades</Link></li>
           <li><Link to="/users" style={linkStyle}>Usuarios</Link></li>
