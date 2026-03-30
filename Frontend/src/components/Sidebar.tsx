@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import '../styles/theme.css';
 
 const linkStyle: React.CSSProperties = {
@@ -68,13 +68,41 @@ const Sidebar: React.FC = () => {
 
       <nav>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          <li><Link to="/admin" style={linkStyle}>Dashboard</Link></li>
-          <li><Link to="/organizations" style={linkStyle}>Organizaciones</Link></li>
-          <li><Link to="/questionnaires" style={linkStyle}>Cuestionarios</Link></li>
-          <li><Link to="/evaluations" style={{ ...linkStyle, background: 'var(--blue-500)' }}>Evaluaciones</Link></li>
-          <li><Link to="/reports" style={linkStyle}>Reportes</Link></li>
-          <li><Link to="/vulnerabilities" style={linkStyle}>Vulnerabilidades</Link></li>
-          <li><Link to="/users" style={linkStyle}>Usuarios</Link></li>
+          <li>
+            <NavLink to="/admin" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Dashboard
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/organizations" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Organizaciones
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/questionnaires" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Cuestionarios
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/evaluations" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Evaluaciones
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/reports" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Reportes
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/vulnerabilities" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Vulnerabilidades
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/users" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+              Usuarios
+            </NavLink>
+          </li>
         </ul>
       </nav>
     </aside>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import '../styles/theme.css';
 import dataService from '../services/dataService';
 import UserForm from './UserForm';
+import Modal from './modal/Modal';
 
 type User = { id: string; name: string; email: string; phone?: string; role: string; active?: boolean };
 
@@ -28,16 +29,44 @@ const UsersTable: React.FC = () => {
   const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Eliminar usuario?')) return;
-    await dataService.deleteUser(id);
-    await load();
+    setDeleting({ id });
   };
 
   const handleResetPassword = async (id: string) => {
-    const pwd = prompt('Nueva contraseña (mock):');
-    if (!pwd) return;
-    await dataService.resetPassword(id, pwd);
-    alert('Contraseña reiniciada (mock).');
+    setResetting({ id });
+  };
+
+  const [deleting, setDeleting] = useState<{ id: string; } | null>(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
+  const [resetting, setResetting] = useState<{ id: string; } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    try {
+      setDeletingLoading(true);
+      await dataService.deleteUser(deleting.id);
+      setDeleting(null);
+      await load();
+    } finally {
+      setDeletingLoading(false);
+    }
+  };
+
+  const confirmReset = async () => {
+    if (!resetting) return;
+    if (!newPassword) return alert('Ingrese nueva contraseña');
+    try {
+      setResetLoading(true);
+      await dataService.resetPassword(resetting.id, newPassword);
+      alert('Contraseña reiniciada (mock).');
+      setResetting(null);
+      setNewPassword('');
+      await load();
+    } finally {
+      setResetLoading(false);
+    }
   };
 
   return (
@@ -49,6 +78,27 @@ const UsersTable: React.FC = () => {
         <input placeholder="Buscar por nombre o correo" value={query} onChange={e => setQuery(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
         <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo usuario</button>
       </div>
+
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Eliminar usuario">
+        <div>
+          <p>¿Confirmas que deseas eliminar este usuario?</p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button className="btn" onClick={() => setDeleting(null)} disabled={deletingLoading}>Cancelar</button>
+            <button className="btn btn-primary" onClick={confirmDelete} disabled={deletingLoading}>{deletingLoading ? 'Eliminando...' : 'Eliminar'}</button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); }} title="Reiniciar contraseña">
+        <div style={{ display: 'grid', gap: 8 }}>
+          <label style={{ fontSize: 12 }}>Nueva contraseña</label>
+          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); }} disabled={resetLoading}>Cancelar</button>
+            <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
+          </div>
+        </div>
+      </Modal>
 
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
