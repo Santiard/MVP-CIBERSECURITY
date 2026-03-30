@@ -10,6 +10,7 @@ import DashboardPage from '../pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import OrganizationsPage from './pages/OrganizationsPage';
 import ReportDetailPage from './pages/ReportDetailPage';
+import ReportsPage from './pages/ReportsPage';
 import OrganizationDetailPage from './pages/OrganizationDetailPage';
 import EvaluationsPage from './pages/EvaluationsPage';
 import ReportViewPage from './pages/ReportViewPage';
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="/organizations" element={<OrganizationsPage />} />
         <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
         <Route path="/organizations/new" element={<RegisterOrganizationPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/reports/:id" element={<ReportDetailPage />} />
         <Route path="/reports/:id/report" element={<ReportViewPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />

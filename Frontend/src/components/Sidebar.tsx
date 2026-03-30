@@ -4,7 +4,7 @@ import '../styles/theme.css';
 
 const linkStyle: React.CSSProperties = {
   display: 'block',
-  color: 'var(--text-primary)',
+  color: 'var(--sidebar-text)',
   padding: '10px 12px',
   borderRadius: 8,
   textDecoration: 'none',
@@ -33,11 +33,14 @@ const Sidebar: React.FC = () => {
     }
   }, [theme]);
 
+  const themeIcon = theme === 'dark' ? '🌙' : '🌞';
+  const themeToggleLabel = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+
   return (
-    <aside style={{
+    <aside className="app-sidebar" style={{
       width: 220,
       background: 'var(--blue-900)',
-      color: 'var(--text-primary)',
+      color: 'var(--sidebar-text)',
       height: '100vh',
       padding: '24px 12px',
       boxSizing: 'border-box',
@@ -54,8 +57,10 @@ const Sidebar: React.FC = () => {
           <button
             onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
             style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '1.2rem' }}
+            title={themeToggleLabel}
+            aria-label={themeToggleLabel}
           >
-            {theme === 'dark' ? '🌞' : '🌙'}
+            {themeIcon}
           </button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>Plataforma de Evaluación</div>
