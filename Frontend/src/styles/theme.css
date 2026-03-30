@@ -39,6 +39,10 @@
   --danger: #EF4444;
   --info: var(--cyan-300);
 
+  /* Switch colors */
+  --switch-on-bg: var(--btn-primary-bg);
+  --switch-off-bg: var(--gray-200);
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(2,6,23,0.12);
   --shadow-md: 0 8px 20px rgba(2,6,23,0.24);
@@ -99,6 +103,10 @@
 
   /* Sidebar text on light theme: make it white for contrast on blue bar */
   --sidebar-text: var(--white);
+
+  /* Switch colors for light theme */
+  --switch-on-bg: var(--btn-primary-bg);
+  --switch-off-bg: var(--gray-200);
 }
 
 /* Dark theme helpers */
@@ -119,6 +127,10 @@
 
   /* Sidebar text on dark theme */
   --sidebar-text: var(--text-on-dark);
+
+  /* Switch colors for dark theme */
+  --switch-on-bg: var(--btn-primary-bg);
+  --switch-off-bg: rgba(255,255,255,0.06);
 }
 
 /* Respect user OS preference by default, but do not override explicit theme classes */
@@ -196,6 +208,34 @@ body{
   .card{ padding: var(--spacing-sm); }
   .btn{ padding: 8px 12px; }
 }
+
+/* Toggle switch styles */
+.toggle-switch{
+  display: inline-flex;
+  align-items: center;
+  width: 48px;
+  height: 26px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--switch-off-bg);
+  cursor: pointer;
+  transition: background .18s ease, box-shadow .12s ease;
+  box-sizing: border-box;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+.toggle-switch:disabled{ opacity: 0.5; cursor: not-allowed; }
+.toggle-switch.on{ background: var(--switch-on-bg); box-shadow: 0 6px 18px rgba(25,118,210,0.12); border-color: transparent; }
+.toggle-switch:focus-visible{ box-shadow: var(--shadow-focus); outline: none; }
+.toggle-switch .thumb{
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 2px 6px rgba(2,6,23,0.16);
+  transform: translateX(0);
+  transition: transform .18s ease, box-shadow .12s ease;
+}
+.toggle-switch.on .thumb{ transform: translateX(22px); box-shadow: 0 4px 10px rgba(25,118,210,0.18); }
 
 /* Example CSS variables usage comment:
   Use tokens like var(--btn-primary-bg) and theme classes .theme-light/.theme-dark on the root element.

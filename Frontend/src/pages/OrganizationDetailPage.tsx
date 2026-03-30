@@ -40,7 +40,7 @@ const OrganizationDetailPage: React.FC = () => {
               <div className="card">
                 <h4 style={{marginTop:0}}>Acciones</h4>
                 <div style={{display:'flex', gap:8}}>
-                  <button className="btn btn-primary" onClick={() => navigate('/DashboardPage')}>Volver</button>
+                  <button className="btn btn-primary" onClick={() => navigate('/organizations')}>Volver</button>
                   <button className="btn" onClick={() => alert('Inicio evaluación - lógica no implementada')}>Iniciar Evaluación</button>
                 </div>
               </div>

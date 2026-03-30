@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ReportSummary from '../components/ReportSummary';
 import CategoryResults from '../components/CategoryResults';
@@ -22,7 +23,7 @@ const ReportDetailPage: React.FC = () => {
           <div style={{display:'flex', flexDirection:'column', gap:12}}>
             <CategoryResults rows={SAMPLE} />
             <div style={{display:'flex', justifyContent:'flex-end'}}>
-              <a href="/DashboardPage" className="btn btn-primary">Volver</a>
+              <Link to="/reports" className="btn btn-primary">Volver</Link>
             </div>
           </div>
         </div>
