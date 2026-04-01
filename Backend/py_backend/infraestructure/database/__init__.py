@@ -1,3 +1,41 @@
 from .schema import OrganizationModel
+from .models import (
+	ActivoORM,
+	AmenazaORM,
+	ControlORM,
+	EmpresaORM,
+	EvaluacionORM,
+	IndicadorORM,
+	NivelMadurezORM,
+	PreguntaORM,
+	RespuestaORM,
+	ResultadoORM,
+	RiesgoAmenazaORM,
+	RiesgoORM,
+	RiesgoVulnerabilidadORM,
+	RolORM,
+	ScoreORM,
+	UsuarioORM,
+	VulnerabilidadORM,
+)
 
-__all__ = ["OrganizationModel"]
+__all__ = [
+	"ActivoORM",
+	"AmenazaORM",
+	"ControlORM",
+	"EmpresaORM",
+	"EvaluacionORM",
+	"IndicadorORM",
+	"NivelMadurezORM",
+	"OrganizationModel",
+	"PreguntaORM",
+	"RespuestaORM",
+	"ResultadoORM",
+	"RiesgoAmenazaORM",
+	"RiesgoORM",
+	"RiesgoVulnerabilidadORM",
+	"RolORM",
+	"ScoreORM",
+	"UsuarioORM",
+	"VulnerabilidadORM",
+]

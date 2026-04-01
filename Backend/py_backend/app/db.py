@@ -4,6 +4,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlmodel import SQLModel, create_engine
 
+# Import models so SQLModel metadata includes all tables before create_all.
+from infraestructure.database import models as _models  # noqa: F401
+
 load_dotenv()
 
 DB_FILE = Path(__file__).resolve().parents[1] / "dev.db"
