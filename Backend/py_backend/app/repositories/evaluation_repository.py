@@ -1,50 +1,45 @@
 from typing import Optional, List
-from sqlmodel import SQLModel, Field, Session
-from app.db import engine
+from sqlmodel import Session
+
+from infraestructure.database import EvaluationModel, OrganizationModel
 
 
-class Organization(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str
-
-
-class Evaluation(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    organization_id: int
-    answers: Optional[dict] = Field(default={})
+def _get_engine():
+    from app.db import engine
+    return engine
 
 
 class SQLEvaluationRepository:
-    def save(self, payload) -> Evaluation:
-        with Session(engine) as session:
-            item = Evaluation(organization_id=payload.organization_id, answers=payload.answers)
+    def save(self, payload) -> EvaluationModel:
+        with Session(_get_engine()) as session:
+            item = EvaluationModel(organization_id=payload.organization_id, answers=payload.answers)
             session.add(item)
             session.commit()
             session.refresh(item)
             return item
 
-    def find_by_id(self, id: int) -> Optional[Evaluation]:
-        with Session(engine) as session:
-            return session.get(Evaluation, id)
+    def find_by_id(self, id: int) -> Optional[EvaluationModel]:
+        with Session(_get_engine()) as session:
+            return session.get(EvaluationModel, id)
 
-    def find_all(self) -> List[Evaluation]:
-        with Session(engine) as session:
-            return session.query(Evaluation).all()
+    def find_all(self) -> List[EvaluationModel]:
+        with Session(_get_engine()) as session:
+            return session.query(EvaluationModel).all()
 
 
 class SQLOrganizationRepository:
-    def save(self, name: str) -> Organization:
-        with Session(engine) as session:
-            item = Organization(name=name)
+    def save(self, name: str) -> OrganizationModel:
+        with Session(_get_engine()) as session:
+            item = OrganizationModel(name=name)
             session.add(item)
             session.commit()
             session.refresh(item)
             return item
 
-    def find_by_id(self, id: int) -> Optional[Organization]:
-        with Session(engine) as session:
-            return session.get(Organization, id)
+    def find_by_id(self, id: int) -> Optional[OrganizationModel]:
+        with Session(_get_engine()) as session:
+            return session.get(OrganizationModel, id)
 
-    def find_all(self) -> List[Organization]:
-        with Session(engine) as session:
-            return session.query(Organization).all()
+    def find_all(self) -> List[OrganizationModel]:
+        with Session(_get_engine()) as session:
+            return session.query(OrganizationModel).all()

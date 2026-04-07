@@ -1,4 +1,4 @@
-from .schema import OrganizationModel
+from .schema import OrganizationModel, EvaluationModel
 from .models import (
 	ActivoORM,
 	AmenazaORM,
@@ -25,6 +25,7 @@ __all__ = [
 	"ControlORM",
 	"EmpresaORM",
 	"EvaluacionORM",
+	"EvaluationModel",
 	"IndicadorORM",
 	"NivelMadurezORM",
 	"OrganizationModel",
