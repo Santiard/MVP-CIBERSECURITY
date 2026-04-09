@@ -83,7 +83,7 @@ const UsersTable: React.FC = () => {
       <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Eliminar usuario">
         <div>
           <p>¿Confirmas que deseas eliminar este usuario?</p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
             <button className="btn" onClick={() => setDeleting(null)} disabled={deletingLoading}>Cancelar</button>
             <button className="btn btn-primary" onClick={confirmDelete} disabled={deletingLoading}>{deletingLoading ? 'Eliminando...' : 'Eliminar'}</button>
           </div>
@@ -94,7 +94,7 @@ const UsersTable: React.FC = () => {
         <div style={{ display: 'grid', gap: 8 }}>
           <label style={{ fontSize: 12 }}>Nueva contraseña</label>
           <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
             <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); }} disabled={resetLoading}>Cancelar</button>
             <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
           </div>
@@ -120,7 +120,7 @@ const UsersTable: React.FC = () => {
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.email}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.phone}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.role}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center' }}>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
                     <Switch
                       checked={!!r.active}
@@ -146,11 +146,13 @@ const UsersTable: React.FC = () => {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
         <div style={{ color: 'var(--muted)' }}>Mostrando {filtered.length} usuarios</div>
-        <div>
-          <button className="btn" onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
-          <span style={{ margin: '0 8px' }}>{page}/{pages}</span>
-          <button className="btn" onClick={() => setPage(p => Math.min(pages, p + 1))}>Next</button>
-        </div>
+        {pages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, minWidth: 180 }}>
+            <button className="btn" onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
+            <span style={{ margin: '0 8px', minWidth: 32, textAlign: 'center' }}>{page}/{pages}</span>
+            <button className="btn" onClick={() => setPage(p => Math.min(pages, p + 1))}>Next</button>
+          </div>
+        )}
       </div>
     </div>
   );

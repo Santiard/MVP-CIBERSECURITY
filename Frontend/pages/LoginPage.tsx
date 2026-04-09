@@ -36,9 +36,9 @@ const LoginPage: React.FC = () => {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="correo@empresa.com"
+          placeholder="Ingresa tu correo electrónico"
           required
-          style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:12, boxSizing:'border-box'}}
+          style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:12, boxSizing:'border-box', textAlign:'center'}}
         />
 
         <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Contraseña</label>
@@ -46,12 +46,12 @@ const LoginPage: React.FC = () => {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="********"
+          placeholder="Ingresa tu contraseña"
           required
-          style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:18, boxSizing:'border-box'}}
+          style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:18, boxSizing:'border-box', textAlign:'center'}}
         />
 
-        <button type="submit" className="btn btn-primary" style={{width:'100%'}}>Ingresar</button>
+        <button type="submit" className="btn btn-primary" style={{width: '200px', margin: '0 auto', display: 'block'}}>Ingresar</button>
 
         <div style={{marginTop:14, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <a href="/RecoverPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>

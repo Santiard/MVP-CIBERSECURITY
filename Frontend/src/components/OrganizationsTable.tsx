@@ -60,7 +60,7 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.nit}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.address}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.phone}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
                   {/* Ver siempre disponible */}
                   <a href={`/organizations/${r.id}`} className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 12px', borderRadius: 8, color: 'var(--white)' }}>VER</a>
                   {mode === 'admin' && (

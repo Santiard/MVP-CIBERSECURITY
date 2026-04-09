@@ -16,7 +16,6 @@ const CategoryResults: React.FC<{ rows: Row[] }> = ({ rows }) => {
                 <ProgressBar value={r.value} label={`${r.value}%`} />
               </div>
             </div>
-            <div style={{width:56, textAlign:'right', color:'var(--muted)'}}>{r.value}%</div>
           </div>
         ))}
       </div>

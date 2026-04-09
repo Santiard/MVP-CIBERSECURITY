@@ -25,7 +25,7 @@ const VulnerabilitiesPage: React.FC = () => {
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Detección de vulnerabilidades</h3>
               <p style={{ color: 'var(--muted)' }}>Ejecutar test de seguridad para la organización seleccionada.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center' }}>
                 <button className="btn btn-primary" onClick={() => alert('Simulación: iniciar escaneo (UI-only)')}>Iniciar escaneo</button>
                 <button className="btn" onClick={() => alert('Simulación: ver historial (UI-only)')}>Ver Historial</button>
               </div>
@@ -34,10 +34,10 @@ const VulnerabilitiesPage: React.FC = () => {
             <div style={{ height: 16 }} />
 
             <div className="card">
-              <h3 style={{ marginTop: 0 }}>Endpoints Analizados</h3>
-              <p style={{ color: 'var(--muted)' }}>Lista de endpoints, servicios o rutas analizadas durante los escaneos.</p>
+              <h3 style={{ marginTop: 0 }}>Sitios y Servicios Revisados</h3>
+              <p style={{ color: 'var(--muted)' }}>Lista de páginas web, servicios y rutas analizadas durante los escaneos de seguridad.</p>
               <div style={{ marginTop: 12 }}>
-                <button className="btn btn-primary" onClick={() => alert('Simulación: abrir endpoints (UI-only)')}>Endpoints</button>
+                <button className="btn btn-primary" onClick={() => alert('Simulación: abrir lista de sitios (UI-only)')}>Ver Lista</button>
               </div>
             </div>
           </div>

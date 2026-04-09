@@ -7,7 +7,7 @@ const AdminCard: React.FC<{ title: string; subtitle?: string; to?: string }> = (
       <div style={{ fontWeight: 800, fontSize: 16 }}>{title}</div>
       {subtitle && <div style={{ color: 'var(--muted)', marginTop: 6 }}>{subtitle}</div>}
     </div>
-    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
       {to ? (
         <a href={to} className="btn btn-primary" style={{ textDecoration: 'none' }}>Abrir</a>
       ) : (
