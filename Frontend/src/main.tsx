@@ -6,7 +6,6 @@ import './styles/theme.css';
 import LoginPage from '../pages/LoginPage';
 import RecoverPage from '../pages/RecoverPage';
 import HomePage from '../pages/HomePage';
-import DashboardPage from '../pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import OrganizationsPage from './pages/OrganizationsPage';
 import ReportDetailPage from './pages/ReportDetailPage';
@@ -27,7 +26,6 @@ function AppRoutes() {
         <Route path="/LoginPage" element={<LoginPage />} />
         <Route path="/HomePage" element={<HomePage />} />
         <Route path="/RecoverPage" element={<RecoverPage />} />
-        <Route path="/DashboardPage" element={<DashboardPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/users/new" element={<RegisterUserPage />} />
         <Route path="/organizations" element={<OrganizationsPage />} />
@@ -38,7 +36,7 @@ function AppRoutes() {
         <Route path="/reports/:id/report" element={<ReportViewPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
         <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/dashboard" element={<AdminDashboardPage />} />
         <Route path="/questionnaires" element={<QuestionnairesPage />} />
         <Route path="/" element={<Navigate to="/LoginPage" replace />} />
       </Routes>

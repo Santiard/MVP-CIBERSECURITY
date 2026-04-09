@@ -43,6 +43,8 @@ let questionnaires: Questionnaire[] = [
 
 const delay = (v: any, ms = 150) => new Promise(resolve => setTimeout(() => resolve(v), ms));
 
+const normalizeDigits = (value?: string) => value ? value.replace(/\D/g, '') : '';
+
 export default {
   // Users
   getUsers: async () => delay([...users]),
@@ -102,5 +104,30 @@ export default {
   toggleQuestionnaireActive: async (id: string) => {
     questionnaires = questionnaires.map(q => q.id === id ? { ...q, active: !q.active } : q);
     return delay(questionnaires.find(q => q.id === id));
+  },
+
+  // Validation methods
+  checkUserEmailExists: async (email: string, excludeId?: string) => {
+    const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase() && u.id !== excludeId);
+    return delay(exists);
+  },
+  checkUserPhoneExists: async (phone: string, excludeId?: string) => {
+    const normalized = normalizeDigits(phone);
+    const exists = !!normalized && users.some(u => normalizeDigits(u.phone) === normalized && u.id !== excludeId);
+    return delay(exists);
+  },
+  checkOrgEmailExists: async (email: string, excludeId?: string) => {
+    const exists = email && orgs.some(o => o.email?.toLowerCase() === email.toLowerCase() && o.id !== excludeId);
+    return delay(exists);
+  },
+  checkOrgNitExists: async (nit: string, excludeId?: string) => {
+    const normalized = normalizeDigits(nit);
+    const exists = !!normalized && orgs.some(o => normalizeDigits(o.nit) === normalized && o.id !== excludeId);
+    return delay(exists);
+  },
+  checkOrgPhoneExists: async (phone: string, excludeId?: string) => {
+    const normalized = normalizeDigits(phone);
+    const exists = !!normalized && orgs.some(o => normalizeDigits(o.phone) === normalized && o.id !== excludeId);
+    return delay(exists);
   }
 };

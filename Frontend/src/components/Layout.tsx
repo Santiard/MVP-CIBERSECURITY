@@ -8,7 +8,7 @@ const Layout: React.FC<{children?: React.ReactNode}> = ({ children }) => {
       <Sidebar />
       <div style={{flex:1, marginLeft:220, minHeight: '100vh', padding: '28px'}}>
         <header style={{display:'flex', justifyContent:'flex-end', marginBottom: 16}}>
-          <div style={{color:'var(--gray-600)'}}>Bienvenido Evaluador</div>
+          <div style={{color:'var(--gray-600)'}}>Bienvenido Administrador</div>
         </header>
         <main>
           {children}

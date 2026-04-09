@@ -30,7 +30,7 @@ const EvaluationsTable: React.FC = () => {
 
   return (
     <div className="card" style={{minHeight:240}}>
-      <h2 style={{marginTop:0}}>Gestión de Evaluaciones</h2>
+      <h2 style={{marginTop:0}}>Evaluaciones</h2>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
         <FilterInput value={filter} onChange={setFilter} />
       </div>

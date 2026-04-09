@@ -69,7 +69,7 @@ const Sidebar: React.FC = () => {
       <nav>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           <li>
-            <NavLink to="/admin" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
+            <NavLink to="/dashboard" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
               Dashboard
             </NavLink>
           </li>

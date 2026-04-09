@@ -27,7 +27,7 @@ const AdminDashboardPage: React.FC = () => {
           <AdminCard title="Cuestionarios" subtitle="Gestionar cuestionarios" to="/questionnaires" />
           <AdminCard title="Organizaciones" subtitle="Registrar Organizaciones" to="/organizations" />
           <AdminCard title="Usuarios" subtitle="Administrar Usuarios" to="/users" />
-          <AdminCard title="Historial" subtitle="Consultar evaluaciones" to="/history" />
+          <AdminCard title="Historial" subtitle="Consultar evaluaciones" to="/evaluations" />
         </div>
       </div>
     </Layout>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './modal/Modal';
+import PhoneField from './PhoneField';
 import dataService from '../services/dataService';
 
 type Props = {
@@ -16,6 +17,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const [phone, setPhone] = useState(initial?.phone || '');
   const [role, setRole] = useState(initial?.role || 'user');
   const [active, setActive] = useState(initial?.active ?? true);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setName(initial?.name || '');
@@ -23,16 +25,48 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
     setPhone(initial?.phone || '');
     setRole(initial?.role || 'user');
     setActive(initial?.active ?? true);
+    setErrors({});
   }, [initial, open]);
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!name || !email) return alert('Nombre y correo son requeridos');
+    
+    // Validaciones básicas
+    if (!name || !email) {
+      alert('Nombre y correo son requeridos');
+      return;
+    }
+
+    // Validaciones de exclusividad
+    const newErrors: Record<string, string> = {};
+
+    // Validar email duplicado
+    const emailExists = await dataService.checkUserEmailExists(email, initial?.id);
+    if (emailExists) {
+      newErrors.email = 'Este correo electrónico ya está registrado';
+    }
+
+    // Validar teléfono duplicado (si está proporcionado)
+    if (phone) {
+      const phoneExists = await dataService.checkUserPhoneExists(phone, initial?.id);
+      if (phoneExists) {
+        newErrors.phone = 'Este número telefónico ya está registrado';
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+
     if (initial?.id) {
       await dataService.updateUser(initial.id, { name, email, phone, role, active } as any);
     } else {
       await dataService.createUser({ name, email, phone, role, active } as any);
     }
+    
     onSaved && onSaved();
     onClose && onClose();
   };
@@ -42,10 +76,20 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
       <input value={name} onChange={e => setName(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
 
       <label style={{ fontSize: 12 }}>Correo</label>
-      <input value={email} onChange={e => setEmail(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+      <input 
+        type="email"
+        value={email} 
+        onChange={e => setEmail(e.target.value)} 
+        style={{ 
+          padding: 8, 
+          borderRadius: 8, 
+            border: errors.email ? '1px solid var(--danger)' : '1px solid var(--border)'
+        }} 
+      />
+      {errors.email && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.email}</div>}
 
       <label style={{ fontSize: 12 }}>Teléfono</label>
-      <input value={phone} onChange={e => setPhone(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+      <PhoneField value={phone} onChange={setPhone} error={errors.phone} />
 
       <label style={{ fontSize: 12 }}>Rol</label>
       <select value={role} onChange={e => setRole(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }}>

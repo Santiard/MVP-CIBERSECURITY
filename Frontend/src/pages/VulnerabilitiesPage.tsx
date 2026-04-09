@@ -25,7 +25,7 @@ const VulnerabilitiesPage: React.FC = () => {
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Detección de vulnerabilidades</h3>
               <p style={{ color: 'var(--muted)' }}>Ejecutar test de seguridad para la organización seleccionada.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-start' }}>
                 <button className="btn btn-primary" onClick={() => alert('Simulación: iniciar escaneo (UI-only)')}>Iniciar escaneo</button>
                 <button className="btn" onClick={() => alert('Simulación: ver historial (UI-only)')}>Ver Historial</button>
               </div>

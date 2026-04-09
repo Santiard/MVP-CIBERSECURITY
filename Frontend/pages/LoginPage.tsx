@@ -10,8 +10,8 @@ const LoginPage: React.FC = () => {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement real auth; for now navigate to HomePage
-    navigate('/HomePage');
+    // TODO: Implement real auth; for now navigate to Dashboard
+    navigate('/dashboard');
   };
 
   return (
@@ -55,7 +55,7 @@ const LoginPage: React.FC = () => {
 
         <div style={{marginTop:14, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <a href="/RecoverPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>
-          <a href="/HomePage" style={{color:'var(--muted)', textDecoration:'none', fontSize:13}}>Entrar como invitado</a>
+          <a href="/dashboard" style={{color:'var(--muted)', textDecoration:'none', fontSize:13}}>Entrar como invitado</a>
         </div>
       </form>
     </div>
