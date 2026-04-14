@@ -1,3 +1,71 @@
+// --- Question (Pregunta) Types ---
+export type Question = {
+  id: string;
+  controlId: string;
+  text: string;
+  dimension: string;
+  order: number;
+  active: boolean;
+};
+
+type QuestionApi = {
+  id_pregunta: number;
+  id_control: number;
+  texto: string;
+  dimension: string;
+  orden: number;
+  activo?: boolean;
+};
+  // --- Questions (Preguntas) ---
+  getQuestionsByControl: async (controlId: string): Promise<Question[]> => {
+    const rows = await readJson<QuestionApi[]>(`/questions?control_id=${controlId}`);
+    return rows.map((q) => ({
+      id: String(q.id_pregunta),
+      controlId: String(q.id_control),
+      text: q.texto,
+      dimension: q.dimension,
+      order: q.orden,
+      active: q.activo ?? true,
+    }));
+  },
+
+  createQuestion: async (q: Omit<Question, 'id'>): Promise<Question> => {
+    const created = await writeJson<QuestionApi>('/questions', 'POST', {
+      id_control: Number(q.controlId),
+      texto: q.text,
+      dimension: q.dimension,
+      orden: q.order,
+      activo: q.active,
+    });
+    return {
+      id: String(created.id_pregunta),
+      controlId: String(created.id_control),
+      text: created.texto,
+      dimension: created.dimension,
+      order: created.orden,
+      active: created.activo ?? true,
+    };
+  },
+
+  updateQuestion: async (id: string, patch: Partial<Question>): Promise<Question | undefined> => {
+    const payload: Record<string, unknown> = {};
+    if (patch.text !== undefined) payload.texto = patch.text;
+    if (patch.dimension !== undefined) payload.dimension = patch.dimension;
+    if (patch.order !== undefined) payload.orden = patch.order;
+    if (patch.active !== undefined) payload.activo = patch.active;
+    await writeJson(`/questions/${id}`, 'PATCH', payload);
+    // Refetch the updated question
+    const controlId = patch.controlId;
+    if (controlId) {
+      const questions = await dataService.getQuestionsByControl(controlId);
+      return questions.find((q) => q.id === id);
+    }
+    return undefined;
+  },
+
+  deleteQuestion: async (id: string) => {
+    return remove(`/questions/${id}`);
+  },
 import { apiFetch } from './apiClient';
 
 type User = {

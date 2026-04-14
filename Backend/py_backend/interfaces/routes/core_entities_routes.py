@@ -7,6 +7,7 @@ from app.db import engine
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database.models import (
     ControlORM,
+    PreguntaORM,
     RiesgoORM,
     RolORM,
     UsuarioORM,
@@ -110,5 +111,6 @@ def _register_single_pk_crud(
 _register_single_pk_crud("roles", RolORM, "id_rol")
 _register_single_pk_crud("users", UsuarioORM, "id_usuario", validate_password=True)
 _register_single_pk_crud("questionnaires", ControlORM, "id_control")
+_register_single_pk_crud("questions", PreguntaORM, "id_pregunta")
 _register_single_pk_crud("vulnerabilities", VulnerabilidadORM, "id_vulnerabilidad")
 _register_single_pk_crud("risks", RiesgoORM, "id_riesgo")
