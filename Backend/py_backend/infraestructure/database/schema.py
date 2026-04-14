@@ -4,6 +4,7 @@ This file documents the target persistence model used by SQLModel.
 """
 
 from typing import Any, Optional
+from datetime import datetime
 
 from sqlalchemy import Column, JSON
 from sqlmodel import Field, SQLModel
@@ -26,3 +27,5 @@ class EvaluationModel(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     organization_id: int
     answers: Optional[dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON))
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    user_id: Optional[int] = None

@@ -3,14 +3,18 @@
 Base URL: `http://localhost:8000`
 
 Authentication:
-- Get token with `POST /auth/token` using payload `{ "user_id": "your-user" }`
+- Get token with `POST /auth/token` using payload `{ "email": "user@example.com", "password": "StrongPass!1" }`
 - Include header in protected endpoints: `Authorization: Bearer <token>`
 
 ## Auth
 
 - `POST /auth/token`
-  - Body: `{ "user_id": "string" }`
-  - Response: `{ "access_token": "string", "token_type": "bearer" }`
+  - Body: `{ "email": "string", "password": "string" }`
+  - Response: `{ "access_token": "string", "token_type": "bearer", "user_id": number, "name": "string", "role": "admin|evaluator|user" }`
+
+- `POST /auth/recover-password`
+  - Body: `{ "email": "string", "new_password": "string" }`
+  - Response: `{ "message": "Contraseña actualizada correctamente" }`
 
 ## Organizations
 
@@ -32,45 +36,23 @@ Authentication:
   - Body (partial): `{ "organization_id": number, "answers": {} }`
 - `DELETE /evaluations/{evaluation_id}`
 
-## Generic Entity CRUD
-
-Prefix: `/entities`
+## Core Entities (Canonical)
 
 Single primary key resources expose:
-- `GET /entities/{resource}`
-- `GET /entities/{resource}/{id}`
-- `POST /entities/{resource}`
-- `PATCH /entities/{resource}/{id}`
-- `DELETE /entities/{resource}/{id}`
+- `GET /{resource}`
+- `GET /{resource}/{id}`
+- `POST /{resource}`
+- `PATCH /{resource}/{id}`
+- `DELETE /{resource}/{id}`
 
 Resources:
 - `roles`
-- `usuarios`
-- `empresas`
-- `evaluaciones`
-- `controles`
-- `preguntas`
-- `respuestas`
-- `niveles-madurez`
-- `resultados`
-- `scores`
-- `indicadores`
-- `activos`
-- `riesgos`
-- `amenazas`
-- `vulnerabilidades`
-
-Composite key resources expose:
-- `GET /entities/{resource}`
-- `POST /entities/{resource}`
-- `GET /entities/{resource}/{pk1}/{pk2}`
-- `DELETE /entities/{resource}/{pk1}/{pk2}`
-
-Resources:
-- `riesgo-amenaza`
-- `riesgo-vulnerabilidad`
+- `users`
+- `questionnaires`
+- `vulnerabilities`
+- `risks`
 
 ## Notes
 
-- Generic endpoints accept free-form JSON body validated by SQLModel constructor.
-- For frontend integration, prefer module-specific routes (`/organizations`, `/evaluations`) when available.
+- Core entity endpoints accept free-form JSON body validated by SQLModel constructor.
+- Frontend integration uses canonical routes only: `/organizations`, `/evaluations`, `/users`, `/roles`, `/questionnaires`, `/vulnerabilities`, `/risks`.

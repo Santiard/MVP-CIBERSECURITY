@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 
 type Props = {
   open: boolean;
-  initial?: { id?: string; name?: string; dimensions?: number; active?: boolean };
+  initial?: { id?: string; name?: string; description?: string; dimensions?: number; active?: boolean };
   onClose: () => void;
   onSaved: () => void;
-  saveFn: (payload: { name: string; dimensions: number; active: boolean }) => Promise<any>;
+  saveFn: (payload: { name: string; description: string; dimensions: number; active: boolean }) => Promise<any>;
 };
 
 const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, saveFn }) => {
   const [name, setName] = useState(initial?.name ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [dimensions, setDimensions] = useState(initial?.dimensions ?? 3);
   const [active, setActive] = useState(initial?.active ?? true);
   const [saving, setSaving] = useState(false);
@@ -17,6 +18,7 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   useEffect(() => {
     if (open) {
       setName(initial?.name ?? '');
+      setDescription(initial?.description ?? '');
       setDimensions(initial?.dimensions ?? 3);
       setActive(initial?.active ?? true);
     }
@@ -28,7 +30,7 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     e.preventDefault();
     setSaving(true);
     try {
-      await saveFn({ name, dimensions, active });
+      await saveFn({ name, description, dimensions, active });
       onSaved();
       onClose();
     } finally {
@@ -42,6 +44,9 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
         <h3 style={{ marginTop: 0 }}>{initial?.id ? 'Editar cuestionario' : 'Nuevo cuestionario'}</h3>
         <label style={{ display: 'block', marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Nombre</label>
         <input value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }} />
+
+        <label style={{ display: 'block', marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Descripción</label>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box', minHeight: 80, fontFamily: 'inherit', resize: 'none' }} />
 
         <label style={{ display: 'block', marginTop: 8, fontSize: 13, color: 'var(--muted)' }}>Dimensiones</label>
         <input type="number" value={dimensions} onChange={e => setDimensions(Number(e.target.value))} min={1} max={20} required style={{ width: 120, padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }} />

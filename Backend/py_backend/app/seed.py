@@ -8,8 +8,7 @@ from infraestructure.database import (
     ActivoORM,
     ControlORM,
     EmpresaORM,
-    EvaluationModel,
-    OrganizationModel,
+    EvaluacionORM,
     RiesgoORM,
     RiesgoVulnerabilidadORM,
     RolORM,
@@ -97,31 +96,16 @@ def _seed_roles_and_users(session: Session) -> None:
     session.flush()
 
 
-def _seed_organizations(session: Session) -> None:
-    organizations_seed = [
-        {
-            "name": "ACME Ciberseguridad",
-            "email": "seguridad@acme.local",
-            "nit": "900123456-1",
-            "address": "Calle 100 #10-10",
-            "phone": "+57 6011234567",
-        },
-        {
-            "name": "Finanzas Orion",
-            "email": "riesgos@orion.local",
-            "nit": "901999888-2",
-            "address": "Carrera 15 #80-20",
-            "phone": "+57 6017654321",
-        },
+def _seed_empresas(session: Session) -> None:
+    empresas_seed = [
+        {"nombre": "ACME Ciberseguridad", "sector": "Servicios", "tamano": "Mediana"},
+        {"nombre": "Finanzas Orion", "sector": "Financiero", "tamano": "Grande"},
     ]
-
-    existing_names = {
-        item.name for item in session.exec(select(OrganizationModel)).all()
-    }
-    for item in organizations_seed:
-        if item["name"] in existing_names:
+    existing_names = {item.nombre for item in session.exec(select(EmpresaORM)).all()}
+    for item in empresas_seed:
+        if item["nombre"] in existing_names:
             continue
-        session.add(OrganizationModel(**item))
+        session.add(EmpresaORM(**item))
 
 
 def _seed_questionnaires(session: Session) -> None:
@@ -203,24 +187,22 @@ def _seed_vulnerabilities(session: Session) -> None:
             )
 
 
-def _seed_evaluations(session: Session) -> None:
-    existing_evaluation = session.exec(select(EvaluationModel).limit(1)).first()
+def _seed_evaluaciones(session: Session) -> None:
+    existing_evaluation = session.exec(select(EvaluacionORM).limit(1)).first()
     if existing_evaluation is not None:
         return
 
-    organization = session.exec(select(OrganizationModel)).first()
-    if organization is None or organization.id is None:
+    empresa = session.exec(select(EmpresaORM)).first()
+    usuario = session.exec(select(UsuarioORM)).first()
+    if empresa is None or usuario is None:
         return
 
     session.add(
-        EvaluationModel(
-            organization_id=organization.id,
-            answers={
-                "gobierno_politicas_1": 4,
-                "gobierno_politicas_2": 3,
-                "endpoint_proteccion_1": 2,
-                "endpoint_proteccion_2": 4,
-            },
+        EvaluacionORM(
+            fecha=date.today(),
+            estado="pendiente",
+            id_usuario=usuario.id_usuario,
+            id_empresa=empresa.id_empresa,
         )
     )
 
@@ -252,9 +234,9 @@ def seed_data_if_enabled() -> None:
 
     with Session(engine) as session:
         _seed_roles_and_users(session)
-        _seed_organizations(session)
+        _seed_empresas(session)
         _seed_questionnaires(session)
         _seed_vulnerabilities(session)
-        _seed_evaluations(session)
+        _seed_evaluaciones(session)
         _seed_user_organization_assignments(session)
         session.commit()

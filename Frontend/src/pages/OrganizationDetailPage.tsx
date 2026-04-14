@@ -14,20 +14,19 @@ const OrganizationDetailPage: React.FC = () => {
     if (!id) return;
     (async () => {
       const list = await dataService.getOrgs();
-      const found = (list as any[]).find((o: any) => o.id === id);
+      const found = (list as any[]).find((o: any) => String(o.id_empresa) === id);
       setOrg(found || null);
     })();
   }, [id]);
 
   const startEvaluation = async () => {
-    if (!org?.id) return;
+    if (!org?.id_empresa) return;
     try {
       setCreatingEvaluation(true);
       const created = await createEvaluation({
-        organization_id: Number(org.id),
-        answers: {},
+        id_empresa: org.id_empresa,
       });
-      navigate(`/reports/${created.id}`);
+      navigate(`/reports/${created.id_evaluacion}`);
     } finally {
       setCreatingEvaluation(false);
     }
@@ -41,15 +40,11 @@ const OrganizationDetailPage: React.FC = () => {
         {org && (
           <div style={{marginTop:16, display:'grid', gridTemplateColumns:'1fr 320px', gap:20}}>
             <div className="card">
-              <h3 style={{marginTop:0}}>{org.name}</h3>
-              <div style={{color:'var(--muted)'}}>Correo</div>
-              <div style={{marginBottom:12}}>{org.email}</div>
-              <div style={{color:'var(--muted)'}}>NIT</div>
-              <div style={{marginBottom:12}}>{org.nit}</div>
-              <div style={{color:'var(--muted)'}}>Dirección</div>
-              <div style={{marginBottom:12}}>{org.address}</div>
-              <div style={{color:'var(--muted)'}}>Teléfono</div>
-              <div style={{marginBottom:12}}>{org.phone}</div>
+              <h3 style={{marginTop:0}}>{org.nombre}</h3>
+              <div style={{color:'var(--muted)'}}>Sector</div>
+              <div style={{marginBottom:12}}>{org.sector}</div>
+              <div style={{color:'var(--muted)'}}>Tamaño</div>
+              <div style={{marginBottom:12}}>{org.tamano}</div>
             </div>
 
             <div style={{display:'flex', flexDirection:'column', gap:12}}>

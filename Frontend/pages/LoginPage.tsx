@@ -80,7 +80,7 @@ const LoginPage: React.FC = () => {
 
         <h3 style={{marginTop:8, marginBottom:6}}>Iniciar sesión</h3>
 
-        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Correo Electrónico</label>
+        <label style={{display:'block', textAlign:'center', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Correo Electrónico</label>
         <input
           type="email"
           value={email}
@@ -90,7 +90,7 @@ const LoginPage: React.FC = () => {
           style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:12, boxSizing:'border-box', textAlign:'center'}}
         />
 
-        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Contraseña</label>
+        <label style={{display:'block', textAlign:'center', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Contraseña</label>
         <input
           type="password"
           value={password}
@@ -101,18 +101,18 @@ const LoginPage: React.FC = () => {
         />
 
         {showPasswordIssues && passwordIssues.length > 0 && (
-          <div style={{ textAlign: 'left', fontSize: 12, color: 'var(--danger)', marginBottom: 12 }}>
+          <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--danger)', marginBottom: 12 }}>
             <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
+            <ul style={{ margin: 0, paddingLeft: 18, display: 'inline-block' }}>
               {passwordIssues.map((issue) => (
-                <li key={issue}>{issue}</li>
+                <li key={issue} style={{ textAlign: 'left' }}>{issue}</li>
               ))}
             </ul>
           </div>
         )}
 
         {error && (
-          <div style={{ color: 'var(--danger-color)', fontSize: 13, marginBottom: 12 }}>
+          <div style={{ color: 'var(--danger-color)', fontSize: 13, marginBottom: 12, textAlign: 'center' }}>
             {error}
           </div>
         )}
@@ -126,7 +126,7 @@ const LoginPage: React.FC = () => {
           {loading ? 'Validando...' : 'Ingresar'}
         </button>
 
-        <div style={{marginTop:14, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <div style={{marginTop:14, display:'flex', flexDirection:'column', alignItems:'center', gap:8}}>
           <a href="/RecoverPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>
           <a href="/dashboard" style={{color:'var(--muted)', textDecoration:'none', fontSize:13}}>Entrar como invitado</a>
         </div>

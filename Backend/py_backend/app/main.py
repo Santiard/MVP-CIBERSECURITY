@@ -9,7 +9,7 @@ from app.db import engine, init_db
 from app.seed import seed_data_if_enabled
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database import RolORM, UsuarioORM
-from interfaces.routes.entity_crud_routes import router as entity_crud_router
+from interfaces.routes.core_entities_routes import router as core_entities_router
 from interfaces.routes.evaluation_routes import router as evaluation_router
 from interfaces.routes.organization_routes import router as organization_router
 
@@ -91,4 +91,4 @@ def recover_password(payload: RecoverPasswordRequest) -> dict[str, str]:
 
 app.include_router(evaluation_router)
 app.include_router(organization_router)
-app.include_router(entity_crud_router)
+app.include_router(core_entities_router)

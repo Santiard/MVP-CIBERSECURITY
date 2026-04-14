@@ -6,11 +6,11 @@ import FilterInput from './FilterInput';
 import { listEvaluations } from '../services/evaluationApi';
 
 type EvalRow = {
-  id: string;
-  organization: string;
-  date: string;
-  result: string;
-  status: string;
+  id_evaluacion: number;
+  id_empresa: number;
+  id_usuario: number;
+  fecha: string;
+  estado: string;
 };
 
 const EvaluationsTable: React.FC = () => {
@@ -25,14 +25,7 @@ const EvaluationsTable: React.FC = () => {
         setLoading(true);
         setError(null);
         const data = await listEvaluations();
-        const mapped: EvalRow[] = data.map((item) => ({
-          id: String(item.id),
-          organization: `Organizacion #${item.organization_id}`,
-          date: '-',
-          result: `${Object.keys(item.answers || {}).length} respuestas`,
-          status: 'En progreso',
-        }));
-        setRowsData(mapped);
+        setRowsData(data as EvalRow[]);
       } catch (err) {
         setError('No se pudieron cargar las evaluaciones');
       } finally {

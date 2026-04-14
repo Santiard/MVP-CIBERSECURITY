@@ -11,17 +11,16 @@ type User = {
 };
 
 type Org = {
-  id: string;
-  name: string;
-  email?: string;
-  nit?: string;
-  address?: string;
-  phone?: string;
+  id_empresa: number;
+  nombre: string;
+  sector: string;
+  tamano: string;
 };
 
 type Questionnaire = {
   id: string;
   name: string;
+  description: string;
   dimensions: number;
   active: boolean;
 };
@@ -72,11 +71,11 @@ async function remove(path: string): Promise<boolean> {
 }
 
 async function ensureRole(roleName: User['role']): Promise<number> {
-  const roles = await readJson<RoleApi[]>('/entities/roles');
+  const roles = await readJson<RoleApi[]>('/roles');
   const existing = roles.find((r) => r.nombre === roleName);
   if (existing) return existing.id_rol;
 
-  const created = await writeJson<RoleApi>('/entities/roles', 'POST', { nombre: roleName });
+  const created = await writeJson<RoleApi>('/roles', 'POST', { nombre: roleName });
   return created.id_rol;
 }
 
@@ -86,8 +85,8 @@ const dataService = {
   // Users
   getUsers: async (): Promise<User[]> => {
     const [users, roles] = await Promise.all([
-      readJson<UserApi[]>('/entities/usuarios'),
-      readJson<RoleApi[]>('/entities/roles'),
+      readJson<UserApi[]>('/users'),
+      readJson<RoleApi[]>('/roles'),
     ]);
     const roleById = new Map(roles.map((r) => [r.id_rol, r.nombre as User['role']]));
 
@@ -102,7 +101,7 @@ const dataService = {
   },
   createUser: async (u: Omit<User, 'id'>) => {
     const roleId = await ensureRole(u.role);
-    const created = await writeJson<UserApi>('/entities/usuarios', 'POST', {
+    const created = await writeJson<UserApi>('/users', 'POST', {
       nombre: u.name,
       correo: u.email,
       telefono: u.phone || null,
@@ -124,73 +123,62 @@ const dataService = {
     if (patch.role !== undefined) payload.id_rol = await ensureRole(patch.role);
     if (patch.password !== undefined) payload.password = patch.password;
 
-    await writeJson(`/entities/usuarios/${id}`, 'PATCH', payload);
+    await writeJson(`/users/${id}`, 'PATCH', payload);
     const users = await dataService.getUsers();
     return users.find((u: User) => u.id === id);
   },
   toggleUserActive: async (id: string) => {
-    const current = await readJson<UserApi>(`/entities/usuarios/${id}`);
+    const current = await readJson<UserApi>(`/users/${id}`);
     const next = !(current.activo ?? true);
-    await writeJson(`/entities/usuarios/${id}`, 'PATCH', { activo: next });
+    await writeJson(`/users/${id}`, 'PATCH', { activo: next });
     const users = await dataService.getUsers();
     return users.find((u: User) => u.id === id);
   },
   deleteUser: async (id: string) => {
-    return remove(`/entities/usuarios/${id}`);
+    return remove(`/users/${id}`);
   },
   resetPassword: async (id: string, newPassword: string) => {
-    await writeJson(`/entities/usuarios/${id}`, 'PATCH', { password: newPassword });
+    await writeJson(`/users/${id}`, 'PATCH', { password: newPassword });
     return true;
   },
 
   // Orgs
   getOrgs: async (): Promise<Org[]> => {
-    const rows = await readJson<any[]>('/organizations');
-    return rows.map((o) => ({
-      id: String(o.id),
-      name: o.name,
-      email: o.email,
-      nit: o.nit,
-      address: o.address,
-      phone: o.phone,
-    }));
+    const rows = await readJson<Org[]>('/organizations');
+    return rows;
   },
-  createOrg: async (o: Omit<Org, 'id'>) => {
-    const created = await writeJson<any>('/organizations', 'POST', {
-      name: o.name,
-      email: o.email || null,
-      nit: o.nit || null,
-      address: o.address || null,
-      phone: o.phone || null,
+  createOrg: async (o: Omit<Org, 'id_empresa'>) => {
+    const created = await writeJson<Org>('/organizations', 'POST', {
+      nombre: o.nombre,
+      sector: o.sector,
+      tamano: o.tamano,
     });
-    return {
-      id: String(created.id),
-      ...o,
-    };
+    return created;
   },
-  updateOrg: async (id: string, patch: Partial<Org>) => {
-    await writeJson(`/organizations/${id}`, 'PATCH', patch);
+  updateOrg: async (id_empresa: number, patch: Partial<Org>) => {
+    await writeJson(`/organizations/${id_empresa}`, 'PATCH', patch);
     const orgs = await dataService.getOrgs();
-    return orgs.find((o: Org) => o.id === id);
+    return orgs.find((o: Org) => o.id_empresa === id_empresa);
   },
-  deleteOrg: async (id: string) => {
-    return remove(`/organizations/${id}`);
+  deleteOrg: async (id_empresa: number) => {
+    return remove(`/organizations/${id_empresa}`);
   },
 
   // Questionnaires
   getQuestionnaires: async (): Promise<Questionnaire[]> => {
-    const rows = await readJson<QuestionnaireApi[]>('/entities/controles');
+    const rows = await readJson<QuestionnaireApi[]>('/questionnaires');
     return rows.map((q) => ({
       id: String(q.id_control),
       name: q.nombre,
+      description: q.descripcion,
       dimensions: q.dimensiones ?? 0,
       active: q.activo ?? true,
     }));
   },
   createQuestionnaire: async (q: Omit<Questionnaire, 'id'>) => {
-    const created = await writeJson<QuestionnaireApi>('/entities/controles', 'POST', {
+    const created = await writeJson<QuestionnaireApi>('/questionnaires', 'POST', {
       nombre: q.name,
-      descripcion: q.name,
+      descripcion: q.description,
       dimensiones: q.dimensions,
       activo: q.active,
       confidencialidad: false,
@@ -204,21 +192,19 @@ const dataService = {
   },
   updateQuestionnaire: async (id: string, patch: Partial<Questionnaire>) => {
     const payload: Record<string, unknown> = {};
-    if (patch.name !== undefined) {
-      payload.nombre = patch.name;
-      payload.descripcion = patch.name;
-    }
+    if (patch.name !== undefined) payload.nombre = patch.name;
+    if (patch.description !== undefined) payload.descripcion = patch.description;
     if (patch.dimensions !== undefined) payload.dimensiones = patch.dimensions;
     if (patch.active !== undefined) payload.activo = patch.active;
 
-    await writeJson(`/entities/controles/${id}`, 'PATCH', payload);
+    await writeJson(`/questionnaires/${id}`, 'PATCH', payload);
     const rows = await dataService.getQuestionnaires();
     return rows.find((q: Questionnaire) => q.id === id);
   },
   toggleQuestionnaireActive: async (id: string) => {
-    const current = await readJson<QuestionnaireApi>(`/entities/controles/${id}`);
+    const current = await readJson<QuestionnaireApi>(`/questionnaires/${id}`);
     const next = !(current.activo ?? true);
-    await writeJson(`/entities/controles/${id}`, 'PATCH', { activo: next });
+    await writeJson(`/questionnaires/${id}`, 'PATCH', { activo: next });
     const rows = await dataService.getQuestionnaires();
     return rows.find((q: Questionnaire) => q.id === id);
   },

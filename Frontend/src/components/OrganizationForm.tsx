@@ -3,85 +3,75 @@ import Modal from './modal/Modal';
 import PhoneField from './PhoneField';
 import dataService from '../services/dataService';
 
+type Org = { id_empresa?: number; nombre?: string; sector?: string; tamano?: string };
 type Props = {
   open: boolean;
   onClose: () => void;
-  initial?: { id?: string; name?: string; email?: string; nit?: string; address?: string; phone?: string };
+  initial?: Org;
   onSaved?: () => void;
 };
 
 const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) => {
-  const [name, setName] = useState(initial?.name || '');
-  const [email, setEmail] = useState(initial?.email || '');
-  const [nit, setNit] = useState(initial?.nit || '');
-  const [address, setAddress] = useState(initial?.address || '');
-  const [phone, setPhone] = useState(initial?.phone || '');
+  const [nombre, setNombre] = useState(initial?.nombre || '');
+  const [sector, setSector] = useState(initial?.sector || '');
+  const [tamano, setTamano] = useState(initial?.tamano || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setName(initial?.name || '');
-    setEmail(initial?.email || '');
-    setNit(initial?.nit || '');
-    setAddress(initial?.address || '');
-    setPhone(initial?.phone || '');
+    setNombre(initial?.nombre || '');
+    setSector(initial?.sector || '');
+    setTamano(initial?.tamano || '');
     setErrors({});
   }, [initial, open]);
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     
-    if (!name) {
+    if (!nombre) {
       alert('Nombre es requerido');
       return;
     }
-
-    // Validaciones de exclusividad
-    const newErrors: Record<string, string> = {};
-
-    // Validar email duplicado (si está proporcionado)
-    if (email) {
-      const emailExists = await dataService.checkOrgEmailExists(email, initial?.id);
-      if (emailExists) {
-        newErrors.email = 'Este correo electrónico ya está registrado en otra organización';
-      }
+    if (!sector) {
+      alert('Sector es requerido');
+      return;
     }
-
-    // Validar NIT solo numérico
-    if (nit && !/^\d+$/.test(nit)) {
-      newErrors.nit = 'El NIT solo puede contener números';
-    }
-
-    // Validar NIT duplicado (si está proporcionado)
-    if (nit && !newErrors.nit) {
-      const nitExists = await dataService.checkOrgNitExists(nit, initial?.id);
-      if (nitExists) {
-        newErrors.nit = 'Este NIT ya está registrado en otra organización';
-      }
-    }
-
-    // Validar teléfono duplicado (si está proporcionado)
-    if (phone) {
-      const phoneExists = await dataService.checkOrgPhoneExists(phone, initial?.id);
-      if (phoneExists) {
-        newErrors.phone = 'Este número telefónico ya está registrado en otra organización';
-      }
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!tamano) {
+      alert('Tamaño es requerido');
       return;
     }
 
+    // Clear previous errors
     setErrors({});
 
-    if (initial?.id) {
-      await dataService.updateOrg(initial.id, { name, email, nit, address, phone } as any);
-    } else {
-      await dataService.createOrg({ name, email, nit, address, phone } as any);
+    // Validate NIT format if provided (local validation only)
+    const localErrors: Record<string, string> = {};
+    if (nit && !/^\d+$/.test(nit)) {
+      localErrors.nit = 'El NIT solo puede contener números';
+      setErrors(localErrors);
+      return;
     }
-    
-    onSaved && onSaved();
-    onClose();
+
+    try {
+      if (initial?.id_empresa) {
+        await dataService.updateOrg(initial.id_empresa, { nombre, sector, tamano });
+      } else {
+        await dataService.createOrg({ nombre, sector, tamano });
+      }
+      
+      onSaved && onSaved();
+      onClose();
+    } catch (error: any) {
+      // Handle backend validation errors
+      if (error.message && error.message.includes('email')) {
+        setErrors({ email: 'Este correo electrónico ya está registrado en otra organización' });
+      } else if (error.message && error.message.includes('NIT')) {
+        setErrors({ nit: 'Este NIT ya está registrado en otra organización' });
+      } else if (error.message && error.message.includes('teléfono')) {
+        setErrors({ phone: 'Este número telefónico ya está registrado en otra organización' });
+      } else {
+        alert('Error al guardar la organización: ' + (error.message || 'Error desconocido'));
+      }
+    }
   };
 
   return (

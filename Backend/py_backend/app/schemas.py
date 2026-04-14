@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
+from datetime import datetime
 
 class OrganizationCreate(BaseModel):
     name: str
@@ -30,16 +31,20 @@ class OrganizationRead(BaseModel):
 class EvaluationCreate(BaseModel):
     organization_id: int
     answers: Optional[Dict[str, Any]] = {}
+    user_id: Optional[int] = None
 
 
 class EvaluationUpdate(BaseModel):
     organization_id: Optional[int] = None
     answers: Optional[Dict[str, Any]] = None
+    user_id: Optional[int] = None
 
 class EvaluationRead(BaseModel):
     id: int
     organization_id: int
     answers: Optional[Dict[str, Any]] = {}
+    created_at: Optional[datetime] = None
+    user_id: Optional[int] = None
 
     class Config:
         orm_mode = True

@@ -6,6 +6,11 @@ type Org = {
   name: string;
 };
 
+type User = {
+  id_usuario: number;
+  nombre: string;
+};
+
 export type ReportListItem = {
   id: string;
   title: string;
@@ -59,6 +64,12 @@ async function fetchOrganizations(): Promise<Org[]> {
   return (await response.json()) as Org[];
 }
 
+async function fetchUsers(): Promise<User[]> {
+  const response = await apiFetch("/users", { method: "GET" });
+  if (!response.ok) return [];
+  return (await response.json()) as User[];
+}
+
 export async function listReports(): Promise<ReportListItem[]> {
   const [evaluations, organizations] = await Promise.all([
     listEvaluations(),
@@ -69,12 +80,22 @@ export async function listReports(): Promise<ReportListItem[]> {
   return evaluations.map((e) => ({
     id: String(e.id),
     title: `Reporte ${orgById.get(e.organization_id) || `Organizacion #${e.organization_id}`}`,
-    date: new Date().toLocaleDateString(),
+    date: e.created_at ? new Date(e.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
   }));
 }
 
 export async function getReportByEvaluationId(id: string): Promise<ReportDetail> {
-  const evaluation = await getEvaluationById(id);
+  const [evaluation, users] = await Promise.all([
+    getEvaluationById(id),
+    fetchUsers(),
+  ]);
+  
+  const userById = new Map(users.map((u) => [u.id_usuario, u.nombre]));
+  const evaluatorName = evaluation.user_id ? userById.get(evaluation.user_id) || "Sistema" : "Sistema";
+  const evaluationDate = evaluation.created_at 
+    ? new Date(evaluation.created_at).toLocaleDateString() 
+    : new Date().toLocaleDateString();
+  
   const answers = evaluation.answers || {};
   const entries = Object.entries(answers);
 
@@ -109,8 +130,8 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
     id,
     score,
     level: levelFromScore(score),
-    date: new Date().toLocaleDateString(),
-    evaluator: "Sistema",
+    date: evaluationDate,
+    evaluator: evaluatorName,
     categories,
     recommendations,
   };

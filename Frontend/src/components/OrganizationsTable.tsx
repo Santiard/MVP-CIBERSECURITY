@@ -3,7 +3,7 @@ import '../styles/theme.css';
 import dataService from '../services/dataService';
 import OrganizationForm from './OrganizationForm';
 
-type Org = { id: string; name: string; email?: string; nit?: string; address?: string; phone?: string };
+type Org = { id_empresa: number; nombre: string; sector: string; tamano: string };
 
 const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode = 'admin' }) => {
   const [rows, setRows] = useState<Org[]>([]);
@@ -21,11 +21,11 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
     setLoading(false);
   };
 
-  const filtered = rows.filter(r => r.name.toLowerCase().includes(query.toLowerCase()) || (r.email || '').toLowerCase().includes(query.toLowerCase()));
+  const filtered = rows.filter(r => r.nombre.toLowerCase().includes(query.toLowerCase()) || r.sector.toLowerCase().includes(query.toLowerCase()));
 
   const handleDelete = async (id: string) => {
     if (!confirm('Eliminar organización?')) return;
-    await dataService.deleteOrg(id);
+    await dataService.deleteOrg(id_empresa);
     await load();
   };
 
@@ -54,19 +54,17 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
           <tbody>
             {loading && <tr><td colSpan={6}>Cargando...</td></tr>}
             {!loading && filtered.map(r => (
-              <tr key={r.id}>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.name}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.email}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.nit}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.address}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.phone}</td>
+              <tr key={r.id_empresa}>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.nombre}</td>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.sector}</td>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.tamano}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
                   {/* Ver siempre disponible */}
                   <a href={`/organizations/${r.id}`} className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 12px', borderRadius: 8, color: 'var(--white)' }}>VER</a>
                   {mode === 'admin' && (
                     <>
                       <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }} style={{ marginLeft: 8 }}>Editar</button>
-                      <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)}>Eliminar</button>
+                      <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id_empresa)}>Eliminar</button>
                     </>
                   )}
                 </td>
