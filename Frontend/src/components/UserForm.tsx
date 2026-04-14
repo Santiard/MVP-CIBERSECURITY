@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Modal from './modal/Modal';
 import PhoneField from './PhoneField';
 import dataService from '../services/dataService';
+import {
+  getPasswordPolicyIssues,
+  isStrongPassword,
+  PASSWORD_POLICY_MESSAGE,
+} from '../utils/passwordPolicy';
 
 type Props = {
   open?: boolean;
@@ -17,7 +22,14 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const [phone, setPhone] = useState(initial?.phone || '');
   const [role, setRole] = useState(initial?.role || 'user');
   const [active, setActive] = useState(initial?.active ?? true);
+  const [password, setPassword] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const passwordIssues = getPasswordPolicyIssues(password);
+  const requirePassword = !initial?.id;
+  const shouldValidatePassword = requirePassword || password.length > 0;
+  const showPasswordIssues = submitted || password.length > 0;
 
   useEffect(() => {
     setName(initial?.name || '');
@@ -25,11 +37,14 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
     setPhone(initial?.phone || '');
     setRole(initial?.role || 'user');
     setActive(initial?.active ?? true);
+    setPassword('');
+    setSubmitted(false);
     setErrors({});
   }, [initial, open]);
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    setSubmitted(true);
     
     // Validaciones básicas
     if (!name || !email) {
@@ -39,6 +54,14 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
 
     // Validaciones de exclusividad
     const newErrors: Record<string, string> = {};
+
+    // Validar política de contraseña
+    if (!initial?.id && !password) {
+      newErrors.password = 'La contraseña es obligatoria para nuevos usuarios';
+    }
+    if (shouldValidatePassword && !isStrongPassword(password)) {
+      newErrors.password = PASSWORD_POLICY_MESSAGE;
+    }
 
     // Validar email duplicado
     const emailExists = await dataService.checkUserEmailExists(email, initial?.id);
@@ -62,9 +85,11 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
     setErrors({});
 
     if (initial?.id) {
-      await dataService.updateUser(initial.id, { name, email, phone, role, active } as any);
+      const payload: any = { name, email, phone, role, active };
+      if (password) payload.password = password;
+      await dataService.updateUser(initial.id, payload);
     } else {
-      await dataService.createUser({ name, email, phone, role, active } as any);
+      await dataService.createUser({ name, email, phone, role, active, password } as any);
     }
     
     onSaved && onSaved();
@@ -98,6 +123,30 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
         <option value="user">Usuario</option>
       </select>
 
+      <label style={{ fontSize: 12 }}>{initial?.id ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
+      <input
+        type="password"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        placeholder="Mínimo 8, con mayúscula, minúscula y especial"
+        style={{
+          padding: 8,
+          borderRadius: 8,
+          border: errors.password ? '1px solid var(--danger)' : '1px solid var(--border)'
+        }}
+      />
+      {errors.password && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.password}</div>}
+      {showPasswordIssues && shouldValidatePassword && passwordIssues.length > 0 && (
+        <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>
+          <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {passwordIssues.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
         <span style={{ color: active ? 'var(--green-600)' : 'var(--muted)' }}>{active ? 'Activo' : 'Inactivo'}</span>
@@ -105,7 +154,13 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <button type="button" className="btn" onClick={() => onClose && onClose()}>Cancelar</button>
-        <button type="submit" className="btn btn-primary">Guardar</button>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={!name.trim() || !email.trim() || (requirePassword && !password) || (shouldValidatePassword && passwordIssues.length > 0)}
+        >
+          Guardar
+        </button>
       </div>
     </form>
   );
@@ -113,7 +168,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   if (inline) return <div>{form}</div>;
 
   return (
-    <Modal open={open} onClose={onClose} title={initial?.id ? 'Editar usuario' : 'Nuevo usuario'}>
+    <Modal open={open} onClose={onClose ?? (() => {})} title={initial?.id ? 'Editar usuario' : 'Nuevo usuario'}>
       {form}
     </Modal>
   );

@@ -16,6 +16,7 @@ from .models import (
 	RolORM,
 	ScoreORM,
 	UsuarioORM,
+	UsuarioOrganizacionORM,
 	VulnerabilidadORM,
 )
 
@@ -38,5 +39,6 @@ __all__ = [
 	"RolORM",
 	"ScoreORM",
 	"UsuarioORM",
+	"UsuarioOrganizacionORM",
 	"VulnerabilidadORM",
 ]

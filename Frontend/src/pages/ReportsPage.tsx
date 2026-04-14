@@ -1,13 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { Link } from 'react-router-dom';
+import { listReports, ReportListItem } from '../services/reportApi';
 
 const ReportsPage: React.FC = () => {
-  // Placeholder list of reports for navigation
-  const sample = [
-    { id: 'r1', title: 'Reporte Empresa ABC', date: '2026-02-15' },
-    { id: 'r2', title: 'Reporte Empresa XYZ', date: '2026-03-01' },
-  ];
+  const [rows, setRows] = useState<ReportListItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setRows(await listReports());
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <Layout>
@@ -23,7 +33,12 @@ const ReportsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {sample.map(r => (
+              {loading && (
+                <tr>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={3}>Cargando...</td>
+                </tr>
+              )}
+              {rows.map(r => (
                 <tr key={r.id}>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.title}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.date}</td>

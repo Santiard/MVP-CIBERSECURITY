@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import VulnerabilityCard from '../components/VulnerabilityCard';
-import dataService from '../services/dataService';
+import { getVulnerabilityMetrics, listVulnerabilities } from '../services/vulnerabilityApi';
 
 const VulnerabilitiesPage: React.FC = () => {
-  // For UI-only we'll use mock counts from dataService or static values
-  const total = 15;
-  const critical = 4;
-  const lastScan = '12/05/2026';
+  const [metrics, setMetrics] = useState({ total: 0, critical: 0, lastScan: '-' });
+  const [rows, setRows] = useState<Array<{ id_vulnerabilidad: number; descripcion: string }>>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [m, vulnerabilities] = await Promise.all([
+          getVulnerabilityMetrics(),
+          listVulnerabilities(),
+        ]);
+        setMetrics(m);
+        setRows(vulnerabilities);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   return (
     <Layout>
@@ -15,19 +31,38 @@ const VulnerabilitiesPage: React.FC = () => {
         <h2 style={{ margin: 0 }}>Reporte de Vulnerabilidades</h2>
 
         <div style={{ display: 'flex', gap: 16, marginTop: 16, marginBottom: 20 }}>
-          <VulnerabilityCard title="Vulnerabilidades detectadas" value={total} hint="Total identificadas en el último análisis" />
-          <VulnerabilityCard title="Vulnerabilidades críticas" value={critical} hint="Clasificadas como críticas" />
-          <VulnerabilityCard title="Último Escaneo" value={lastScan} hint="Fecha del último análisis técnico" />
+          <VulnerabilityCard title="Vulnerabilidades detectadas" value={metrics.total} hint="Total identificadas en el último análisis" />
+          <VulnerabilityCard title="Vulnerabilidades críticas" value={metrics.critical} hint="Clasificadas como críticas" />
+          <VulnerabilityCard title="Último Escaneo" value={metrics.lastScan} hint="Fecha del último análisis técnico" />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
           <div>
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Detección de vulnerabilidades</h3>
-              <p style={{ color: 'var(--muted)' }}>Ejecutar test de seguridad para la organización seleccionada.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-start' }}>
-                <button className="btn btn-primary" onClick={() => alert('Simulación: iniciar escaneo (UI-only)')}>Iniciar escaneo</button>
-                <button className="btn" onClick={() => alert('Simulación: ver historial (UI-only)')}>Ver Historial</button>
+              <p style={{ color: 'var(--muted)' }}>Registros cargados desde backend ({loading ? 'cargando...' : 'actualizado'}).</p>
+              <div style={{ overflowX: 'auto', marginTop: 12 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
+                      <th style={{ padding: '10px 8px' }}>ID</th>
+                      <th style={{ padding: '10px 8px' }}>Descripción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id_vulnerabilidad}>
+                        <td style={{ padding: '10px 8px', borderTop: '1px solid var(--border)' }}>{r.id_vulnerabilidad}</td>
+                        <td style={{ padding: '10px 8px', borderTop: '1px solid var(--border)' }}>{r.descripcion}</td>
+                      </tr>
+                    ))}
+                    {!loading && rows.length === 0 && (
+                      <tr>
+                        <td style={{ padding: '10px 8px', borderTop: '1px solid var(--border)' }} colSpan={2}>Sin vulnerabilidades registradas.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -35,20 +70,14 @@ const VulnerabilitiesPage: React.FC = () => {
 
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Sitios y Servicios Revisados</h3>
-              <p style={{ color: 'var(--muted)' }}>Lista de páginas web, servicios y rutas analizadas durante los escaneos de seguridad.</p>
-              <div style={{ marginTop: 12 }}>
-                <button className="btn btn-primary" onClick={() => alert('Simulación: abrir lista de sitios (UI-only)')}>Ver Lista</button>
-              </div>
+              <p style={{ color: 'var(--muted)' }}>Módulo conectado para consumir inventario técnico desde endpoints de entidad.</p>
             </div>
           </div>
 
           <div>
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Historial de Vulnerabilidades</h3>
-              <p style={{ color: 'var(--muted)' }}>Accede al histórico de análisis técnicos realizados anteriormente.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <button className="btn btn-primary" onClick={() => alert('Simulación: ver historial completo (UI-only)')}>Ver Historial</button>
-              </div>
+              <p style={{ color: 'var(--muted)' }}>Último corte: {metrics.lastScan}. Total acumulado: {metrics.total}.</p>
             </div>
           </div>
         </div>

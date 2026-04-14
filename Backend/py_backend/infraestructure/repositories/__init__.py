@@ -1,3 +1,3 @@
-from .prisma_evaluation_repository import PrismaEvaluationRepository
+from .sql_evaluation_repository import SqlEvaluationRepository
 
-__all__ = ["PrismaEvaluationRepository"]
+__all__ = ["SqlEvaluationRepository"]

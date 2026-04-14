@@ -2,11 +2,13 @@ import React, {useEffect, useState} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import dataService from '../services/dataService';
+import { createEvaluation } from '../services/evaluationApi';
 
 const OrganizationDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [org, setOrg] = useState<any | null>(null);
+  const [creatingEvaluation, setCreatingEvaluation] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -16,6 +18,20 @@ const OrganizationDetailPage: React.FC = () => {
       setOrg(found || null);
     })();
   }, [id]);
+
+  const startEvaluation = async () => {
+    if (!org?.id) return;
+    try {
+      setCreatingEvaluation(true);
+      const created = await createEvaluation({
+        organization_id: Number(org.id),
+        answers: {},
+      });
+      navigate(`/reports/${created.id}`);
+    } finally {
+      setCreatingEvaluation(false);
+    }
+  };
 
   return (
     <Layout>
@@ -41,7 +57,9 @@ const OrganizationDetailPage: React.FC = () => {
                 <h4 style={{marginTop:0}}>Acciones</h4>
                 <div style={{display:'flex', gap:8, justifyContent:'center'}}>
                   <button className="btn btn-primary" onClick={() => navigate('/organizations')}>Volver</button>
-                  <button className="btn" onClick={() => alert('Inicio evaluación - lógica no implementada')}>Iniciar Evaluación</button>
+                  <button className="btn" onClick={startEvaluation} disabled={creatingEvaluation}>
+                    {creatingEvaluation ? 'Creando...' : 'Iniciar Evaluación'}
+                  </button>
                 </div>
               </div>
             </div>

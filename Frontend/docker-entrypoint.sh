@@ -6,7 +6,7 @@ if [ ! -d node_modules ]; then
   npm ci --silent
 fi
 
-DEV_CMD=${DEV_CMD:-"npm run start"}
+DEV_CMD=${DEV_CMD:-"npm run dev -- --host 0.0.0.0 --port 5173"}
 
 echo "Starting frontend with: $DEV_CMD"
 exec sh -c "$DEV_CMD"

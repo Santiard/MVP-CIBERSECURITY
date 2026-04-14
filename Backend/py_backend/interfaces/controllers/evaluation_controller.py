@@ -2,12 +2,12 @@ from fastapi import HTTPException
 
 from application.dtos.evaluation_dto import EvaluationDTO
 from application.use_cases.create_evaluation_use_case import CreateEvaluationUseCase
-from infraestructure.repositories.prisma_evaluation_repository import PrismaEvaluationRepository
+from infraestructure.repositories.sql_evaluation_repository import SqlEvaluationRepository
 
 
 class EvaluationController:
     def __init__(self) -> None:
-        repo = PrismaEvaluationRepository()
+        repo = SqlEvaluationRepository()
         self.create_evaluation_use_case = CreateEvaluationUseCase(repo)
         self.repo = repo
 

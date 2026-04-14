@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlmodel import SQLModel, create_engine
@@ -9,8 +8,10 @@ from infraestructure.database import models as _models  # noqa: F401
 
 load_dotenv()
 
-DB_FILE = Path(__file__).resolve().parents[1] / "dev.db"
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_FILE}")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+psycopg2://mvp_user:mvp_pass@localhost:5432/mvp_db",
+)
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 

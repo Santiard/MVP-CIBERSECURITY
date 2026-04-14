@@ -21,6 +21,8 @@ class UsuarioORM(SQLModel, table=True):
     id_usuario: Optional[int] = Field(default=None, primary_key=True)
     nombre: str
     correo: str = Field(sa_column_kwargs={"unique": True})
+    telefono: Optional[str] = None
+    activo: bool = True
     password: str
     id_rol: int = Field(foreign_key="roles.id_rol")
 
@@ -62,6 +64,8 @@ class ControlORM(SQLModel, table=True):
     id_control: Optional[int] = Field(default=None, primary_key=True)
     nombre: str
     descripcion: str
+    dimensiones: int = 0
+    activo: bool = True
     confidencialidad: bool
     integridad: bool
     disponibilidad: bool
@@ -204,3 +208,10 @@ class VulnerabilidadORM(SQLModel, table=True):
         back_populates="vulnerabilidades",
         link_model=RiesgoVulnerabilidadORM,
     )
+
+
+class UsuarioOrganizacionORM(SQLModel, table=True):
+    __tablename__ = "usuario_organizacion"
+
+    id_usuario: int = Field(foreign_key="usuarios.id_usuario", primary_key=True)
+    id_organization: int = Field(foreign_key="organization.id", primary_key=True)

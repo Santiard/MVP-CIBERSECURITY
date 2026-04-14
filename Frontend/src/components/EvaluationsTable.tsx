@@ -1,8 +1,9 @@
-import React, {useMemo, useState} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/theme.css';
 import Badge from './Badge';
 import FilterInput from './FilterInput';
+import { listEvaluations } from '../services/evaluationApi';
 
 type EvalRow = {
   id: string;
@@ -12,21 +13,41 @@ type EvalRow = {
   status: string;
 };
 
-const SAMPLE: EvalRow[] = [
-  { id: '1', organization: 'Empresa ABC', date: '10/03/2026', result: '72%', status: 'Finalizada' },
-  { id: '2', organization: 'Empresa XYZ', date: '10/03/2026', result: '72%', status: 'Finalizada' },
-  { id: '3', organization: 'Empresa Global', date: '10/03/2026', result: '72%', status: 'En progreso' },
-  { id: '4', organization: 'Empresa Tech', date: '10/03/2026', result: '72%', status: 'Finalizada' },
-];
-
 const EvaluationsTable: React.FC = () => {
   const [filter, setFilter] = useState('');
+  const [rowsData, setRowsData] = useState<EvalRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await listEvaluations();
+        const mapped: EvalRow[] = data.map((item) => ({
+          id: String(item.id),
+          organization: `Organizacion #${item.organization_id}`,
+          date: '-',
+          result: `${Object.keys(item.answers || {}).length} respuestas`,
+          status: 'En progreso',
+        }));
+        setRowsData(mapped);
+      } catch (err) {
+        setError('No se pudieron cargar las evaluaciones');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return SAMPLE;
-    return SAMPLE.filter(r => r.organization.toLowerCase().includes(q));
-  }, [filter]);
+    if (!q) return rowsData;
+    return rowsData.filter(r => r.organization.toLowerCase().includes(q));
+  }, [filter, rowsData]);
 
   return (
     <div className="card" style={{minHeight:240}}>
@@ -47,6 +68,16 @@ const EvaluationsTable: React.FC = () => {
             </tr>
           </thead>
           <tbody>
+            {loading && (
+              <tr>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={5}>Cargando evaluaciones...</td>
+              </tr>
+            )}
+            {!loading && error && (
+              <tr>
+                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', color: 'var(--danger)' }} colSpan={5}>{error}</td>
+              </tr>
+            )}
             {rows.map(r => (
               <tr key={r.id} style={{background:'transparent'}}>
                 <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.organization}</td>

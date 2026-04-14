@@ -97,13 +97,13 @@ pytest tests/ --cov=app
 | DTO (TypeScript interface) | Pydantic model (schemas.py) |
 | Use-case class | Python class (use_cases/) |
 | Express routes | FastAPI routers (main.py) |
-| Prisma ORM | SQLModel + SQLAlchemy |
+| Persistencia antigua | SQLModel + SQLAlchemy |
 | JWT middleware | `@Depends(get_current_user)` |
 
 ### Cambios principales
 1. **Tipos**: TypeScript → Python typing + Pydantic
 2. **Rutas**: Express Router → FastAPI routers con `Depends()`
-3. **DB**: Prisma → SQLModel (compatible con FastAPI/SQLAlchemy)
+3. **DB**: PostgreSQL/SQLModel (compatible con FastAPI/SQLAlchemy)
 4. **Auth**: Custom JWT → python-jose + FastAPI security
 5. **Testing**: Jest → pytest
 
@@ -118,11 +118,11 @@ gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
 ### Cloud (Azure, AWS, GCP)
 - Dockerfile incluido para containerizar
 - Variables de entorno: usar secrets management
-- DB: Migrar a PostgreSQL (reemplazar DATABASE_URL en `.env`)
+- DB: PostgreSQL vía `DATABASE_URL`
 
 ## Notas
 
 - Todos los endpoints excepto `/auth/token` requieren autenticación JWT
 - Token incluido en header: `Authorization: Bearer <token>`
-- Base de datos: SQLite por defecto (dev.db)
+- Base de datos: PostgreSQL por defecto en Docker (`mvp_db`)
 - En producción, usar PostgreSQL + Alembic para migraciones

@@ -4,11 +4,8 @@ from app.repositories.evaluation_repository import SQLEvaluationRepository
 from domain.repositories.evaluation_repository import EvaluationRepository
 
 
-class PrismaEvaluationRepository(EvaluationRepository):
-    """Python replacement for the legacy PrismaEvaluationRepository.
-
-    It keeps the same responsibility while using SQLModel under the hood.
-    """
+class SqlEvaluationRepository(EvaluationRepository):
+    """SQLModel-backed evaluation repository adapter."""
 
     def __init__(self) -> None:
         self._repo = SQLEvaluationRepository()

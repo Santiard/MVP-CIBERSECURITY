@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlmodel import Session, select
+
+from app.db import engine
+from infraestructure.database import RolORM, UsuarioORM
 
 load_dotenv()
 
@@ -33,6 +37,24 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         sub = payload.get("sub")
         if sub is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token: missing subject")
-        return {"sub": sub}
+
+        user_id = int(sub)
+        with Session(engine) as session:
+            user = session.get(UsuarioORM, user_id)
+            if user is None or not user.activo:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user")
+
+            role = session.get(RolORM, user.id_rol)
+            role_name = role.nombre if role is not None else "user"
+
+        return {
+            "sub": sub,
+            "user_id": user_id,
+            "role": role_name,
+            "email": user.correo,
+            "name": user.nombre,
+        }
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")

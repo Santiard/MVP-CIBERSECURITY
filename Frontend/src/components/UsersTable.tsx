@@ -4,6 +4,7 @@ import dataService from '../services/dataService';
 import UserForm from './UserForm';
 import Modal from './modal/Modal';
 import Switch from './Switch';
+import { getPasswordPolicyIssues, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 
 type User = { id: string; name: string; email: string; phone?: string; role: string; active?: boolean };
 
@@ -35,6 +36,9 @@ const UsersTable: React.FC = () => {
 
   const handleResetPassword = async (id: string) => {
     setResetting({ id });
+    setNewPassword('');
+    setResetError('');
+    setResetSubmitted(false);
   };
 
   const [deleting, setDeleting] = useState<{ id: string; } | null>(null);
@@ -42,6 +46,11 @@ const UsersTable: React.FC = () => {
   const [resetting, setResetting] = useState<{ id: string; } | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSubmitted, setResetSubmitted] = useState(false);
+
+  const resetIssues = getPasswordPolicyIssues(newPassword);
+  const showResetIssues = resetSubmitted || newPassword.length > 0;
 
   const confirmDelete = async () => {
     if (!deleting) return;
@@ -57,11 +66,20 @@ const UsersTable: React.FC = () => {
 
   const confirmReset = async () => {
     if (!resetting) return;
-    if (!newPassword) return alert('Ingrese nueva contraseña');
+    setResetSubmitted(true);
+    if (!newPassword) {
+      setResetError('Ingrese nueva contraseña');
+      return;
+    }
+    if (!isStrongPassword(newPassword)) {
+      setResetError(PASSWORD_POLICY_MESSAGE);
+      return;
+    }
     try {
       setResetLoading(true);
+      setResetError('');
       await dataService.resetPassword(resetting.id, newPassword);
-      alert('Contraseña reiniciada (mock).');
+      alert('Contraseña reiniciada correctamente.');
       setResetting(null);
       setNewPassword('');
       await load();
@@ -90,13 +108,24 @@ const UsersTable: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); }} title="Reiniciar contraseña">
+      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Reiniciar contraseña">
         <div style={{ display: 'grid', gap: 8 }}>
           <label style={{ fontSize: 12 }}>Nueva contraseña</label>
           <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+          {showResetIssues && resetIssues.length > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>
+              <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {resetIssues.map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {resetError && <div style={{ fontSize: 12, color: 'var(--danger)' }}>{resetError}</div>}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); }} disabled={resetLoading}>Cancelar</button>
-            <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
+            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} disabled={resetLoading}>Cancelar</button>
+            <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading || !newPassword || resetIssues.length > 0}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
           </div>
         </div>
       </Modal>

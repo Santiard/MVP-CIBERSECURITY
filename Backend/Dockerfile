@@ -1,25 +1,17 @@
-# Backend multi-stage Dockerfile (Node + TypeScript / NestJS placeholder)
-FROM node:18-alpine AS builder
+FROM python:3.11-slim
+
 WORKDIR /app
 
-# Install dependencies based on package.json
-COPY package*.json ./
-RUN npm ci --silent
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Copy source and build
-COPY . .
-RUN npm run build --silent || true
+COPY py_backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-FROM node:18-alpine
-WORKDIR /app
-ENV NODE_ENV=production
+COPY py_backend/ ./
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
-# Copy package files and built output
-COPY package*.json ./
-COPY --from=builder /app/dist ./dist
+EXPOSE 8000
 
-# Install only production deps
-RUN npm ci --omit=dev --silent || true
-
-EXPOSE 3000
-CMD ["node", "dist/main.js"]
+CMD ["/bin/sh", "/app/docker-entrypoint.sh"]

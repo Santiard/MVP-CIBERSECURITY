@@ -1,4 +1,4 @@
 from .auth.jwt_service import JWTService
-from .repositories.prisma_evaluation_repository import PrismaEvaluationRepository
+from .repositories.sql_evaluation_repository import SqlEvaluationRepository
 
-__all__ = ["JWTService", "PrismaEvaluationRepository"]
+__all__ = ["JWTService", "SqlEvaluationRepository"]

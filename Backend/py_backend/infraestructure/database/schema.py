@@ -1,4 +1,4 @@
-"""Python counterpart to the legacy Prisma schema.
+"""Python SQLModel schema used by the backend.
 
 This file documents the target persistence model used by SQLModel.
 """
@@ -14,6 +14,10 @@ class OrganizationModel(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
+    email: Optional[str] = None
+    nit: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class EvaluationModel(SQLModel, table=True):

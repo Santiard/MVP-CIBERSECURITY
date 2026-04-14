@@ -6,19 +6,19 @@ services:
       POSTGRES_DB: mvp_db
       POSTGRES_USER: mvp_user
       POSTGRES_PASSWORD: mvp_pass
-    volumes:
-      - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
 
   backend:
     build:
       context: ./Backend
     environment:
-      DATABASE_URL: postgres://mvp_user:mvp_pass@db:5432/mvp_db
-      NODE_ENV: development
+      DATABASE_URL: postgresql+psycopg2://mvp_user:mvp_pass@db:5432/mvp_db
+      SEED_ON_STARTUP: "true"
     ports:
-      - "3000:3000"
+      - "8000:8000"
     depends_on:
       - db
 

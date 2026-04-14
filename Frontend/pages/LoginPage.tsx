@@ -2,16 +2,65 @@ import React, { useState } from 'react';
 import '../src/styles/theme.css';
 import logo from '../src/images/logoRAY.png';
 import { useNavigate } from 'react-router-dom';
+import {
+  getPasswordPolicyIssues,
+  isStrongPassword,
+  PASSWORD_POLICY_MESSAGE,
+} from '../src/utils/passwordPolicy';
+
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8000';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const navigate = useNavigate();
 
-  const submit = (e: React.FormEvent) => {
+  const passwordIssues = getPasswordPolicyIssues(password);
+  const showPasswordIssues = submitted || password.length > 0;
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement real auth; for now navigate to Dashboard
-    navigate('/dashboard');
+    setSubmitted(true);
+    setError('');
+
+    if (!isStrongPassword(password)) {
+      setError(PASSWORD_POLICY_MESSAGE);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Correo o contraseña incorrectos');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('authToken', data.access_token);
+      localStorage.setItem('authUser', JSON.stringify({
+        id: data.user_id,
+        name: data.name,
+        role: data.role,
+        email: email.trim().toLowerCase(),
+      }));
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesion');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,7 +100,31 @@ const LoginPage: React.FC = () => {
           style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:18, boxSizing:'border-box', textAlign:'center'}}
         />
 
-        <button type="submit" className="btn btn-primary" style={{width: '200px', margin: '0 auto', display: 'block'}}>Ingresar</button>
+        {showPasswordIssues && passwordIssues.length > 0 && (
+          <div style={{ textAlign: 'left', fontSize: 12, color: 'var(--danger)', marginBottom: 12 }}>
+            <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {passwordIssues.map((issue) => (
+                <li key={issue}>{issue}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {error && (
+          <div style={{ color: 'var(--danger-color)', fontSize: 13, marginBottom: 12 }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={loading || !email.trim() || !password || passwordIssues.length > 0}
+          style={{width: '200px', margin: '0 auto', display: 'block', opacity: loading ? 0.8 : 1}}
+        >
+          {loading ? 'Validando...' : 'Ingresar'}
+        </button>
 
         <div style={{marginTop:14, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <a href="/RecoverPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>
