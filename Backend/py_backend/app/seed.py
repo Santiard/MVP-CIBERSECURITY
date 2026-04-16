@@ -8,7 +8,9 @@ from infraestructure.database import (
     ActivoORM,
     ControlORM,
     EmpresaORM,
+    EvaluacionControlORM,
     EvaluacionORM,
+    PreguntaORM,
     RiesgoORM,
     RiesgoVulnerabilidadORM,
     RolORM,
@@ -43,7 +45,7 @@ def _seed_roles_and_users(session: Session) -> None:
             "nombre": "Admin Principal",
             "correo": "admin@gmail.com",
             "telefono": "+57 3000000001",
-            "password": "Admin123!",
+            "password": "Admin2026!Secure*",
             "rol": "admin",
         },
         {
@@ -72,7 +74,7 @@ def _seed_roles_and_users(session: Session) -> None:
         admin_user.nombre = "Admin Principal"
         admin_user.correo = "admin@gmail.com"
         admin_user.telefono = "+57 3000000001"
-        admin_user.password = "Admin123!"
+        admin_user.password = "Admin2026!Secure*"
         admin_user.activo = True
         session.add(admin_user)
         existing_emails.add("admin@gmail.com")
@@ -139,6 +141,23 @@ def _seed_questionnaires(session: Session) -> None:
         session.add(ControlORM(**item))
 
 
+def _seed_preguntas(session: Session) -> None:
+    """Al menos una pregunta por control para poder probar el flujo de cuestionario en el front."""
+    for control in session.exec(select(ControlORM)).all():
+        if control.id_control is None:
+            continue
+        exists = session.exec(
+            select(PreguntaORM).where(PreguntaORM.id_control == control.id_control).limit(1)
+        ).first()
+        if exists is not None:
+            continue
+        for texto, peso in (
+            (f"Indique el nivel de madurez observado en: {control.nombre[:40]} (1-5)", 1.0),
+            ("Comentarios o evidencias relevantes (opcional en respuesta)", 0.5),
+        ):
+            session.add(PreguntaORM(texto=texto, peso=peso, id_control=control.id_control))
+
+
 def _seed_vulnerabilities(session: Session) -> None:
     empresa = session.exec(select(EmpresaORM).where(EmpresaORM.nombre == "ACME Ciberseguridad")).first()
     if empresa is None:
@@ -197,33 +216,40 @@ def _seed_evaluaciones(session: Session) -> None:
     if empresa is None or usuario is None:
         return
 
-    session.add(
-        EvaluacionORM(
-            fecha=date.today(),
-            estado="pendiente",
-            id_usuario=usuario.id_usuario,
-            id_empresa=empresa.id_empresa,
-        )
+    ev = EvaluacionORM(
+        fecha=date.today(),
+        estado="pendiente",
+        id_usuario=usuario.id_usuario,
+        id_empresa=empresa.id_empresa,
     )
+    session.add(ev)
+    session.flush()
+    if ev.id_evaluacion is not None:
+        for control in session.exec(select(ControlORM)).all():
+            if control.id_control is None:
+                continue
+            session.add(
+                EvaluacionControlORM(id_evaluacion=ev.id_evaluacion, id_control=control.id_control)
+            )
 
 
 def _seed_user_organization_assignments(session: Session) -> None:
-    org = session.exec(select(OrganizationModel).where(OrganizationModel.name == "ACME Ciberseguridad")).first()
+    org = session.exec(select(EmpresaORM).where(EmpresaORM.nombre == "ACME Ciberseguridad")).first()
     user = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario.org@mvp.local")).first()
-    if org is None or user is None or org.id is None or user.id_usuario is None:
+    if org is None or user is None or org.id_empresa is None or user.id_usuario is None:
         return
 
     existing = session.exec(
         select(UsuarioOrganizacionORM).where(
             UsuarioOrganizacionORM.id_usuario == user.id_usuario,
-            UsuarioOrganizacionORM.id_organization == org.id,
+            UsuarioOrganizacionORM.id_empresa == org.id_empresa,
         )
     ).first()
     if existing is None:
         session.add(
             UsuarioOrganizacionORM(
                 id_usuario=user.id_usuario,
-                id_organization=org.id,
+                id_empresa=org.id_empresa,
             )
         )
 
@@ -236,6 +262,7 @@ def seed_data_if_enabled() -> None:
         _seed_roles_and_users(session)
         _seed_empresas(session)
         _seed_questionnaires(session)
+        _seed_preguntas(session)
         _seed_vulnerabilities(session)
         _seed_evaluaciones(session)
         _seed_user_organization_assignments(session)

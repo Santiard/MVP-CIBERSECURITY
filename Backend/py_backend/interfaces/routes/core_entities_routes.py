@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import SQLModel, Session, select
 
 from app.db import engine
+from app.schemas import RiskRead
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database.models import (
     ControlORM,
@@ -111,6 +112,33 @@ def _register_single_pk_crud(
 _register_single_pk_crud("roles", RolORM, "id_rol")
 _register_single_pk_crud("users", UsuarioORM, "id_usuario", validate_password=True)
 _register_single_pk_crud("questionnaires", ControlORM, "id_control")
+
+
+@router.get("/questions/by-control/{control_id}", name="list_questions_by_control")
+def list_questions_by_control(control_id: int, session: Session = Depends(_get_session)):
+    """Preguntas de un control (cuestionario); el listado global `GET /questions` no filtra por control."""
+    rows = session.exec(select(PreguntaORM).where(PreguntaORM.id_control == control_id)).all()
+    return [_serialize(row) for row in rows]
+
+
 _register_single_pk_crud("questions", PreguntaORM, "id_pregunta")
 _register_single_pk_crud("vulnerabilities", VulnerabilidadORM, "id_vulnerabilidad")
+
+
+@router.get(
+    "/risks/by-control/{control_id}",
+    response_model=list[RiskRead],
+    name="list_risks_by_control",
+)
+def list_risks_by_control(control_id: int, session: Session = Depends(_get_session)):
+    """Riesgos asociados a un control (`id_control`); complementa POST/PATCH `/risks` con `id_control` en el cuerpo."""
+    rows = session.exec(select(RiesgoORM).where(RiesgoORM.id_control == control_id)).all()
+    out: list[RiskRead] = []
+    for row in rows:
+        if row.id_riesgo is None:
+            continue
+        out.append(RiskRead.model_validate(row))
+    return out
+
+
 _register_single_pk_crud("risks", RiesgoORM, "id_riesgo")

@@ -1,8 +1,7 @@
-from __future__ import annotations
+from datetime import date, datetime
+from typing import Any, Optional
 
-from datetime import date
-from typing import Optional
-
+from sqlalchemy import Column, JSON
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -10,152 +9,179 @@ class RolORM(SQLModel, table=True):
     __tablename__ = "roles"
 
     id_rol: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
+    nombre: str = Field()
 
-    usuarios: list[UsuarioORM] = Relationship(back_populates="rol")
+    usuarios: list["UsuarioORM"] = Relationship(back_populates="rol")
 
 
 class UsuarioORM(SQLModel, table=True):
     __tablename__ = "usuarios"
 
     id_usuario: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
-    correo: str = Field(sa_column_kwargs={"unique": True})
-    telefono: Optional[str] = None
-    activo: bool = True
-    password: str
+    nombre: str = Field()
+    correo: str = Field()
+    telefono: Optional[str] = Field(default=None)
+    activo: bool = Field(default=True)
+    password: str = Field()
     id_rol: int = Field(foreign_key="roles.id_rol")
 
-    rol: Optional[RolORM] = Relationship(back_populates="usuarios")
-    evaluaciones: list[EvaluacionORM] = Relationship(back_populates="usuario")
+    rol: Optional["RolORM"] = Relationship(back_populates="usuarios")
+    evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="usuario")
+    asignaciones_empresa: list["UsuarioOrganizacionORM"] = Relationship(back_populates="usuario")
 
 
 class EmpresaORM(SQLModel, table=True):
     __tablename__ = "empresas"
 
     id_empresa: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
-    sector: str
-    tamano: str
+    nombre: str = Field()
+    sector: str = Field()
+    tamano: str = Field()
+    correo: Optional[str] = Field(default=None)
+    nit: Optional[str] = Field(default=None)
+    direccion: Optional[str] = Field(default=None)
+    telefono: Optional[str] = Field(default=None)
 
-    evaluaciones: list[EvaluacionORM] = Relationship(back_populates="empresa")
-    activos: list[ActivoORM] = Relationship(back_populates="empresa")
+    evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="empresa")
+    activos: list["ActivoORM"] = Relationship(back_populates="empresa")
+    asignaciones_usuario: list["UsuarioOrganizacionORM"] = Relationship(back_populates="empresa")
+
+
+class EvaluacionControlORM(SQLModel, table=True):
+    """UML: una Evaluación evalúa uno o más Controles (alcance de la evaluación)."""
+
+    __tablename__ = "evaluacion_control"
+
+    id_evaluacion: int = Field(foreign_key="evaluaciones.id_evaluacion", primary_key=True)
+    id_control: int = Field(foreign_key="controles.id_control", primary_key=True)
 
 
 class EvaluacionORM(SQLModel, table=True):
     __tablename__ = "evaluaciones"
 
     id_evaluacion: Optional[int] = Field(default=None, primary_key=True)
-    fecha: date
-    estado: str
+    fecha: date = Field()
+    estado: str = Field()
     id_usuario: int = Field(foreign_key="usuarios.id_usuario")
     id_empresa: int = Field(foreign_key="empresas.id_empresa")
+    datos_respuestas: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    creado_en: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    usuario: Optional[UsuarioORM] = Relationship(back_populates="evaluaciones")
-    empresa: Optional[EmpresaORM] = Relationship(back_populates="evaluaciones")
-    respuestas: list[RespuestaORM] = Relationship(back_populates="evaluacion")
-    resultados: list[ResultadoORM] = Relationship(back_populates="evaluacion")
-    score: Optional[ScoreORM] = Relationship(back_populates="evaluacion")
+    usuario: Optional["UsuarioORM"] = Relationship(back_populates="evaluaciones")
+    empresa: Optional["EmpresaORM"] = Relationship(back_populates="evaluaciones")
+    respuestas: list["RespuestaORM"] = Relationship(back_populates="evaluacion")
+    resultados: list["ResultadoORM"] = Relationship(back_populates="evaluacion")
+    score: Optional["ScoreORM"] = Relationship(back_populates="evaluacion")
+    controles: list["ControlORM"] = Relationship(
+        back_populates="evaluaciones",
+        link_model=EvaluacionControlORM,
+    )
 
 
 class ControlORM(SQLModel, table=True):
     __tablename__ = "controles"
 
     id_control: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
-    descripcion: str
-    dimensiones: int = 0
-    activo: bool = True
-    confidencialidad: bool
-    integridad: bool
-    disponibilidad: bool
+    nombre: str = Field()
+    descripcion: str = Field()
+    dimensiones: int = Field(default=0)
+    activo: bool = Field(default=True)
+    confidencialidad: bool = Field()
+    integridad: bool = Field()
+    disponibilidad: bool = Field()
 
-    preguntas: list[PreguntaORM] = Relationship(back_populates="control")
-    indicadores: list[IndicadorORM] = Relationship(back_populates="control")
-    resultados: list[ResultadoORM] = Relationship(back_populates="control")
+    preguntas: list["PreguntaORM"] = Relationship(back_populates="control")
+    indicadores: list["IndicadorORM"] = Relationship(back_populates="control")
+    resultados: list["ResultadoORM"] = Relationship(back_populates="control")
+    evaluaciones: list["EvaluacionORM"] = Relationship(
+        back_populates="controles",
+        link_model=EvaluacionControlORM,
+    )
+    riesgos: list["RiesgoORM"] = Relationship(back_populates="control")
 
 
 class PreguntaORM(SQLModel, table=True):
     __tablename__ = "preguntas"
 
     id_pregunta: Optional[int] = Field(default=None, primary_key=True)
-    texto: str
-    peso: float
+    texto: str = Field()
+    peso: float = Field()
     id_control: int = Field(foreign_key="controles.id_control")
 
-    control: Optional[ControlORM] = Relationship(back_populates="preguntas")
-    respuestas: list[RespuestaORM] = Relationship(back_populates="pregunta")
+    control: Optional["ControlORM"] = Relationship(back_populates="preguntas")
+    respuestas: list["RespuestaORM"] = Relationship(back_populates="pregunta")
 
 
 class RespuestaORM(SQLModel, table=True):
     __tablename__ = "respuestas"
 
     id_respuesta: Optional[int] = Field(default=None, primary_key=True)
-    valor: int
-    comentario: str
+    valor: int = Field()
+    comentario: Optional[str] = Field(default=None)
     id_pregunta: int = Field(foreign_key="preguntas.id_pregunta")
     id_evaluacion: int = Field(foreign_key="evaluaciones.id_evaluacion")
 
-    pregunta: Optional[PreguntaORM] = Relationship(back_populates="respuestas")
-    evaluacion: Optional[EvaluacionORM] = Relationship(back_populates="respuestas")
+    pregunta: Optional["PreguntaORM"] = Relationship(back_populates="respuestas")
+    evaluacion: Optional["EvaluacionORM"] = Relationship(back_populates="respuestas")
+
 
 
 class NivelMadurezORM(SQLModel, table=True):
     __tablename__ = "niveles_madurez"
 
     id_nivel: Optional[int] = Field(default=None, primary_key=True)
-    nivel: int
-    descripcion: str
+    nivel: int = Field()
+    descripcion: str = Field()
 
-    resultados: list[ResultadoORM] = Relationship(back_populates="nivel")
+    resultados: list["ResultadoORM"] = Relationship(back_populates="nivel")
 
 
 class ResultadoORM(SQLModel, table=True):
     __tablename__ = "resultados"
 
     id_resultado: Optional[int] = Field(default=None, primary_key=True)
-    puntaje: float
+    puntaje: float = Field()
     id_evaluacion: int = Field(foreign_key="evaluaciones.id_evaluacion")
     id_control: int = Field(foreign_key="controles.id_control")
     id_nivel: int = Field(foreign_key="niveles_madurez.id_nivel")
 
-    evaluacion: Optional[EvaluacionORM] = Relationship(back_populates="resultados")
-    control: Optional[ControlORM] = Relationship(back_populates="resultados")
-    nivel: Optional[NivelMadurezORM] = Relationship(back_populates="resultados")
+    evaluacion: Optional["EvaluacionORM"] = Relationship(back_populates="resultados")
+    control: Optional["ControlORM"] = Relationship(back_populates="resultados")
+    nivel: Optional["NivelMadurezORM"] = Relationship(back_populates="resultados")
 
 
 class ScoreORM(SQLModel, table=True):
     __tablename__ = "scores"
 
     id_score: Optional[int] = Field(default=None, primary_key=True)
-    valor_total: float
+    valor_total: float = Field()
     id_evaluacion: int = Field(foreign_key="evaluaciones.id_evaluacion", sa_column_kwargs={"unique": True})
 
-    evaluacion: Optional[EvaluacionORM] = Relationship(back_populates="score")
+    evaluacion: Optional["EvaluacionORM"] = Relationship(back_populates="score")
 
 
 class IndicadorORM(SQLModel, table=True):
     __tablename__ = "indicadores"
 
     id_indicador: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
-    formula: str
-    frecuencia: str
+    nombre: str = Field()
+    formula: str = Field()
+    frecuencia: str = Field()
     id_control: int = Field(foreign_key="controles.id_control")
 
-    control: Optional[ControlORM] = Relationship(back_populates="indicadores")
+    control: Optional["ControlORM"] = Relationship(back_populates="indicadores")
 
 
 class ActivoORM(SQLModel, table=True):
     __tablename__ = "activos"
 
     id_activo: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
-    valor: int
+    nombre: str = Field()
+    valor: int = Field()
     id_empresa: int = Field(foreign_key="empresas.id_empresa")
 
-    empresa: Optional[EmpresaORM] = Relationship(back_populates="activos")
-    riesgos: list[RiesgoORM] = Relationship(back_populates="activo")
+    empresa: Optional["EmpresaORM"] = Relationship(back_populates="activos")
+    riesgos: list["RiesgoORM"] = Relationship(back_populates="activo")
 
 
 class RiesgoAmenazaORM(SQLModel, table=True):
@@ -176,14 +202,16 @@ class RiesgoORM(SQLModel, table=True):
     __tablename__ = "riesgos"
 
     id_riesgo: Optional[int] = Field(default=None, primary_key=True)
-    descripcion: str
-    impacto: int
-    probabilidad: int
+    descripcion: str = Field()
+    impacto: int = Field()
+    probabilidad: int = Field()
     id_activo: int = Field(foreign_key="activos.id_activo")
+    id_control: Optional[int] = Field(default=None, foreign_key="controles.id_control")
 
-    activo: Optional[ActivoORM] = Relationship(back_populates="riesgos")
-    amenazas: list[AmenazaORM] = Relationship(back_populates="riesgos", link_model=RiesgoAmenazaORM)
-    vulnerabilidades: list[VulnerabilidadORM] = Relationship(
+    activo: Optional["ActivoORM"] = Relationship(back_populates="riesgos")
+    control: Optional["ControlORM"] = Relationship(back_populates="riesgos")
+    amenazas: list["AmenazaORM"] = Relationship(back_populates="riesgos", link_model=RiesgoAmenazaORM)
+    vulnerabilidades: list["VulnerabilidadORM"] = Relationship(
         back_populates="riesgos",
         link_model=RiesgoVulnerabilidadORM,
     )
@@ -193,25 +221,30 @@ class AmenazaORM(SQLModel, table=True):
     __tablename__ = "amenazas"
 
     id_amenaza: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str
+    nombre: str = Field()
 
-    riesgos: list[RiesgoORM] = Relationship(back_populates="amenazas", link_model=RiesgoAmenazaORM)
+    riesgos: list["RiesgoORM"] = Relationship(back_populates="amenazas", link_model=RiesgoAmenazaORM)
 
 
 class VulnerabilidadORM(SQLModel, table=True):
     __tablename__ = "vulnerabilidades"
 
     id_vulnerabilidad: Optional[int] = Field(default=None, primary_key=True)
-    descripcion: str
+    descripcion: str = Field()
 
-    riesgos: list[RiesgoORM] = Relationship(
+    riesgos: list["RiesgoORM"] = Relationship(
         back_populates="vulnerabilidades",
         link_model=RiesgoVulnerabilidadORM,
     )
 
 
 class UsuarioOrganizacionORM(SQLModel, table=True):
+    """Asignación usuario ↔ empresa (organización), alineado al dominio Empresa del UML."""
+
     __tablename__ = "usuario_organizacion"
 
     id_usuario: int = Field(foreign_key="usuarios.id_usuario", primary_key=True)
-    id_organization: int = Field(foreign_key="organization.id", primary_key=True)
+    id_empresa: int = Field(foreign_key="empresas.id_empresa", primary_key=True)
+
+    usuario: Optional["UsuarioORM"] = Relationship(back_populates="asignaciones_empresa")
+    empresa: Optional["EmpresaORM"] = Relationship(back_populates="asignaciones_usuario")

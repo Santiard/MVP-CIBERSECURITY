@@ -1,21 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import '../styles/theme.css';
-import Badge from './Badge';
-import FilterInput from './FilterInput';
-import { listEvaluations } from '../services/evaluationApi';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import "../styles/theme.css";
+import Badge from "./Badge";
+import FilterInput from "./FilterInput";
+import dataService from "../services/dataService";
+import { listEvaluations, type EvaluationApiRow } from "../services/evaluationApi";
 
-type EvalRow = {
-  id_evaluacion: number;
-  id_empresa: number;
-  id_usuario: number;
-  fecha: string;
-  estado: string;
-};
+type Org = { id_empresa: number; nombre: string };
 
 const EvaluationsTable: React.FC = () => {
-  const [filter, setFilter] = useState('');
-  const [rowsData, setRowsData] = useState<EvalRow[]>([]);
+  const [filter, setFilter] = useState("");
+  const [rowsData, setRowsData] = useState<EvaluationApiRow[]>([]);
+  const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,64 +20,114 @@ const EvaluationsTable: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await listEvaluations();
-        setRowsData(data as EvalRow[]);
-      } catch (err) {
-        setError('No se pudieron cargar las evaluaciones');
+        const [data, o] = await Promise.all([listEvaluations(), dataService.getOrgs() as Promise<Org[]>]);
+        setRowsData(data);
+        setOrgs(o);
+      } catch {
+        setError("No se pudieron cargar las evaluaciones");
       } finally {
         setLoading(false);
       }
     };
 
-    load();
+    void load();
   }, []);
+
+  const orgName = useMemo(() => {
+    const m = new Map<number, string>();
+    orgs.forEach((o) => m.set(o.id_empresa, o.nombre));
+    return m;
+  }, [orgs]);
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return rowsData;
-    return rowsData.filter(r => r.organization.toLowerCase().includes(q));
-  }, [filter, rowsData]);
+    return rowsData.filter((r) => {
+      const name = (orgName.get(r.id_empresa) ?? "").toLowerCase();
+      return (
+        name.includes(q) ||
+        String(r.id_evaluacion).includes(q) ||
+        (r.estado || "").toLowerCase().includes(q)
+      );
+    });
+  }, [filter, rowsData, orgName]);
 
   return (
-    <div className="card" style={{minHeight:240}}>
-      <h2 style={{marginTop:0}}>Evaluaciones</h2>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-        <FilterInput value={filter} onChange={setFilter} />
+    <div className="card" style={{ minHeight: 240 }}>
+      <p style={{ marginTop: 0, fontSize: 14, color: "var(--muted)" }}>
+        Para <strong>asignar o mover</strong> evaluaciones entre empresas, usa{" "}
+        <Link to="/asignaciones">Asignaciones empresa ↔ evaluación</Link>.
+      </p>
+      <h2 style={{ marginTop: 8 }}>Evaluaciones</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por empresa, id o estado" />
       </div>
 
-      <div style={{overflowX:'auto'}}>
-        <table style={{width:'100%', borderCollapse:'collapse'}}>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{textAlign:'left', color:'var(--muted)'}}>
-              <th style={{padding:'12px 8px'}}>Organización</th>
-              <th style={{padding:'12px 8px'}}>Fecha</th>
-              <th style={{padding:'12px 8px'}}>Resultado</th>
-              <th style={{padding:'12px 8px'}}>Estado</th>
-              <th style={{padding:'12px 8px'}}>Acción</th>
+            <tr style={{ textAlign: "left", color: "var(--muted)" }}>
+              <th style={{ padding: "12px 8px" }}>Organización</th>
+              <th style={{ padding: "12px 8px" }}>ID</th>
+              <th style={{ padding: "12px 8px" }}>Fecha</th>
+              <th style={{ padding: "12px 8px" }}>Estado</th>
+              <th style={{ padding: "12px 8px" }}>Acción</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={5}>Cargando evaluaciones...</td>
+                <td colSpan={5} style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                  Cargando evaluaciones...
+                </td>
               </tr>
             )}
             {!loading && error && (
               <tr>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', color: 'var(--danger)' }} colSpan={5}>{error}</td>
-              </tr>
-            )}
-            {rows.map(r => (
-              <tr key={r.id} style={{background:'transparent'}}>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.organization}</td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.date}</td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>{r.result}</td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}><Badge status={r.status} /></td>
-                <td style={{padding:'14px 8px', borderTop:'1px solid var(--border)'}}>
-                  <Link to={`/reports/${r.id}`} className="btn btn-primary" style={{padding:'8px 12px', borderRadius:8, textDecoration:'none', display:'inline-block'}}>VER</Link>
+                <td
+                  colSpan={5}
+                  style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", color: "var(--danger)" }}
+                >
+                  {error}
                 </td>
               </tr>
-            ))}
+            )}
+            {!loading &&
+              !error &&
+              rows.map((r) => (
+                <tr key={r.id_evaluacion}>
+                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                    {orgName.get(r.id_empresa) ?? `Empresa #${r.id_empresa}`}
+                  </td>
+                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.id_evaluacion}</td>
+                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
+                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                    <Badge status={r.estado || "pendiente"} />
+                  </td>
+                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                    <Link
+                      to={`/evaluations/${r.id_evaluacion}/workflow`}
+                      className="btn btn-primary"
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        textDecoration: "none",
+                        display: "inline-block",
+                        marginRight: 8,
+                      }}
+                    >
+                      Flujo
+                    </Link>
+                    <Link
+                      to={`/reports/${r.id_evaluacion}`}
+                      className="btn"
+                      style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", display: "inline-block" }}
+                    >
+                      Informe
+                    </Link>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>

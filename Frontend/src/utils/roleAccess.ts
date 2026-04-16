@@ -48,6 +48,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
     if (path === '/questionnaires') return true;
     if (path === '/evaluations') return true;
     if (path === '/reports') return true;
+    if (/^\/evaluations\/[^/]+\/workflow$/.test(path)) return true;
     return false;
   }
 
@@ -57,6 +58,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
     if (path === '/reports') return true;
     if (/^\/reports\/[^/]+$/.test(path)) return true;
     if (/^\/reports\/[^/]+\/report$/.test(path)) return true;
+    if (/^\/evaluations\/[^/]+\/workflow$/.test(path)) return true;
     return false;
   }
 

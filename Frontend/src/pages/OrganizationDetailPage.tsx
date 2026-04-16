@@ -26,7 +26,7 @@ const OrganizationDetailPage: React.FC = () => {
       const created = await createEvaluation({
         id_empresa: org.id_empresa,
       });
-      navigate(`/reports/${created.id_evaluacion}`);
+      navigate(`/evaluations/${created.id_evaluacion}/workflow`);
     } finally {
       setCreatingEvaluation(false);
     }
@@ -50,10 +50,21 @@ const OrganizationDetailPage: React.FC = () => {
             <div style={{display:'flex', flexDirection:'column', gap:12}}>
               <div className="card">
                 <h4 style={{marginTop:0}}>Acciones</h4>
-                <div style={{display:'flex', gap:8, justifyContent:'center'}}>
-                  <button className="btn btn-primary" onClick={() => navigate('/organizations')}>Volver</button>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 0 }}>
+                  Las evaluaciones ligadas a esta empresa se gestionan en <strong>Asignaciones</strong> (no aquí), para
+                  mantener separado el catálogo de la empresa del vínculo con evaluaciones.
+                </p>
+                <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                  <button className="btn btn-primary" onClick={() => navigate('/organizations')}>Volver al listado</button>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={() => navigate(`/asignaciones?empresa=${org.id_empresa}`)}
+                  >
+                    Ir a asignaciones (esta empresa)
+                  </button>
                   <button className="btn" onClick={startEvaluation} disabled={creatingEvaluation}>
-                    {creatingEvaluation ? 'Creando...' : 'Iniciar Evaluación'}
+                    {creatingEvaluation ? 'Creando...' : 'Iniciar evaluación (rápido)'}
                   </button>
                 </div>
               </div>

@@ -1,31 +1,4 @@
-"""Python SQLModel schema used by the backend.
+"""Modelos SQL canónicos en `models.py`.
 
-This file documents the target persistence model used by SQLModel.
+Las tablas `organization` y `evaluation` se eliminaron: el dominio usa `empresas` y `evaluaciones`.
 """
-
-from typing import Any, Optional
-from datetime import datetime
-
-from sqlalchemy import Column, JSON
-from sqlmodel import Field, SQLModel
-
-
-class OrganizationModel(SQLModel, table=True):
-    __tablename__ = "organization"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str
-    email: Optional[str] = None
-    nit: Optional[str] = None
-    address: Optional[str] = None
-    phone: Optional[str] = None
-
-
-class EvaluationModel(SQLModel, table=True):
-    __tablename__ = "evaluation"
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-    organization_id: int
-    answers: Optional[dict[str, Any]] = Field(default_factory=dict, sa_column=Column(JSON))
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    user_id: Optional[int] = None

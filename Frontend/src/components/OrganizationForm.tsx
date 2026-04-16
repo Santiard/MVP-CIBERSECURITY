@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './modal/Modal';
-import PhoneField from './PhoneField';
 import dataService from '../services/dataService';
 
 type Org = { id_empresa?: number; nombre?: string; sector?: string; tamano?: string };
+type AppUser = { id: string; name: string; email: string; role: string; active?: boolean };
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -11,11 +12,16 @@ type Props = {
   onSaved?: () => void;
 };
 
+const SIZE_OPTIONS = ['Pequeña', 'Mediana', 'Grande'] as const;
+
 const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) => {
   const [nombre, setNombre] = useState(initial?.nombre || '');
   const [sector, setSector] = useState(initial?.sector || '');
   const [tamano, setTamano] = useState(initial?.tamano || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [memberUserIds, setMemberUserIds] = useState<number[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   useEffect(() => {
     setNombre(initial?.nombre || '');
@@ -24,103 +30,208 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
     setErrors({});
   }, [initial, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoadingUsers(true);
+    (async () => {
+      try {
+        const users = await dataService.getUsers();
+        if (cancelled) return;
+        setAllUsers(users as AppUser[]);
+        if (initial?.id_empresa) {
+          const members = await dataService.listOrganizationUsers(initial.id_empresa);
+          if (cancelled) return;
+          setMemberUserIds(members.map((m) => m.id_usuario));
+        } else {
+          setMemberUserIds([]);
+        }
+      } catch {
+        if (!cancelled) {
+          setAllUsers([]);
+          setMemberUserIds([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingUsers(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, initial?.id_empresa]);
+
+  const toggleMember = (id: number) => {
+    setMemberUserIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    
-    if (!nombre) {
-      alert('Nombre es requerido');
+
+    if (!nombre.trim()) {
+      setErrors({ nombre: 'El nombre de la empresa es requerido' });
       return;
     }
-    if (!sector) {
-      alert('Sector es requerido');
+    if (!sector.trim()) {
+      setErrors({ sector: 'El sector es requerido' });
       return;
     }
-    if (!tamano) {
-      alert('Tamaño es requerido');
+    if (!tamano.trim()) {
+      setErrors({ tamano: 'El tamaño es requerido' });
       return;
     }
 
-    // Clear previous errors
     setErrors({});
-
-    // Validate NIT format if provided (local validation only)
-    const localErrors: Record<string, string> = {};
-    if (nit && !/^\d+$/.test(nit)) {
-      localErrors.nit = 'El NIT solo puede contener números';
-      setErrors(localErrors);
-      return;
-    }
 
     try {
       if (initial?.id_empresa) {
-        await dataService.updateOrg(initial.id_empresa, { nombre, sector, tamano });
+        await dataService.updateOrg(initial.id_empresa, {
+          nombre,
+          sector,
+          tamano,
+          user_ids: memberUserIds,
+        });
       } else {
-        await dataService.createOrg({ nombre, sector, tamano });
+        await dataService.createOrg({
+          nombre,
+          sector,
+          tamano,
+          ...(memberUserIds.length > 0 ? { user_ids: memberUserIds } : {}),
+        });
       }
-      
+
       onSaved && onSaved();
       onClose();
-    } catch (error: any) {
-      // Handle backend validation errors
-      if (error.message && error.message.includes('email')) {
-        setErrors({ email: 'Este correo electrónico ya está registrado en otra organización' });
-      } else if (error.message && error.message.includes('NIT')) {
-        setErrors({ nit: 'Este NIT ya está registrado en otra organización' });
-      } else if (error.message && error.message.includes('teléfono')) {
-        setErrors({ phone: 'Este número telefónico ya está registrado en otra organización' });
-      } else {
-        alert('Error al guardar la organización: ' + (error.message || 'Error desconocido'));
-      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      alert('Error al guardar la organización: ' + message);
     }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={initial?.id ? 'Editar organización' : 'Nueva organización'}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={initial?.id_empresa ? 'Editar organización' : 'Nueva organización'}
+    >
       <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-        <label style={{ fontSize: 12 }}>Nombre</label>
-        <input value={name} onChange={e => setName(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
-
-        <label style={{ fontSize: 12 }}>Correo</label>
-        <input 
-          type="email"
-          value={email} 
-          onChange={e => setEmail(e.target.value)} 
-          style={{ 
-            padding: 8, 
-            borderRadius: 8, 
-            border: errors.email ? '1px solid var(--danger)' : '1px solid var(--border)' 
-          }} 
+        <label style={{ fontSize: 12 }}>Nombre de la empresa</label>
+        <input
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          style={{
+            padding: 8,
+            borderRadius: 8,
+            border: errors.nombre ? '1px solid var(--danger)' : '1px solid var(--border)',
+          }}
         />
-        {errors.email && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.email}</div>}
+        {errors.nombre && (
+          <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.nombre}</div>
+        )}
 
-        <label style={{ fontSize: 12 }}>NIT</label>
-        <input 
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={nit} 
-          onChange={e => setNit(e.target.value.replace(/\D/g, ''))} 
-          style={{ 
-            padding: 8, 
-            borderRadius: 8, 
-            border: errors.nit ? '1px solid var(--danger)' : '1px solid var(--border)' 
-          }} 
+        <label style={{ fontSize: 12 }}>Sector</label>
+        <input
+          value={sector}
+          onChange={(e) => setSector(e.target.value)}
+          style={{
+            padding: 8,
+            borderRadius: 8,
+            border: errors.sector ? '1px solid var(--danger)' : '1px solid var(--border)',
+          }}
         />
-        {errors.nit && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.nit}</div>}
+        {errors.sector && (
+          <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.sector}</div>
+        )}
 
-        <label style={{ fontSize: 12 }}>Dirección</label>
-        <input value={address} onChange={e => setAddress(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+        <label style={{ fontSize: 12 }}>Tamaño</label>
+        <select
+          value={tamano}
+          onChange={(e) => setTamano(e.target.value)}
+          style={{
+            padding: 8,
+            borderRadius: 8,
+            border: errors.tamano ? '1px solid var(--danger)' : '1px solid var(--border)',
+          }}
+        >
+          <option value="">Seleccione…</option>
+          {SIZE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+        {errors.tamano && (
+          <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.tamano}</div>
+        )}
 
-        <label style={{ fontSize: 12 }}>Teléfono</label>
-        <PhoneField 
-          value={phone} 
-          onChange={setPhone} 
-          error={errors.phone} 
-          maxDropdownHeight={120}
-        />
+        <div
+          style={{
+            marginTop: 8,
+            paddingTop: 12,
+            borderTop: '1px solid var(--border)',
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Usuarios de la empresa</div>
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.45 }}>
+            Marca qué cuentas pueden operar en el contexto de esta organización (tabla de asignación usuario–empresa).
+            El inicio de sesión sigue siendo por usuario; aquí defines a qué empresa pertenecen para datos y permisos
+            del API.
+          </p>
+          {loadingUsers ? (
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Cargando usuarios…</div>
+          ) : (
+            <div
+              style={{
+                maxHeight: 200,
+                overflowY: 'auto',
+                border: '1px solid var(--border)',
+                borderRadius: 8,
+                padding: 8,
+              }}
+            >
+              {allUsers.length === 0 ? (
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>No hay usuarios cargados.</span>
+              ) : (
+                allUsers.map((u) => {
+                  const idNum = Number(u.id);
+                  const disabled = !u.active;
+                  const checked = memberUserIds.includes(idNum);
+                  return (
+                    <label
+                      key={u.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 4px',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? 0.5 : 1,
+                        fontSize: 13,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={() => !disabled && toggleMember(idNum)}
+                      />
+                      <span>
+                        {u.name} <span style={{ color: 'var(--muted)' }}>({u.email})</span> — {u.role}
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-          <button type="button" className="btn" onClick={onClose}>Cancelar</button>
-          <button type="submit" className="btn btn-primary">Guardar</button>
+          <button type="button" className="btn" onClick={onClose}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn btn-primary">
+            Guardar
+          </button>
         </div>
       </form>
     </Modal>

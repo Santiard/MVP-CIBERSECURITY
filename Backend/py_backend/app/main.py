@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
 from app.auth import create_access_token
-from app.auth_schemas import LoginRequest, LoginResponse, RecoverPasswordRequest
+from app.auth_schemas import LoginRequest, LoginResponse, RecoverPasswordRequest, RegisterRequest
 from app.db import engine, init_db
 from app.seed import seed_data_if_enabled
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
@@ -19,7 +19,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3001",
+        "http://127.0.0.1:3001",
         "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -51,7 +53,7 @@ def login(payload: LoginRequest) -> LoginResponse:
         if user is None or user.password != password or not user.activo:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Credenciales invalidas",
+                detail="Credenciales inválidas. Revisa tu correo y contraseña.",
             )
 
         role_name = "user"
@@ -87,6 +89,50 @@ def recover_password(payload: RecoverPasswordRequest) -> dict[str, str]:
         session.commit()
 
     return {"message": "Contraseña actualizada correctamente"}
+
+
+@app.post("/auth/register")
+def register(payload: RegisterRequest) -> LoginResponse:
+    """Alta pública: crea usuario con rol `user` e inicia sesión (misma respuesta que login)."""
+    email = payload.email.strip().lower()
+    name = payload.name.strip()
+    password = payload.password
+    phone = (payload.phone or "").strip() or None
+
+    if not name:
+        raise HTTPException(status_code=422, detail="El nombre es obligatorio")
+    if not is_strong_password(password):
+        raise HTTPException(status_code=422, detail=PASSWORD_POLICY_MESSAGE)
+
+    with Session(engine) as session:
+        existing = session.exec(select(UsuarioORM).where(UsuarioORM.correo == email)).first()
+        if existing is not None:
+            raise HTTPException(status_code=409, detail="Ya existe una cuenta con ese correo")
+
+        user_role = session.exec(select(RolORM).where(RolORM.nombre == "user")).first()
+        if user_role is None or user_role.id_rol is None:
+            raise HTTPException(status_code=500, detail="Rol de usuario no configurado en el sistema")
+
+        user = UsuarioORM(
+            nombre=name,
+            correo=email,
+            telefono=phone,
+            activo=True,
+            password=password,
+            id_rol=user_role.id_rol,
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        token = create_access_token(subject=str(user.id_usuario))
+        return LoginResponse(
+            access_token=token,
+            token_type="bearer",
+            user_id=user.id_usuario,
+            name=user.nombre,
+            role="user",
+        )
 
 
 app.include_router(evaluation_router)

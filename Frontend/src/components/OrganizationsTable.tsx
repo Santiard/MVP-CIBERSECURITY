@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import '../styles/theme.css';
 import dataService from '../services/dataService';
 import OrganizationForm from './OrganizationForm';
@@ -23,7 +24,7 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
 
   const filtered = rows.filter(r => r.nombre.toLowerCase().includes(query.toLowerCase()) || r.sector.toLowerCase().includes(query.toLowerCase()));
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id_empresa: number) => {
     if (!confirm('Eliminar organización?')) return;
     await dataService.deleteOrg(id_empresa);
     await load();
@@ -34,9 +35,12 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
       <h2 style={{ marginTop: 0 }}>Gestión de Organizaciones</h2>
       <OrganizationForm open={openForm} onClose={() => setOpenForm(false)} initial={editing || undefined} onSaved={load} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <input placeholder="Buscar por nombre o correo" value={query} onChange={e => setQuery(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
-        <a href="/organizations/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>Nueva organización</a>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <input placeholder="Buscar por nombre o sector" value={query} onChange={e => setQuery(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link to="/asignaciones" className="btn" style={{ textDecoration: 'none' }}>Asignaciones empresa ↔ evaluación</Link>
+          <a href="/organizations/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>Nueva organización</a>
+        </div>
       </div>
 
       <div style={{ overflowX: 'auto' }}>
@@ -44,15 +48,13 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
           <thead>
             <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
               <th style={{ padding: '12px 8px' }}>Nombre</th>
-              <th style={{ padding: '12px 8px' }}>Correo</th>
-              <th style={{ padding: '12px 8px' }}>NIT</th>
-              <th style={{ padding: '12px 8px' }}>Dirección</th>
-              <th style={{ padding: '12px 8px' }}>Teléfono</th>
+              <th style={{ padding: '12px 8px' }}>Sector</th>
+              <th style={{ padding: '12px 8px' }}>Tamaño</th>
               <th style={{ padding: '12px 8px' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={6}>Cargando...</td></tr>}
+            {loading && <tr><td colSpan={4}>Cargando...</td></tr>}
             {!loading && filtered.map(r => (
               <tr key={r.id_empresa}>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.nombre}</td>
@@ -60,7 +62,7 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.tamano}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
                   {/* Ver siempre disponible */}
-                  <a href={`/organizations/${r.id}`} className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 12px', borderRadius: 8, color: 'var(--white)' }}>VER</a>
+                  <a href={`/organizations/${r.id_empresa}`} className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 12px', borderRadius: 8, color: 'var(--white)' }}>VER</a>
                   {mode === 'admin' && (
                     <>
                       <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }} style={{ marginLeft: 8 }}>Editar</button>

@@ -237,6 +237,13 @@ body{
 }
 .toggle-switch.on .thumb{ transform: translateX(22px); box-shadow: 0 4px 10px rgba(25,118,210,0.18); }
 
+.app-sidebar .sidebar-logout-btn:hover,
+.app-sidebar .sidebar-logout-btn:focus-visible{
+  background: var(--blue-500);
+  color: var(--white);
+  outline: none;
+}
+
 /* Example CSS variables usage comment:
   Use tokens like var(--btn-primary-bg) and theme classes .theme-light/.theme-dark on the root element.
 */

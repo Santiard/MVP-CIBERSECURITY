@@ -77,11 +77,14 @@ export async function listReports(): Promise<ReportListItem[]> {
   ]);
   const orgById = new Map(organizations.map((o) => [o.id, o.name]));
 
-  return evaluations.map((e) => ({
-    id: String(e.id),
-    title: `Reporte ${orgById.get(e.organization_id) || `Organizacion #${e.organization_id}`}`,
-    date: e.created_at ? new Date(e.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
-  }));
+  return evaluations.map((e) => {
+    const orgId = e.organization_id ?? e.id_empresa;
+    return {
+      id: String(e.id_evaluacion),
+      title: `Reporte ${orgById.get(orgId) || `Organizacion #${orgId}`}`,
+      date: e.created_at ? new Date(e.created_at).toLocaleDateString() : new Date().toLocaleDateString(),
+    };
+  });
 }
 
 export async function getReportByEvaluationId(id: string): Promise<ReportDetail> {
@@ -91,7 +94,8 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
   ]);
   
   const userById = new Map(users.map((u) => [u.id_usuario, u.nombre]));
-  const evaluatorName = evaluation.user_id ? userById.get(evaluation.user_id) || "Sistema" : "Sistema";
+  const uid = evaluation.user_id ?? evaluation.id_usuario;
+  const evaluatorName = uid ? userById.get(uid) || "Sistema" : "Sistema";
   const evaluationDate = evaluation.created_at 
     ? new Date(evaluation.created_at).toLocaleDateString() 
     : new Date().toLocaleDateString();
@@ -102,7 +106,11 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
   const byCategory = new Map<string, number[]>();
   for (const [key, value] of entries) {
     const category = normalizeCategory(key);
-    const score = scoreFromAnswer(value);
+    const rawVal =
+      value != null && typeof value === "object" && !Array.isArray(value) && "valor" in value
+        ? (value as { valor: unknown }).valor
+        : value;
+    const score = scoreFromAnswer(rawVal);
     const current = byCategory.get(category) || [];
     current.push(score);
     byCategory.set(category, current);

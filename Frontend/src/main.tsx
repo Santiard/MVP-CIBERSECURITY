@@ -18,12 +18,16 @@ import AdminDashboardPage from '../pages/AdminDashboardPage';
 import QuestionnairesPage from './pages/QuestionnairesPage';
 import RegisterUserPage from './pages/RegisterUserPage';
 import RegisterOrganizationPage from './pages/RegisterOrganizationPage';
+import PublicRegisterPage from '../pages/PublicRegisterPage';
+import EvaluationAssignmentsPage from './pages/EvaluationAssignmentsPage';
+import EvaluationWorkflowPage from './pages/EvaluationWorkflowPage';
 
 function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/LoginPage" element={<LoginPage />} />
+        <Route path="/register" element={<PublicRegisterPage />} />
         <Route path="/HomePage" element={<HomePage />} />
         <Route path="/RecoverPage" element={<RecoverPage />} />
         <Route path="/users" element={<UsersPage />} />
@@ -35,6 +39,8 @@ function AppRoutes() {
         <Route path="/reports/:id" element={<ReportDetailPage />} />
         <Route path="/reports/:id/report" element={<ReportViewPage />} />
         <Route path="/evaluations" element={<EvaluationsPage />} />
+        <Route path="/evaluations/:evaluationId/workflow" element={<EvaluationWorkflowPage />} />
+        <Route path="/asignaciones" element={<EvaluationAssignmentsPage />} />
         <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
         <Route path="/dashboard" element={<AdminDashboardPage />} />
         <Route path="/questionnaires" element={<QuestionnairesPage />} />

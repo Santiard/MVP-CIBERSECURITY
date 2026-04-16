@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './modal/Modal';
 import PhoneField from './PhoneField';
+import Switch from './Switch';
 import dataService from '../services/dataService';
 import {
   getPasswordPolicyIssues,
@@ -84,16 +85,21 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
 
     setErrors({});
 
-    if (initial?.id) {
-      const payload: any = { name, email, phone, role, active };
-      if (password) payload.password = password;
-      await dataService.updateUser(initial.id, payload);
-    } else {
-      await dataService.createUser({ name, email, phone, role, active, password } as any);
+    try {
+      if (initial?.id) {
+        const payload: Record<string, unknown> = { name, email, phone, role, active };
+        if (password) payload.password = password;
+        await dataService.updateUser(initial.id, payload as any);
+      } else {
+        await dataService.createUser({ name, email, phone, role, active, password } as any);
+      }
+
+      onSaved && onSaved();
+      onClose && onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el usuario';
+      alert(message);
     }
-    
-    onSaved && onSaved();
-    onClose && onClose();
   };
   const form = (
     <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
@@ -147,10 +153,27 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
         </div>
       )}
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
-        <span style={{ color: active ? 'var(--green-600)' : 'var(--muted)' }}>{active ? 'Activo' : 'Inactivo'}</span>
-      </label>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '8px 0',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>Cuenta activa</div>
+          <span style={{ color: active ? 'var(--success)' : 'var(--muted)', fontSize: 13, fontWeight: 600 }}>
+            {active ? 'Activo' : 'Inactivo'}
+          </span>
+        </div>
+        <Switch
+          checked={active}
+          onChange={setActive}
+          ariaLabel={active ? 'Desactivar cuenta de usuario' : 'Activar cuenta de usuario'}
+        />
+      </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
         <button type="button" className="btn" onClick={() => onClose && onClose()}>Cancelar</button>

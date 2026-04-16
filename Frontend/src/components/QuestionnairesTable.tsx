@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import dataService from '../services/dataService';
 import QuestionnaireForm from './QuestionnaireForm';
+import QuestionsTable from './QuestionsTable';
 
 type Q = { id: string; name: string; dimensions: number; active: boolean };
 
@@ -9,6 +10,7 @@ const QuestionnairesTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Q | null>(null);
+  const [questionsForId, setQuestionsForId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -57,17 +59,31 @@ const QuestionnairesTable: React.FC = () => {
           <tbody>
             {loading && <tr><td colSpan={4}>Cargando...</td></tr>}
             {!loading && rows.map(r => (
-              <tr key={r.id}>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.name}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.dimensions}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
-                  <span style={{ padding: '6px 10px', borderRadius: 9999, background: r.active ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)', color: r.active ? 'var(--success)' : 'var(--danger)', fontWeight:700 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
-                </td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
-                  <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
-                  <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleToggle(r.id)}>{r.active ? 'Desactivar' : 'Activar'}</button>
-                </td>
-              </tr>
+              <React.Fragment key={r.id}>
+                <tr>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.name}</td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.dimensions}</td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
+                    <span style={{ padding: '6px 10px', borderRadius: 9999, background: r.active ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)', color: r.active ? 'var(--success)' : 'var(--danger)', fontWeight:700 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
+                  </td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
+                    <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={() => setQuestionsForId((cur) => (cur === r.id ? null : r.id))}>
+                      {questionsForId === r.id ? 'Ocultar preguntas' : 'Preguntas'}
+                    </button>
+                    <button type="button" className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
+                    <button type="button" className="btn" style={{ marginLeft: 8 }} onClick={() => handleToggle(r.id)}>{r.active ? 'Desactivar' : 'Activar'}</button>
+                  </td>
+                </tr>
+                {questionsForId === r.id && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: 0, borderTop: '1px solid var(--border)', background: 'var(--surface-muted, rgba(0,0,0,0.02))' }}>
+                      <div style={{ padding: '8px 12px 16px' }}>
+                        <QuestionsTable controlId={Number(r.id)} questionnaireName={r.name} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

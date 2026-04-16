@@ -7,4 +7,4 @@ class CreateOrganizationUseCase:
         self.repo = repo
 
     def execute(self, payload: OrganizationCreate):
-        return self.repo.save(payload.name)
+        return self.repo.save(payload.model_dump(mode="json"))

@@ -10,7 +10,10 @@ class CreateEvaluationUseCase:
 
     def execute(self, input_dto: EvaluationDTO) -> Any:
         payload = {
-            "organization_id": input_dto.organization_id,
+            "organization_id": int(input_dto.organization_id),
             "answers": input_dto.answers or {},
+            "user_id": input_dto.user_id,
+            "fecha": input_dto.fecha,
+            "estado": input_dto.estado,
         }
         return self.repository.save(payload)

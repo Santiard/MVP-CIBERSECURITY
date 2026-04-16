@@ -1,108 +1,123 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from app.access_control import get_assigned_organization_ids, is_org_user
 from app.db import engine
-from infraestructure.database import EvaluacionORM
+from app.schemas import (
+    ControlLinkedRead,
+    EvaluationCreate,
+    EvaluationLinkControlsBody,
+    EvaluationRead,
+    EvaluationUpdate,
+)
+from infraestructure.database import ControlORM, EvaluacionControlORM, EvaluacionORM
 from interfaces.controllers.evaluation_controller import EvaluationController
 from interfaces.middlewares.auth_middleware import auth_middleware
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
 
+controller = EvaluationController()
+
+
+def _evaluacion_con_acceso(session: Session, evaluation_id: int, current_user: dict) -> EvaluacionORM:
+    ev = session.get(EvaluacionORM, evaluation_id)
+    if ev is None:
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+    if is_org_user(current_user):
+        allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
+        if ev.id_empresa not in allowed:
+            raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
+    return ev
+
+
+def _eval_to_read(e: EvaluacionORM) -> EvaluationRead:
+    eid = e.id_evaluacion or 0
+    return EvaluationRead(
+        id=eid,
+        organization_id=e.id_empresa,
+        answers=e.datos_respuestas or {},
+        created_at=e.creado_en,
+        user_id=e.id_usuario,
+        id_evaluacion=e.id_evaluacion,
+        id_empresa=e.id_empresa,
+        id_usuario=e.id_usuario,
+        fecha=e.fecha,
+        estado=e.estado,
+    )
+
 
 @router.post("", response_model=EvaluationRead)
-def create_evaluation(input_data: EvaluationCreate, current_user=Depends(auth_middleware)):
+def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends(auth_middleware)):
+    id_empresa = int(input_data.organization_id)
     if is_org_user(current_user):
         with Session(engine) as session:
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-        if input_data.organization_id not in allowed:
+        if id_empresa not in allowed:
             raise HTTPException(status_code=403, detail="No autorizado para crear evaluaciones de esta organización")
-    # Set the user_id from the current user if not provided
-    payload = input_data.model_dump()
-    if payload.get("user_id") is None:
-        payload["user_id"] = int(current_user["user_id"])
-    return controller.create(payload)
-from datetime import date
 
-@router.post("")
-def create_evaluation(input_data: dict, current_user=Depends(auth_middleware)):
-    data = dict(input_data)
-    if is_org_user(current_user):
-        with Session(engine) as session:
-            allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-        if data.get("id_empresa") not in allowed:
-            raise HTTPException(status_code=403, detail="No autorizado para crear evaluaciones de esta empresa")
-    # Validar duplicado: misma empresa, usuario y fecha
+    uid = input_data.user_id if input_data.user_id is not None else int(current_user["user_id"])
+    fecha_eval = input_data.fecha or date.today()
+
     with Session(engine) as session:
-        id_empresa = data.get("id_empresa")
-        id_usuario = data.get("id_usuario") or int(current_user["user_id"])
-        fecha_eval = data.get("fecha") or date.today()
         exists = session.exec(
             select(EvaluacionORM).where(
-                (EvaluacionORM.id_empresa == id_empresa) &
-                (EvaluacionORM.id_usuario == id_usuario) &
-                (EvaluacionORM.fecha == fecha_eval)
+                (EvaluacionORM.id_empresa == id_empresa)
+                & (EvaluacionORM.id_usuario == uid)
+                & (EvaluacionORM.fecha == fecha_eval)
             )
         ).first()
         if exists:
-            raise HTTPException(status_code=409, detail="Ya existe una evaluación para este usuario, empresa y fecha")
-        evaluacion = EvaluacionORM(
-            id_empresa=id_empresa,
-            id_usuario=id_usuario,
-            fecha=fecha_eval,
-            estado=data.get("estado", "pendiente")
-        )
-        session.add(evaluacion)
-        session.commit()
-        session.refresh(evaluacion)
-        return evaluacion
+            raise HTTPException(
+                status_code=409,
+                detail="Ya existe una evaluación para este usuario, empresa y fecha",
+            )
+
+    payload = input_data.model_dump()
+    payload["user_id"] = uid
+    payload["fecha"] = fecha_eval
+    if not payload.get("estado"):
+        payload["estado"] = "pendiente"
+    item = controller.create(payload)
+    return _eval_to_read(item)
 
 
-@router.get("")
-def list_evaluations(organization_id: int | None = None, current_user=Depends(auth_middleware)):
-    with Session(engine) as session:
-        stmt = select(EvaluationModel)
-
-        if organization_id is not None:
-            stmt = stmt.where(EvaluationModel.organization_id == organization_id)
-
-        if is_org_user(current_user):
-            allowed_ids = get_assigned_organization_ids(session, int(current_user["user_id"]))
-            if not allowed_ids:
-                return []
-            stmt = stmt.where(EvaluationModel.organization_id.in_(allowed_ids))
-
-            if organization_id is not None and organization_id not in allowed_ids:
-                return []
-
-        return session.exec(stmt).all()
-@router.get("")
-def list_evaluations(id_empresa: int | None = None, current_user=Depends(auth_middleware)):
+@router.get("", response_model=list[EvaluationRead])
+def list_evaluations(
+    organization_id: int | None = None,
+    id_empresa: int | None = None,
+    current_user: dict = Depends(auth_middleware),
+):
+    org_filter = organization_id if organization_id is not None else id_empresa
     with Session(engine) as session:
         stmt = select(EvaluacionORM)
-        if id_empresa is not None:
-            stmt = stmt.where(EvaluacionORM.id_empresa == id_empresa)
+        if org_filter is not None:
+            stmt = stmt.where(EvaluacionORM.id_empresa == org_filter)
         if is_org_user(current_user):
             allowed_ids = get_assigned_organization_ids(session, int(current_user["user_id"]))
             if not allowed_ids:
                 return []
             stmt = stmt.where(EvaluacionORM.id_empresa.in_(allowed_ids))
-            if id_empresa is not None and id_empresa not in allowed_ids:
+            if org_filter is not None and org_filter not in allowed_ids:
                 return []
-        return session.exec(stmt).all()
+        rows = session.exec(stmt).all()
+        return [_eval_to_read(e) for e in rows]
 
 
-@router.get("/{evaluation_id}")
-def get_evaluation(evaluation_id: int, current_user=Depends(auth_middleware)):
-    item = controller.get_by_id(evaluation_id)
-    if is_org_user(current_user):
-        with Session(engine) as session:
-            allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-        if item.organization_id not in allowed:
-            raise HTTPException(status_code=403, detail="No autorizado para ver esta evaluación")
-    return item
-@router.get("/{evaluation_id}")
-def get_evaluation(evaluation_id: int, current_user=Depends(auth_middleware)):
+@router.get("/{evaluation_id}", response_model=EvaluationRead)
+def get_evaluation(evaluation_id: int, current_user: dict = Depends(auth_middleware)):
+    with Session(engine) as session:
+        item = _evaluacion_con_acceso(session, evaluation_id, current_user)
+        return _eval_to_read(item)
+
+
+@router.patch("/{evaluation_id}", response_model=EvaluationRead)
+def update_evaluation(
+    evaluation_id: int,
+    input_data: EvaluationUpdate,
+    current_user: dict = Depends(auth_middleware),
+):
     with Session(engine) as session:
         item = session.get(EvaluacionORM, evaluation_id)
         if item is None:
@@ -110,67 +125,34 @@ def get_evaluation(evaluation_id: int, current_user=Depends(auth_middleware)):
         if is_org_user(current_user):
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
             if item.id_empresa not in allowed:
-                raise HTTPException(status_code=403, detail="No autorizado para ver esta evaluación")
-        return item
+                raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
+            target_org = (
+                input_data.organization_id if input_data.organization_id is not None else item.id_empresa
+            )
+            if target_org not in allowed:
+                raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
 
+    patch = input_data.model_dump(exclude_unset=True)
+    repo_patch: dict = {}
+    if "organization_id" in patch and patch["organization_id"] is not None:
+        repo_patch["organization_id"] = patch["organization_id"]
+    if "answers" in patch:
+        repo_patch["answers"] = patch["answers"]
+    if "user_id" in patch and patch["user_id"] is not None:
+        repo_patch["user_id"] = patch["user_id"]
+    if "estado" in patch:
+        repo_patch["estado"] = patch["estado"]
+    if "fecha" in patch:
+        repo_patch["fecha"] = patch["fecha"]
 
-@router.patch("/{evaluation_id}", response_model=EvaluationRead)
-def update_evaluation(evaluation_id: int, input_data: EvaluationUpdate, current_user=Depends(auth_middleware)):
-    if is_org_user(current_user):
-        current_item = repo.find_by_id(evaluation_id)
-        if current_item is None:
-            raise HTTPException(status_code=404, detail="Evaluation not found")
-
-        with Session(engine) as session:
-            allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-
-        target_org_id = input_data.organization_id if input_data.organization_id is not None else current_item.organization_id
-        if target_org_id not in allowed:
-            raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
-
-    item = repo.update(evaluation_id, input_data.model_dump(exclude_unset=True))
-    if item is None:
-        @router.patch("/{evaluation_id}")
-        def update_evaluation(evaluation_id: int, input_data: dict, current_user=Depends(auth_middleware)):
-            with Session(engine) as session:
-                item = session.get(EvaluacionORM, evaluation_id)
-                if item is None:
-                    raise HTTPException(status_code=404, detail="Evaluación no encontrada")
-                if is_org_user(current_user):
-                    allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-                    if item.id_empresa not in allowed:
-                        raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
-                data = dict(input_data)
-                if "estado" in data and str(data["estado"]).strip():
-                    item.estado = data["estado"]
-                if "fecha" in data:
-                    item.fecha = data["fecha"]
-                session.add(item)
-                session.commit()
-                session.refresh(item)
-                return item
-        raise HTTPException(status_code=404, detail="Evaluation not found")
-    return item
+    updated = controller.repo.update(evaluation_id, repo_patch)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+    return _eval_to_read(updated)
 
 
 @router.delete("/{evaluation_id}")
-def delete_evaluation(evaluation_id: int, current_user=Depends(auth_middleware)):
-    if is_org_user(current_user):
-        current_item = repo.find_by_id(evaluation_id)
-        if current_item is None:
-            raise HTTPException(status_code=404, detail="Evaluation not found")
-
-        with Session(engine) as session:
-            allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-        if current_item.organization_id not in allowed:
-            raise HTTPException(status_code=403, detail="No autorizado para eliminar esta evaluación")
-
-    deleted = repo.delete(evaluation_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Evaluation not found")
-    return {"deleted": True, "id": evaluation_id}
-@router.delete("/{evaluation_id}")
-def delete_evaluation(evaluation_id: int, current_user=Depends(auth_middleware)):
+def delete_evaluation(evaluation_id: int, current_user: dict = Depends(auth_middleware)):
     with Session(engine) as session:
         item = session.get(EvaluacionORM, evaluation_id)
         if item is None:
@@ -179,6 +161,109 @@ def delete_evaluation(evaluation_id: int, current_user=Depends(auth_middleware))
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
             if item.id_empresa not in allowed:
                 raise HTTPException(status_code=403, detail="No autorizado para eliminar esta evaluación")
-        session.delete(item)
+
+    deleted = controller.repo.delete(evaluation_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+    return {"deleted": True, "id": evaluation_id}
+
+
+@router.get("/{evaluation_id}/controles", response_model=list[ControlLinkedRead])
+def list_controls_for_evaluation(
+    evaluation_id: int,
+    current_user: dict = Depends(auth_middleware),
+):
+    """Controles enlazados a la evaluación (tabla evaluacion_control)."""
+    with Session(engine) as session:
+        _evaluacion_con_acceso(session, evaluation_id, current_user)
+        stmt = (
+            select(ControlORM)
+            .join(
+                EvaluacionControlORM,
+                EvaluacionControlORM.id_control == ControlORM.id_control,
+            )
+            .where(EvaluacionControlORM.id_evaluacion == evaluation_id)
+        )
+        rows = session.exec(stmt).all()
+        return [ControlLinkedRead.model_validate(c) for c in rows]
+
+
+@router.delete("/{evaluation_id}/controles/{control_id}")
+def detach_control_from_evaluation(
+    evaluation_id: int,
+    control_id: int,
+    current_user: dict = Depends(auth_middleware),
+):
+    """Quita el vínculo Evaluación–Control (no borra el control)."""
+    with Session(engine) as session:
+        _evaluacion_con_acceso(session, evaluation_id, current_user)
+        link = session.exec(
+            select(EvaluacionControlORM).where(
+                EvaluacionControlORM.id_evaluacion == evaluation_id,
+                EvaluacionControlORM.id_control == control_id,
+            )
+        ).first()
+        if link is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Este control no está vinculado a la evaluación",
+            )
+        session.delete(link)
         session.commit()
-        return {"deleted": True, "id": evaluation_id}
+    return {"deleted": True, "evaluation_id": evaluation_id, "control_id": control_id}
+
+
+@router.post("/{evaluation_id}/controles", status_code=201)
+def attach_controls_bulk(
+    evaluation_id: int,
+    body: EvaluationLinkControlsBody,
+    current_user: dict = Depends(auth_middleware),
+):
+    """Enlaza varios controles a la vez (omitir los ya enlazados)."""
+    with Session(engine) as session:
+        _evaluacion_con_acceso(session, evaluation_id, current_user)
+        created = 0
+        for control_id in body.control_ids:
+            ctrl = session.get(ControlORM, control_id)
+            if ctrl is None:
+                raise HTTPException(status_code=404, detail=f"Control {control_id} no existe")
+            exists = session.exec(
+                select(EvaluacionControlORM).where(
+                    EvaluacionControlORM.id_evaluacion == evaluation_id,
+                    EvaluacionControlORM.id_control == control_id,
+                )
+            ).first()
+            if exists is None:
+                session.add(EvaluacionControlORM(id_evaluacion=evaluation_id, id_control=control_id))
+                created += 1
+        session.commit()
+    return {
+        "evaluation_id": evaluation_id,
+        "control_ids": body.control_ids,
+        "new_links": created,
+    }
+
+
+@router.post("/{evaluation_id}/controles/{control_id}", status_code=201)
+def attach_control_to_evaluation(
+    evaluation_id: int,
+    control_id: int,
+    current_user: dict = Depends(auth_middleware),
+):
+    """UML: asociar un Control al alcance de una Evaluación (tabla evaluacion_control)."""
+    with Session(engine) as session:
+        _evaluacion_con_acceso(session, evaluation_id, current_user)
+        ctrl = session.get(ControlORM, control_id)
+        if ctrl is None:
+            raise HTTPException(status_code=404, detail="Control no encontrado")
+        exists = session.exec(
+            select(EvaluacionControlORM).where(
+                EvaluacionControlORM.id_evaluacion == evaluation_id,
+                EvaluacionControlORM.id_control == control_id,
+            )
+        ).first()
+        if exists:
+            return {"evaluation_id": evaluation_id, "control_id": control_id, "linked": True, "already": True}
+        session.add(EvaluacionControlORM(id_evaluacion=evaluation_id, id_control=control_id))
+        session.commit()
+    return {"evaluation_id": evaluation_id, "control_id": control_id, "linked": True}

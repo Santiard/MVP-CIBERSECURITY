@@ -5,68 +5,11 @@ export type Question = {
   text: string;
   dimension: string;
   order: number;
+  peso?: number;
   active: boolean;
 };
 
-type QuestionApi = {
-  id_pregunta: number;
-  id_control: number;
-  texto: string;
-  dimension: string;
-  orden: number;
-  activo?: boolean;
-};
-  // --- Questions (Preguntas) ---
-  getQuestionsByControl: async (controlId: string): Promise<Question[]> => {
-    const rows = await readJson<QuestionApi[]>(`/questions?control_id=${controlId}`);
-    return rows.map((q) => ({
-      id: String(q.id_pregunta),
-      controlId: String(q.id_control),
-      text: q.texto,
-      dimension: q.dimension,
-      order: q.orden,
-      active: q.activo ?? true,
-    }));
-  },
-
-  createQuestion: async (q: Omit<Question, 'id'>): Promise<Question> => {
-    const created = await writeJson<QuestionApi>('/questions', 'POST', {
-      id_control: Number(q.controlId),
-      texto: q.text,
-      dimension: q.dimension,
-      orden: q.order,
-      activo: q.active,
-    });
-    return {
-      id: String(created.id_pregunta),
-      controlId: String(created.id_control),
-      text: created.texto,
-      dimension: created.dimension,
-      order: created.orden,
-      active: created.activo ?? true,
-    };
-  },
-
-  updateQuestion: async (id: string, patch: Partial<Question>): Promise<Question | undefined> => {
-    const payload: Record<string, unknown> = {};
-    if (patch.text !== undefined) payload.texto = patch.text;
-    if (patch.dimension !== undefined) payload.dimension = patch.dimension;
-    if (patch.order !== undefined) payload.orden = patch.order;
-    if (patch.active !== undefined) payload.activo = patch.active;
-    await writeJson(`/questions/${id}`, 'PATCH', payload);
-    // Refetch the updated question
-    const controlId = patch.controlId;
-    if (controlId) {
-      const questions = await dataService.getQuestionsByControl(controlId);
-      return questions.find((q) => q.id === id);
-    }
-    return undefined;
-  },
-
-  deleteQuestion: async (id: string) => {
-    return remove(`/questions/${id}`);
-  },
-import { apiFetch } from './apiClient';
+import { apiFetch, publicApiFetch } from './apiClient';
 
 type User = {
   id: string;
@@ -83,6 +26,9 @@ type Org = {
   nombre: string;
   sector: string;
   tamano: string;
+  email?: string;
+  nit?: string;
+  phone?: string;
 };
 
 type Questionnaire = {
@@ -111,45 +57,163 @@ type QuestionnaireApi = {
   activo?: boolean;
 };
 
+type QuestionApi = {
+  id_pregunta: number;
+  id_control: number;
+  texto: string;
+  dimension?: string;
+  orden?: number;
+  peso?: number;
+  activo?: boolean;
+};
+
+function normalizeDigits(value?: string | null): string {
+  if (!value) return '';
+  return String(value).replace(/\D/g, '');
+}
+
+async function parseErrorMessage(res: Response): Promise<string> {
+  const text = await res.text();
+  try {
+    const body = JSON.parse(text) as { detail?: unknown };
+    const { detail } = body;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      const msgs = detail
+        .map((item) => (item && typeof item === 'object' && 'msg' in item ? String((item as { msg: string }).msg) : ''))
+        .filter(Boolean);
+      if (msgs.length) return msgs.join(' ');
+    }
+  } catch {
+    // ignore
+  }
+  return text || res.statusText || `HTTP ${res.status}`;
+}
+
 async function readJson<T>(path: string): Promise<T> {
-  const response = await apiFetch(path, { method: 'GET' });
-  if (!response.ok) {
-    throw new Error(`GET ${path} failed`);
+  const res = await apiFetch(path, { method: 'GET' });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
   }
-  return (await response.json()) as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
-async function writeJson<T>(path: string, method: 'POST' | 'PATCH', payload: unknown): Promise<T> {
-  const response = await apiFetch(path, {
+async function writeJson<T>(path: string, method: string, body?: unknown): Promise<T> {
+  const res = await apiFetch(path, {
     method,
-    body: JSON.stringify(payload),
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  if (!response.ok) {
-    throw new Error(`${method} ${path} failed`);
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
   }
-  return (await response.json()) as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
-async function remove(path: string): Promise<boolean> {
-  const response = await apiFetch(path, { method: 'DELETE' });
-  if (!response.ok) {
-    throw new Error(`DELETE ${path} failed`);
+async function remove(path: string): Promise<void> {
+  const res = await apiFetch(path, { method: 'DELETE' });
+  if (!res.ok) {
+    throw new Error(await parseErrorMessage(res));
   }
-  return true;
 }
+
+const roleIdByName = new Map<string, number>();
 
 async function ensureRole(roleName: User['role']): Promise<number> {
+  const hit = roleIdByName.get(roleName);
+  if (hit !== undefined) return hit;
   const roles = await readJson<RoleApi[]>('/roles');
-  const existing = roles.find((r) => r.nombre === roleName);
-  if (existing) return existing.id_rol;
-
-  const created = await writeJson<RoleApi>('/roles', 'POST', { nombre: roleName });
-  return created.id_rol;
+  const found = roles.find((r) => r.nombre === roleName);
+  if (!found?.id_rol) {
+    throw new Error(`Rol no encontrado en el servidor: ${roleName}`);
+  }
+  roleIdByName.set(roleName, found.id_rol);
+  return found.id_rol;
 }
 
-const normalizeDigits = (value?: string) => value ? value.replace(/\D/g, '') : '';
+type RegisterAccountPayload = { name: string; email: string; password: string; phone?: string };
 
 const dataService = {
+  /** Registro público: `POST /auth/register` (sin token). Tras éxito puedes guardar `access_token` en localStorage. */
+  registerAccount: async (payload: RegisterAccountPayload) => {
+    const res = await publicApiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: payload.name.trim(),
+        email: payload.email.trim().toLowerCase(),
+        password: payload.password,
+        phone: payload.phone?.trim() || null,
+      }),
+    });
+    const text = await res.text();
+    const data = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+    if (!res.ok) {
+      const detail = data.detail;
+      if (typeof detail === 'string') throw new Error(detail);
+      throw new Error(res.statusText || `HTTP ${res.status}`);
+    }
+    return data as {
+      access_token: string;
+      token_type?: string;
+      user_id: number;
+      name: string;
+      role: string;
+    };
+  },
+
+  // --- Questions (Preguntas) ---
+  getQuestionsByControl: async (controlId: string): Promise<Question[]> => {
+    const rows = await readJson<QuestionApi[]>(`/questions/by-control/${encodeURIComponent(controlId)}`);
+    return rows.map((q) => ({
+      id: String(q.id_pregunta),
+      controlId: String(q.id_control),
+      text: q.texto,
+      dimension: q.dimension ?? '',
+      order: q.orden ?? 0,
+      peso: q.peso,
+      active: q.activo ?? true,
+    }));
+  },
+
+  createQuestion: async (q: Omit<Question, 'id'>): Promise<Question> => {
+    const created = await writeJson<QuestionApi>('/questions', 'POST', {
+      id_control: Number(q.controlId),
+      texto: q.text,
+      peso: q.peso ?? 1,
+    });
+    return {
+      id: String(created.id_pregunta),
+      controlId: String(created.id_control),
+      text: created.texto,
+      dimension: created.dimension ?? '',
+      order: created.orden ?? 0,
+      active: created.activo ?? true,
+    };
+  },
+
+  updateQuestion: async (id: string, patch: Partial<Question>): Promise<Question | undefined> => {
+    const payload: Record<string, unknown> = {};
+    if (patch.text !== undefined) payload.texto = patch.text;
+    if (patch.peso !== undefined) payload.peso = patch.peso;
+    if (patch.dimension !== undefined) payload.dimension = patch.dimension;
+    if (patch.order !== undefined) payload.orden = patch.order;
+    if (patch.active !== undefined) payload.activo = patch.active;
+    await writeJson(`/questions/${id}`, 'PATCH', payload);
+    // Refetch the updated question
+    const controlId = patch.controlId;
+    if (controlId) {
+      const questions = await dataService.getQuestionsByControl(controlId);
+      return questions.find((q) => q.id === id);
+    }
+    return undefined;
+  },
+
+  deleteQuestion: async (id: string) => {
+    return remove(`/questions/${id}`);
+  },
   // Users
   getUsers: async (): Promise<User[]> => {
     const [users, roles] = await Promise.all([
@@ -215,16 +279,30 @@ const dataService = {
     const rows = await readJson<Org[]>('/organizations');
     return rows;
   },
-  createOrg: async (o: Omit<Org, 'id_empresa'>) => {
-    const created = await writeJson<Org>('/organizations', 'POST', {
-      nombre: o.nombre,
+  createOrg: async (o: Omit<Org, 'id_empresa'> & { user_ids?: number[] }) => {
+    const body: Record<string, unknown> = {
+      name: o.nombre,
       sector: o.sector,
-      tamano: o.tamano,
-    });
+      size: o.tamano,
+    };
+    if (o.user_ids !== undefined && o.user_ids.length > 0) {
+      body.user_ids = o.user_ids;
+    }
+    const created = await writeJson<Org>('/organizations', 'POST', body);
     return created;
   },
-  updateOrg: async (id_empresa: number, patch: Partial<Org>) => {
-    await writeJson(`/organizations/${id_empresa}`, 'PATCH', patch);
+  listOrganizationUsers: async (id_empresa: number) => {
+    return readJson<Array<{ id_usuario: number; nombre: string; correo: string; activo?: boolean }>>(
+      `/organizations/${id_empresa}/users`,
+    );
+  },
+  updateOrg: async (id_empresa: number, patch: Partial<Org> & { user_ids?: number[] }) => {
+    const body: Record<string, unknown> = {};
+    if (patch.nombre !== undefined) body.name = patch.nombre;
+    if (patch.sector !== undefined) body.sector = patch.sector;
+    if (patch.tamano !== undefined) body.size = patch.tamano;
+    if (patch.user_ids !== undefined) body.user_ids = patch.user_ids;
+    await writeJson(`/organizations/${id_empresa}`, 'PATCH', body);
     const orgs = await dataService.getOrgs();
     return orgs.find((o: Org) => o.id_empresa === id_empresa);
   },

@@ -17,3 +17,10 @@ class LoginResponse(BaseModel):
 class RecoverPasswordRequest(BaseModel):
     email: str
     new_password: str
+
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone: str | None = None

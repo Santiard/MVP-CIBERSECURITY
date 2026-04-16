@@ -79,7 +79,7 @@ const UsersTable: React.FC = () => {
       setResetLoading(true);
       setResetError('');
       await dataService.resetPassword(resetting.id, newPassword);
-      alert('Contraseña reiniciada correctamente.');
+      alert('Contraseña actualizada correctamente.');
       setResetting(null);
       setNewPassword('');
       await load();
@@ -108,7 +108,7 @@ const UsersTable: React.FC = () => {
         </div>
       </Modal>
 
-      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Reiniciar contraseña">
+      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Cambiar contraseña">
         <div style={{ display: 'grid', gap: 8 }}>
           <label style={{ fontSize: 12 }}>Nueva contraseña</label>
           <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
@@ -164,7 +164,7 @@ const UsersTable: React.FC = () => {
                     <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
                   </div>
                   <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
-                  <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleResetPassword(r.id)}>Reset pwd</button>
+                  <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleResetPassword(r.id)}>Cambiar contraseña</button>
                   <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)}>Eliminar</button>
                 </td>
               </tr>
