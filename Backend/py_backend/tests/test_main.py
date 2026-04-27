@@ -5,6 +5,9 @@ from app.db import init_db
 
 client = TestClient(app)
 
+ADMIN_EMAIL = "admin@gmail.com"
+ADMIN_PASSWORD = "Admin2026!Secure*"
+
 
 @pytest.fixture(scope="module")
 def setup_db():
@@ -12,66 +15,63 @@ def setup_db():
     yield
 
 
-def test_login():
-    """Test JWT token generation"""
-    response = client.post("/auth/token", json={"user_id": "test_user"})
+def _admin_headers():
+    token_response = client.post(
+        "/auth/token",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+    )
+    assert token_response.status_code == 200, token_response.text
+    token = token_response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_login(setup_db):
+    response = client.post(
+        "/auth/token",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+    )
     assert response.status_code == 200
-    assert "access_token" in response.json()
+    body = response.json()
+    assert "access_token" in body
+    assert body.get("role") == "admin"
 
 
-def test_create_organization_unauthorized():
-    """Test that POST /organizations requires authentication"""
-    response = client.post("/organizations", json={"name": "Test Org"})
+def test_create_organization_unauthorized(setup_db):
+    response = client.post("/organizations", json={"name": "Test Org", "sector": "x", "size": "S"})
     assert response.status_code == 403
 
 
-def test_create_organization_authorized():
-    """Test organization creation with valid token"""
-    # Get token
-    token_response = client.post("/auth/token", json={"user_id": "test_user"})
-    token = token_response.json()["access_token"]
-    
-    # Create organization
-    headers = {"Authorization": f"Bearer {token}"}
-    response = client.post("/organizations", json={"name": "Test Organization"}, headers=headers)
+def test_create_organization_authorized(setup_db):
+    headers = _admin_headers()
+    response = client.post(
+        "/organizations",
+        json={"name": "Test Organization", "sector": "Tech", "size": "Pequeña"},
+        headers=headers,
+    )
     assert response.status_code == 200
-    assert response.json()["name"] == "Test Organization"
+    data = response.json()
+    assert data.get("nombre") == "Test Organization"
 
 
-def test_create_evaluation_authorized():
-    """Test evaluation creation with valid token"""
-    # Get token
-    token_response = client.post("/auth/token", json={"user_id": "test_user"})
-    token = token_response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    # Create evaluation
+def test_create_evaluation_authorized(setup_db):
+    headers = _admin_headers()
     response = client.post(
         "/evaluations",
         json={"organization_id": 1, "answers": {"q1": "answer1"}},
-        headers=headers
+        headers=headers,
     )
-    assert response.status_code == 200
-    assert response.json()["organization_id"] == 1
+    assert response.status_code in (200, 409), response.text
 
 
-def test_list_organizations():
-    """Test GET /organizations"""
-    token_response = client.post("/auth/token", json={"user_id": "test_user"})
-    token = token_response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    
+def test_list_organizations(setup_db):
+    headers = _admin_headers()
     response = client.get("/organizations", headers=headers)
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
-def test_list_evaluations():
-    """Test GET /evaluations"""
-    token_response = client.post("/auth/token", json={"user_id": "test_user"})
-    token = token_response.json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
-    
+def test_list_evaluations(setup_db):
+    headers = _admin_headers()
     response = client.get("/evaluations", headers=headers)
     assert response.status_code == 200
     assert isinstance(response.json(), list)

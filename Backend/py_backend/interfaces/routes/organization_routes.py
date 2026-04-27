@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.access_control import get_assigned_organization_ids, is_org_user
+from app.access_control import get_assigned_organization_ids, is_admin, is_org_user, is_staff
 from app.db import engine
 from infraestructure.database import EmpresaORM, UsuarioORM, UsuarioOrganizacionORM
 from interfaces.middlewares.auth_middleware import auth_middleware
@@ -46,6 +46,8 @@ def _sync_usuario_empresa(session: Session, id_empresa: int, user_ids: list[int]
 def create_organization(input_data: dict, current_user=Depends(auth_middleware)):
     if is_org_user(current_user):
         raise HTTPException(status_code=403, detail="No autorizado para crear empresas")
+    if not is_staff(current_user):
+        raise HTTPException(status_code=403, detail="No autorizado para crear empresas")
     data = dict(input_data)
     if "name" not in data or not str(data["name"]).strip():
         raise HTTPException(status_code=422, detail="El nombre de la empresa es requerido")
@@ -75,6 +77,8 @@ def create_organization(input_data: dict, current_user=Depends(auth_middleware))
 def list_organizations(current_user=Depends(auth_middleware)):
     with Session(engine) as session:
         if not is_org_user(current_user):
+            if not is_staff(current_user):
+                return []
             return session.exec(select(EmpresaORM)).all()
         allowed_ids = get_assigned_organization_ids(session, int(current_user["user_id"]))
         if not allowed_ids:
@@ -87,6 +91,8 @@ def list_organizations(current_user=Depends(auth_middleware)):
 def list_organization_users(org_id: int, current_user=Depends(auth_middleware)):
     """Usuarios asignados a la empresa (tabla usuario_organizacion)."""
     with Session(engine) as session:
+        if not is_org_user(current_user) and not is_staff(current_user):
+            raise HTTPException(status_code=403, detail="No autorizado")
         if is_org_user(current_user):
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
             if org_id not in allowed:
@@ -116,6 +122,8 @@ def list_organization_users(org_id: int, current_user=Depends(auth_middleware)):
 @router.get("/{org_id}")
 def get_organization(org_id: int, current_user=Depends(auth_middleware)):
     with Session(engine) as session:
+        if not is_org_user(current_user) and not is_staff(current_user):
+            raise HTTPException(status_code=403, detail="No autorizado")
         if is_org_user(current_user):
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
             if org_id not in allowed:
@@ -128,6 +136,8 @@ def get_organization(org_id: int, current_user=Depends(auth_middleware)):
 
 @router.patch("/{org_id}")
 def update_organization(org_id: int, input_data: dict, current_user=Depends(auth_middleware)):
+    if not is_org_user(current_user) and not is_staff(current_user):
+        raise HTTPException(status_code=403, detail="No autorizado")
     data = dict(input_data)
     user_ids_payload = _user_ids_from_payload(data)
     if user_ids_payload is not None and is_org_user(current_user):
@@ -164,11 +174,9 @@ def update_organization(org_id: int, input_data: dict, current_user=Depends(auth
 
 @router.delete("/{org_id}")
 def delete_organization(org_id: int, current_user=Depends(auth_middleware)):
+    if not is_admin(current_user):
+        raise HTTPException(status_code=403, detail="Solo un administrador puede eliminar empresas")
     with Session(engine) as session:
-        if is_org_user(current_user):
-            allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-            if org_id not in allowed:
-                raise HTTPException(status_code=403, detail="No autorizado para eliminar esta empresa")
         empresa = session.get(EmpresaORM, org_id)
         if empresa is None:
             raise HTTPException(status_code=404, detail="Empresa no encontrada")

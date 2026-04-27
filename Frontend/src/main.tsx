@@ -22,6 +22,7 @@ import PublicRegisterPage from '../pages/PublicRegisterPage';
 import EvaluationAssignmentsPage from './pages/EvaluationAssignmentsPage';
 import EvaluationWorkflowPage from './pages/EvaluationWorkflowPage';
 import { AlertProvider } from './components/alerts/AlertProvider';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function AppRoutes() {
   return (
@@ -29,22 +30,127 @@ function AppRoutes() {
       <Routes>
         <Route path="/LoginPage" element={<LoginPage />} />
         <Route path="/register" element={<PublicRegisterPage />} />
-        <Route path="/HomePage" element={<HomePage />} />
         <Route path="/RecoverPage" element={<RecoverPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/users/new" element={<RegisterUserPage />} />
-        <Route path="/organizations" element={<OrganizationsPage />} />
-        <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
-        <Route path="/organizations/new" element={<RegisterOrganizationPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/reports/:id" element={<ReportDetailPage />} />
-        <Route path="/reports/:id/report" element={<ReportViewPage />} />
-        <Route path="/evaluations" element={<EvaluationsPage />} />
-        <Route path="/evaluations/:evaluationId/workflow" element={<EvaluationWorkflowPage />} />
-        <Route path="/asignaciones" element={<EvaluationAssignmentsPage />} />
-        <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
-        <Route path="/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/questionnaires" element={<QuestionnairesPage />} />
+        <Route
+          path="/HomePage"
+          element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users/new"
+          element={
+            <ProtectedRoute>
+              <RegisterUserPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organizations"
+          element={
+            <ProtectedRoute>
+              <OrganizationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organizations/:id"
+          element={
+            <ProtectedRoute>
+              <OrganizationDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/organizations/new"
+          element={
+            <ProtectedRoute>
+              <RegisterOrganizationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/:id"
+          element={
+            <ProtectedRoute>
+              <ReportDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports/:id/report"
+          element={
+            <ProtectedRoute>
+              <ReportViewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluations"
+          element={
+            <ProtectedRoute>
+              <EvaluationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/evaluations/:evaluationId/workflow"
+          element={
+            <ProtectedRoute>
+              <EvaluationWorkflowPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/asignaciones"
+          element={
+            <ProtectedRoute>
+              <EvaluationAssignmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vulnerabilities"
+          element={
+            <ProtectedRoute>
+              <VulnerabilitiesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/questionnaires"
+          element={
+            <ProtectedRoute>
+              <QuestionnairesPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/LoginPage" replace />} />
       </Routes>
     </BrowserRouter>

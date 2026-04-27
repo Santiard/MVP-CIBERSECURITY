@@ -7,6 +7,7 @@ import {
   isStrongPassword,
   PASSWORD_POLICY_MESSAGE,
 } from '../src/utils/passwordPolicy';
+import { defaultPathByRole, normalizeRole } from '../src/utils/auth';
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
@@ -113,7 +114,8 @@ const LoginPage: React.FC = () => {
         role: dataOk.role,
         email: emailTrim,
       }));
-      navigate('/dashboard');
+      const nr = normalizeRole(dataOk.role);
+      navigate(nr ? defaultPathByRole(nr) : '/dashboard');
     } catch (err) {
       if (err instanceof Error) {
         if (err.message === 'Failed to fetch' || err.name === 'TypeError') {

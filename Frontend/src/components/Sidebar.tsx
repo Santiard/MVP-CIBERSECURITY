@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import exitIcon from '../images/exit.png';
 import '../styles/theme.css';
+import { getCurrentRole } from '../utils/auth';
+import { getNavItemsByRole } from '../utils/roleAccess';
 
 const linkStyle: React.CSSProperties = {
   display: 'block',
@@ -24,6 +26,7 @@ const exitIconStyle: React.CSSProperties = {
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
+  const navItems = getNavItemsByRole(getCurrentRole());
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       const stored = localStorage.getItem('theme');
@@ -94,46 +97,22 @@ const Sidebar: React.FC = () => {
 
       <nav style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          <li>
-            <NavLink to="/dashboard" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Dashboard
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/organizations" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Organizaciones
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/questionnaires" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Cuestionarios
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/evaluations" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Evaluaciones
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/asignaciones" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Asignaciones
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/reports" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Reportes
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/vulnerabilities" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Vulnerabilidades
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/users" style={({ isActive }) => isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle}>
-              Usuarios
-            </NavLink>
-          </li>
+          {navItems.length === 0 ? (
+            <li style={{ ...linkStyle, color: 'var(--muted)', cursor: 'default' }}>Sin menú para este rol</li>
+          ) : (
+            navItems.map(({ to, label }) => (
+              <li key={to}>
+                <NavLink
+                  to={to}
+                  style={({ isActive }) =>
+                    isActive ? { ...linkStyle, background: 'var(--blue-500)', color: 'var(--white)' } : linkStyle
+                  }
+                >
+                  {label}
+                </NavLink>
+              </li>
+            ))
+          )}
         </ul>
       </nav>
 

@@ -5,6 +5,8 @@ import Badge from "./Badge";
 import FilterInput from "./FilterInput";
 import dataService from "../services/dataService";
 import { listEvaluations, type EvaluationApiRow } from "../services/evaluationApi";
+import { getCurrentRole } from "../utils/auth";
+import { isStaffRole } from "../utils/roleAccess";
 
 type Org = { id_empresa: number; nombre: string };
 
@@ -65,12 +67,16 @@ const EvaluationsTable: React.FC = () => {
     if (page > pages) setPage(pages);
   }, [page, pages]);
 
+  const staff = isStaffRole(getCurrentRole());
+
   return (
     <div className="card" style={{ minHeight: 240 }}>
-      <p style={{ marginTop: 0, fontSize: 14, color: "var(--muted)" }}>
-        Para <strong>asignar o mover</strong> evaluaciones entre empresas, usa{" "}
-        <Link to="/asignaciones">Asignaciones empresa ↔ evaluación</Link>.
-      </p>
+      {staff && (
+        <p style={{ marginTop: 0, fontSize: 14, color: "var(--muted)" }}>
+          Para <strong>asignar o mover</strong> evaluaciones entre empresas, usa{" "}
+          <Link to="/asignaciones">Asignaciones empresa ↔ evaluación</Link>.
+        </p>
+      )}
       <h2 style={{ marginTop: 8 }}>Evaluaciones</h2>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por empresa, id o estado" />

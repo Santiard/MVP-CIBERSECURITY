@@ -39,6 +39,6 @@ export function isAuthenticated(): boolean {
 }
 
 export function defaultPathByRole(role: AppRole): string {
-  if (role === 'user') return '/questionnaires';
+  if (role === 'user') return '/evaluations';
   return '/dashboard';
 }

@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import SQLModel, Session, select
 
+from app.access_control import require_admin, require_roles
 from app.db import engine
 from app.schemas import RiskRead
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
@@ -40,20 +41,26 @@ def _register_single_pk_crud(
     model: type[SQLModel],
     pk_name: str,
     validate_password: bool = False,
+    *,
+    read_roles: tuple[str, ...] | None = None,
+    write_roles: tuple[str, ...] | None = None,
 ) -> None:
-    @router.get(f"/{resource}", name=f"list_{resource}")
+    read_deps = [Depends(require_roles(*read_roles))] if read_roles else []
+    write_deps = [Depends(require_roles(*write_roles))] if write_roles else []
+
+    @router.get(f"/{resource}", name=f"list_{resource}", dependencies=read_deps)
     def list_items(session: Session = Depends(_get_session), _model: type[SQLModel] = model):
         rows = session.exec(select(_model)).all()
         return [_serialize(row) for row in rows]
 
-    @router.get(f"/{resource}/{{item_id}}", name=f"get_{resource}")
+    @router.get(f"/{resource}/{{item_id}}", name=f"get_{resource}", dependencies=read_deps)
     def get_item(item_id: int, session: Session = Depends(_get_session), _model: type[SQLModel] = model):
         item = session.get(_model, item_id)
         if item is None:
             raise HTTPException(status_code=404, detail=f"{resource} not found")
         return _serialize(item)
 
-    @router.post(f"/{resource}", name=f"create_{resource}")
+    @router.post(f"/{resource}", name=f"create_{resource}", dependencies=write_deps)
     def create_item(payload: dict[str, Any], session: Session = Depends(_get_session), _model: type[SQLModel] = model):
         data = dict(payload)
         data.pop(pk_name, None)
@@ -72,7 +79,7 @@ def _register_single_pk_crud(
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Invalid payload for {resource}: {exc}")
 
-    @router.patch(f"/{resource}/{{item_id}}", name=f"update_{resource}")
+    @router.patch(f"/{resource}/{{item_id}}", name=f"update_{resource}", dependencies=write_deps)
     def update_item(
         item_id: int,
         payload: dict[str, Any],
@@ -99,7 +106,7 @@ def _register_single_pk_crud(
         session.refresh(item)
         return _serialize(item)
 
-    @router.delete(f"/{resource}/{{item_id}}", name=f"delete_{resource}")
+    @router.delete(f"/{resource}/{{item_id}}", name=f"delete_{resource}", dependencies=write_deps)
     def delete_item(item_id: int, session: Session = Depends(_get_session), _model: type[SQLModel] = model):
         item = session.get(_model, item_id)
         if item is None:
@@ -109,9 +116,21 @@ def _register_single_pk_crud(
         return {"deleted": True, "resource": resource, "id": item_id}
 
 
-_register_single_pk_crud("roles", RolORM, "id_rol")
-_register_single_pk_crud("users", UsuarioORM, "id_usuario", validate_password=True)
-_register_single_pk_crud("questionnaires", ControlORM, "id_control")
+_register_single_pk_crud("roles", RolORM, "id_rol", write_roles=("admin",))
+_register_single_pk_crud(
+    "users",
+    UsuarioORM,
+    "id_usuario",
+    validate_password=True,
+    read_roles=("admin",),
+    write_roles=("admin",),
+)
+_register_single_pk_crud(
+    "questionnaires",
+    ControlORM,
+    "id_control",
+    write_roles=("admin",),
+)
 
 
 @router.get("/questions/by-control/{control_id}", name="list_questions_by_control")
@@ -121,8 +140,8 @@ def list_questions_by_control(control_id: int, session: Session = Depends(_get_s
     return [_serialize(row) for row in rows]
 
 
-_register_single_pk_crud("questions", PreguntaORM, "id_pregunta")
-_register_single_pk_crud("vulnerabilities", VulnerabilidadORM, "id_vulnerabilidad")
+_register_single_pk_crud("questions", PreguntaORM, "id_pregunta", write_roles=("admin",))
+_register_single_pk_crud("vulnerabilities", VulnerabilidadORM, "id_vulnerabilidad", write_roles=("admin",))
 
 
 @router.get(
@@ -141,4 +160,4 @@ def list_risks_by_control(control_id: int, session: Session = Depends(_get_sessi
     return out
 
 
-_register_single_pk_crud("risks", RiesgoORM, "id_riesgo")
+_register_single_pk_crud("risks", RiesgoORM, "id_riesgo", write_roles=("admin",))

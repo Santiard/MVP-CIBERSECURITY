@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.access_control import get_assigned_organization_ids, is_org_user
+from app.access_control import get_assigned_organization_ids, is_org_user, is_staff
 from app.db import engine
 from app.schemas import (
     ControlLinkedRead,
@@ -28,6 +28,8 @@ def _evaluacion_con_acceso(session: Session, evaluation_id: int, current_user: d
     if is_org_user(current_user):
         allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
         if ev.id_empresa not in allowed:
+            raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
+        if ev.id_usuario != int(current_user["user_id"]):
             raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
     return ev
 
@@ -57,7 +59,16 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
         if id_empresa not in allowed:
             raise HTTPException(status_code=403, detail="No autorizado para crear evaluaciones de esta organización")
 
-    uid = input_data.user_id if input_data.user_id is not None else int(current_user["user_id"])
+    self_uid = int(current_user["user_id"])
+    if is_org_user(current_user):
+        if input_data.user_id is not None and int(input_data.user_id) != self_uid:
+            raise HTTPException(
+                status_code=403,
+                detail="No puede crear evaluaciones asignadas a otro usuario",
+            )
+        uid = self_uid
+    else:
+        uid = int(input_data.user_id) if input_data.user_id is not None else self_uid
     fecha_eval = input_data.fecha or date.today()
 
     with Session(engine) as session:
@@ -95,10 +106,11 @@ def list_evaluations(
         if org_filter is not None:
             stmt = stmt.where(EvaluacionORM.id_empresa == org_filter)
         if is_org_user(current_user):
-            allowed_ids = get_assigned_organization_ids(session, int(current_user["user_id"]))
+            uid = int(current_user["user_id"])
+            allowed_ids = get_assigned_organization_ids(session, uid)
             if not allowed_ids:
                 return []
-            stmt = stmt.where(EvaluacionORM.id_empresa.in_(allowed_ids))
+            stmt = stmt.where(EvaluacionORM.id_empresa.in_(allowed_ids)).where(EvaluacionORM.id_usuario == uid)
             if org_filter is not None and org_filter not in allowed_ids:
                 return []
         rows = session.exec(stmt).all()
@@ -126,6 +138,8 @@ def update_evaluation(
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
             if item.id_empresa not in allowed:
                 raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
+            if item.id_usuario != int(current_user["user_id"]):
+                raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
             target_org = (
                 input_data.organization_id if input_data.organization_id is not None else item.id_empresa
             )
@@ -133,6 +147,9 @@ def update_evaluation(
                 raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
 
     patch = input_data.model_dump(exclude_unset=True)
+    if is_org_user(current_user):
+        if patch.get("user_id") is not None and int(patch["user_id"]) != int(current_user["user_id"]):
+            raise HTTPException(status_code=403, detail="No puede reasignar la evaluación a otro usuario")
     repo_patch: dict = {}
     if "organization_id" in patch and patch["organization_id"] is not None:
         repo_patch["organization_id"] = patch["organization_id"]
@@ -153,14 +170,13 @@ def update_evaluation(
 
 @router.delete("/{evaluation_id}")
 def delete_evaluation(evaluation_id: int, current_user: dict = Depends(auth_middleware)):
+    if is_org_user(current_user):
+        raise HTTPException(status_code=403, detail="No autorizado para eliminar evaluaciones")
+    if not is_staff(current_user):
+        raise HTTPException(status_code=403, detail="No autorizado para eliminar evaluaciones")
     with Session(engine) as session:
-        item = session.get(EvaluacionORM, evaluation_id)
-        if item is None:
+        if session.get(EvaluacionORM, evaluation_id) is None:
             raise HTTPException(status_code=404, detail="Evaluación no encontrada")
-        if is_org_user(current_user):
-            allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
-            if item.id_empresa not in allowed:
-                raise HTTPException(status_code=403, detail="No autorizado para eliminar esta evaluación")
 
     deleted = controller.repo.delete(evaluation_id)
     if not deleted:
