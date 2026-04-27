@@ -110,9 +110,10 @@ const RecoverPage: React.FC = () => {
 
       <form onSubmit={submit} style={{width:420, maxWidth:'92%', background:'var(--surface-light)', padding:28, borderRadius:12, boxShadow:'var(--shadow-md)', textAlign:'center'}}>
         <h3 style={{marginTop:0, marginBottom:6}}>Recuperar Contraseña</h3>
+        <p style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 0, marginBottom: 10 }}>* Campos obligatorios</p>
         <p style={{marginTop:0, marginBottom:18, color:'var(--gray-600)', fontSize:13}}>Ingresa tu correo y define una nueva contraseña.</p>
 
-        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Correo Electrónico</label>
+        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Correo Electrónico *</label>
         <input
           type="email"
           value={email}
@@ -131,7 +132,7 @@ const RecoverPage: React.FC = () => {
         />
         {errors.email && <div style={{ fontSize: 12, color: 'var(--danger)', textAlign: 'left', marginBottom: 8 }}>{errors.email}</div>}
 
-        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Nueva Contraseña</label>
+        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Nueva Contraseña *</label>
         <input
           type="password"
           value={newPassword}
@@ -160,7 +161,7 @@ const RecoverPage: React.FC = () => {
         )}
         {errors.newPassword && <div style={{ fontSize: 12, color: 'var(--danger)', textAlign: 'left', marginBottom: 8 }}>{errors.newPassword}</div>}
 
-        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Confirmar Contraseña</label>
+        <label style={{display:'block', textAlign:'left', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Confirmar Contraseña *</label>
         <input
           type="password"
           value={confirmPassword}

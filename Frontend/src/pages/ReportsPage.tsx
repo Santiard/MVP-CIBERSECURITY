@@ -5,6 +5,8 @@ import { listReports, ReportListItem } from '../services/reportApi';
 
 const ReportsPage: React.FC = () => {
   const [rows, setRows] = useState<ReportListItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -18,6 +20,18 @@ const ReportsPage: React.FC = () => {
     };
     load();
   }, []);
+
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, pages);
+  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
+    if (page > pages) setPage(pages);
+  }, [page, pages]);
 
   return (
     <Layout>
@@ -38,7 +52,7 @@ const ReportsPage: React.FC = () => {
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={3}>Cargando...</td>
                 </tr>
               )}
-              {rows.map(r => (
+              {visibleRows.map(r => (
                 <tr key={r.id}>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.title}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.date}</td>
@@ -49,6 +63,24 @@ const ReportsPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+          <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} reportes</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
+            >
+              {[5, 10, 20, 50].map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+            <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
+            <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+          </div>
         </div>
       </div>
     </Layout>

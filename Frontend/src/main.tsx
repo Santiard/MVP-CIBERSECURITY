@@ -21,6 +21,7 @@ import RegisterOrganizationPage from './pages/RegisterOrganizationPage';
 import PublicRegisterPage from '../pages/PublicRegisterPage';
 import EvaluationAssignmentsPage from './pages/EvaluationAssignmentsPage';
 import EvaluationWorkflowPage from './pages/EvaluationWorkflowPage';
+import { AlertProvider } from './components/alerts/AlertProvider';
 
 function AppRoutes() {
   return (
@@ -52,6 +53,8 @@ function AppRoutes() {
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AppRoutes />
+    <AlertProvider>
+      <AppRoutes />
+    </AlertProvider>
   </React.StrictMode>
 );

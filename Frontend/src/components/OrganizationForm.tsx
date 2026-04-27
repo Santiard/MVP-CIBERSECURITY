@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './modal/Modal';
 import dataService from '../services/dataService';
+import { useAlert } from './alerts/AlertProvider';
 
 type Org = { id_empresa?: number; nombre?: string; sector?: string; tamano?: string };
 type AppUser = { id: string; name: string; email: string; role: string; active?: boolean };
@@ -19,6 +20,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
   const [sector, setSector] = useState(initial?.sector || '');
   const [tamano, setTamano] = useState(initial?.tamano || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showAlert } = useAlert();
   const [allUsers, setAllUsers] = useState<AppUser[]>([]);
   const [memberUserIds, setMemberUserIds] = useState<number[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -66,17 +68,27 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
 
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-
+    const missingFields: string[] = [];
+    const nextErrors: Record<string, string> = {};
     if (!nombre.trim()) {
-      setErrors({ nombre: 'El nombre de la empresa es requerido' });
-      return;
+      nextErrors.nombre = 'El nombre de la empresa es requerido';
+      missingFields.push('Nombre de la empresa');
     }
     if (!sector.trim()) {
-      setErrors({ sector: 'El sector es requerido' });
-      return;
+      nextErrors.sector = 'El sector es requerido';
+      missingFields.push('Sector');
     }
     if (!tamano.trim()) {
-      setErrors({ tamano: 'El tamaño es requerido' });
+      nextErrors.tamano = 'El tamaño es requerido';
+      missingFields.push('Tamaño');
+    }
+    if (missingFields.length > 0) {
+      setErrors(nextErrors);
+      showAlert({
+        type: 'warning',
+        title: 'Advertencia',
+        message: `Faltan campos obligatorios: ${missingFields.join(', ')}.`,
+      });
       return;
     }
 
@@ -98,12 +110,21 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
           ...(memberUserIds.length > 0 ? { user_ids: memberUserIds } : {}),
         });
       }
+      showAlert({
+        type: 'success',
+        title: 'Exito',
+        message: initial?.id_empresa ? 'Organizacion actualizada correctamente.' : 'Organizacion creada correctamente.',
+      });
 
       onSaved && onSaved();
       onClose();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
-      alert('Error al guardar la organización: ' + message);
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Error al guardar la organizacion: ' + message,
+      });
     }
   };
 
@@ -113,11 +134,13 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
       onClose={onClose}
       title={initial?.id_empresa ? 'Editar organización' : 'Nueva organización'}
     >
-      <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-        <label style={{ fontSize: 12 }}>Nombre de la empresa</label>
+      <form noValidate onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
+        <label style={{ fontSize: 12 }}>Nombre de la empresa *</label>
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
+          required
           style={{
             padding: 8,
             borderRadius: 8,
@@ -128,10 +151,11 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
           <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.nombre}</div>
         )}
 
-        <label style={{ fontSize: 12 }}>Sector</label>
+        <label style={{ fontSize: 12 }}>Sector *</label>
         <input
           value={sector}
           onChange={(e) => setSector(e.target.value)}
+          required
           style={{
             padding: 8,
             borderRadius: 8,
@@ -142,10 +166,11 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
           <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.sector}</div>
         )}
 
-        <label style={{ fontSize: 12 }}>Tamaño</label>
+        <label style={{ fontSize: 12 }}>Tamaño *</label>
         <select
           value={tamano}
           onChange={(e) => setTamano(e.target.value)}
+          required
           style={{
             padding: 8,
             borderRadius: 8,

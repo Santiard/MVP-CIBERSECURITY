@@ -11,6 +11,7 @@ import {
   type AnswerValue,
   type EvaluationDetail,
 } from "../services/evaluationApi";
+import { useAlert } from "../components/alerts/AlertProvider";
 
 type QuestionnaireRow = Awaited<ReturnType<typeof dataService.getQuestionnaires>>[number];
 
@@ -26,6 +27,7 @@ async function syncEvaluationControls(evaluationId: number, desiredIds: Set<numb
 }
 
 const EvaluationWorkflowPage: React.FC = () => {
+  const { showAlert } = useAlert();
   const { evaluationId } = useParams<{ evaluationId: string }>();
   const idNum = evaluationId ? Number(evaluationId) : NaN;
 
@@ -77,7 +79,11 @@ const EvaluationWorkflowPage: React.FC = () => {
   const handleSaveScopeAndContinue = async () => {
     if (!Number.isFinite(idNum)) return;
     if (selectedControlIds.size === 0) {
-      alert("Seleccione al menos un control (cuestionario) en el alcance.");
+      showAlert({
+        type: "warning",
+        title: "Advertencia",
+        message: "Seleccione al menos un control (cuestionario) en el alcance.",
+      });
       return;
     }
     setSaving(true);
@@ -139,11 +145,19 @@ const EvaluationWorkflowPage: React.FC = () => {
       }
       const updated = await patchEvaluation(idNum, { answers: merged });
       setEvaluation(updated);
-      alert("Respuestas guardadas correctamente.");
+      showAlert({
+        type: "success",
+        title: "Exito",
+        message: "Respuestas guardadas correctamente.",
+      });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al guardar respuestas";
       setError(msg);
-      alert(msg);
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: msg,
+      });
     } finally {
       setSaving(false);
     }

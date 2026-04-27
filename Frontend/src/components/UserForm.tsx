@@ -8,6 +8,7 @@ import {
   isStrongPassword,
   PASSWORD_POLICY_MESSAGE,
 } from '../utils/passwordPolicy';
+import { useAlert } from './alerts/AlertProvider';
 
 type Props = {
   open?: boolean;
@@ -26,6 +27,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const [password, setPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { showAlert } = useAlert();
 
   const passwordIssues = getPasswordPolicyIssues(password);
   const requirePassword = !initial?.id;
@@ -46,10 +48,19 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setSubmitted(true);
-    
-    // Validaciones básicas
-    if (!name || !email) {
-      alert('Nombre y correo son requeridos');
+    const missingFields: string[] = [];
+    const nameTrim = name.trim();
+    const emailTrim = email.trim();
+    if (!nameTrim) missingFields.push('Nombre');
+    if (!emailTrim) missingFields.push('Correo');
+    if (!role.trim()) missingFields.push('Rol');
+    if (requirePassword && !password.trim()) missingFields.push('Contraseña');
+    if (missingFields.length > 0) {
+      showAlert({
+        type: 'warning',
+        title: 'Advertencia',
+        message: `Faltan campos obligatorios: ${missingFields.join(', ')}.`,
+      });
       return;
     }
 
@@ -80,6 +91,11 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      showAlert({
+        type: 'warning',
+        title: 'Advertencia',
+        message: 'Revisa los campos marcados en rojo antes de guardar.',
+      });
       return;
     }
 
@@ -87,30 +103,41 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
 
     try {
       if (initial?.id) {
-        const payload: Record<string, unknown> = { name, email, phone, role, active };
+        const payload: Record<string, unknown> = { name: nameTrim, email: emailTrim, phone, role, active };
         if (password) payload.password = password;
         await dataService.updateUser(initial.id, payload as any);
       } else {
-        await dataService.createUser({ name, email, phone, role, active, password } as any);
+        await dataService.createUser({ name: nameTrim, email: emailTrim, phone, role, active, password } as any);
       }
+      showAlert({
+        type: 'success',
+        title: 'Exito',
+        message: initial?.id ? 'Usuario actualizado correctamente.' : 'Usuario creado correctamente.',
+      });
 
       onSaved && onSaved();
       onClose && onClose();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No se pudo guardar el usuario';
-      alert(message);
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message,
+      });
     }
   };
   const form = (
-    <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-      <label style={{ fontSize: 12 }}>Nombre</label>
-      <input value={name} onChange={e => setName(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+    <form noValidate onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
+      <label style={{ fontSize: 12 }}>Nombre *</label>
+      <input value={name} onChange={e => setName(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
 
-      <label style={{ fontSize: 12 }}>Correo</label>
+      <label style={{ fontSize: 12 }}>Correo *</label>
       <input 
         type="email"
         value={email} 
         onChange={e => setEmail(e.target.value)} 
+        required
         style={{ 
           padding: 8, 
           borderRadius: 8, 
@@ -122,19 +149,20 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
       <label style={{ fontSize: 12 }}>Teléfono</label>
       <PhoneField value={phone} onChange={setPhone} error={errors.phone} />
 
-      <label style={{ fontSize: 12 }}>Rol</label>
-      <select value={role} onChange={e => setRole(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }}>
+      <label style={{ fontSize: 12 }}>Rol *</label>
+      <select value={role} onChange={e => setRole(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }}>
         <option value="admin">Administrador</option>
         <option value="evaluator">Evaluador</option>
         <option value="user">Usuario</option>
       </select>
 
-      <label style={{ fontSize: 12 }}>{initial?.id ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
+      <label style={{ fontSize: 12 }}>{initial?.id ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</label>
       <input
         type="password"
         value={password}
         onChange={e => setPassword(e.target.value)}
         placeholder="Mínimo 8, con mayúscula, minúscula y especial"
+        required={requirePassword}
         style={{
           padding: 8,
           borderRadius: 8,
@@ -180,7 +208,6 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
         <button
           type="submit"
           className="btn btn-primary"
-          disabled={!name.trim() || !email.trim() || (requirePassword && !password) || (shouldValidatePassword && passwordIssues.length > 0)}
         >
           Guardar
         </button>

@@ -118,6 +118,7 @@ const PublicRegisterPage: React.FC = () => {
         </div>
 
         <h3 style={{ marginTop: 8, marginBottom: 6 }}>Registro</h3>
+        <p style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 0, marginBottom: 10 }}>* Campos obligatorios</p>
         <p style={{ fontSize: 13, color: 'var(--gray-600)', marginTop: 0, marginBottom: 16, lineHeight: 1.45 }}>
           Se creará una cuenta con rol de usuario. Si eres administrador, usa la gestión de usuarios tras iniciar
           sesión.
@@ -143,13 +144,14 @@ const PublicRegisterPage: React.FC = () => {
         ) : null}
 
         <label style={{ display: 'block', textAlign: 'center', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
-          Nombre completo
+          Nombre completo *
         </label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoComplete="name"
           placeholder="Tu nombre"
+          required
           style={{
             width: '100%',
             padding: '12px 14px',
@@ -162,7 +164,7 @@ const PublicRegisterPage: React.FC = () => {
         />
 
         <label style={{ display: 'block', textAlign: 'center', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
-          Correo electrónico
+          Correo electrónico *
         </label>
         <input
           type="email"
@@ -170,6 +172,7 @@ const PublicRegisterPage: React.FC = () => {
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="email"
           placeholder="correo@ejemplo.com"
+          required
           style={{
             width: '100%',
             padding: '12px 14px',
@@ -201,7 +204,7 @@ const PublicRegisterPage: React.FC = () => {
         />
 
         <label style={{ display: 'block', textAlign: 'center', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
-          Contraseña
+          Contraseña *
         </label>
         <input
           type="password"
@@ -209,6 +212,7 @@ const PublicRegisterPage: React.FC = () => {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
           placeholder="Cumple la política de seguridad"
+          required
           style={{
             width: '100%',
             padding: '12px 14px',

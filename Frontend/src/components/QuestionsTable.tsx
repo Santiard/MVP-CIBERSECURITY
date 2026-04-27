@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import dataService, { type Question } from "../services/dataService";
 import QuestionForm from "./QuestionForm";
+import ConfirmModal from "./modal/ConfirmModal";
+import { useAlert } from "./alerts/AlertProvider";
 
 type Props = {
   controlId: number;
@@ -8,10 +10,15 @@ type Props = {
 };
 
 const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
+  const { showAlert } = useAlert();
   const [rows, setRows] = useState<Question[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
   const [openForm, setOpenForm] = useState(false);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -27,10 +34,35 @@ const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [controlId, pageSize]);
+
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, pages);
+  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => {
+    if (page > pages) setPage(pages);
+  }, [page, pages]);
+
   const handleDelete = async (id: string) => {
-    if (!window.confirm("¿Eliminar esta pregunta?")) return;
-    await dataService.deleteQuestion(id);
-    await load();
+    setDeletingQuestionId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingQuestionId) return;
+    try {
+      setDeletingLoading(true);
+      await dataService.deleteQuestion(deletingQuestionId);
+      setDeletingQuestionId(null);
+      showAlert({ type: "success", title: "Exito", message: "Pregunta eliminada correctamente." });
+      await load();
+    } catch {
+      showAlert({ type: "error", title: "Error", message: "No se pudo eliminar la pregunta." });
+    } finally {
+      setDeletingLoading(false);
+    }
   };
 
   return (
@@ -51,6 +83,15 @@ const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
         }}
         onSaved={() => void load()}
         controlId={controlId}
+      />
+      <ConfirmModal
+        open={deletingQuestionId != null}
+        title="Eliminar pregunta"
+        message="¿Confirmas que deseas eliminar esta pregunta?"
+        confirmText="Eliminar"
+        loading={deletingLoading}
+        onCancel={() => setDeletingQuestionId(null)}
+        onConfirm={() => void confirmDelete()}
       />
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
         <button
@@ -89,7 +130,7 @@ const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
               </tr>
             )}
             {!loading &&
-              rows.map((r) => (
+              visibleRows.map((r) => (
                 <tr key={r.id}>
                   <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.text}</td>
                   <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.peso ?? "—"}</td>
@@ -117,6 +158,24 @@ const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
               ))}
           </tbody>
         </table>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, alignItems: "center" }}>
+        <div style={{ color: "var(--muted)" }}>Mostrando {visibleRows.length} de {rows.length} preguntas</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <label style={{ fontSize: 12, color: "var(--muted)" }}>Filas</label>
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            style={{ padding: 6, borderRadius: 8, border: "1px solid var(--border)" }}
+          >
+            {[5, 10, 20, 50].map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+          <span style={{ margin: "0 4px", minWidth: 42, textAlign: "center" }}>{safePage}/{pages}</span>
+          <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+        </div>
       </div>
     </div>
   );

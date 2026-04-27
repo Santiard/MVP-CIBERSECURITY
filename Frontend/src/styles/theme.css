@@ -244,6 +244,116 @@ body{
   outline: none;
 }
 
+.toast-stack{
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  gap: 12px;
+  z-index: 2000;
+}
+
+.toast-card{
+  position: relative;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface-light);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 14px 14px 12px;
+  overflow: hidden;
+  animation: toast-in 220ms ease-out;
+}
+
+.toast-card.toast-leaving{
+  animation: toast-out 200ms ease-in forwards;
+}
+
+.toast-icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.toast-title{
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.toast-message{
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.35;
+  padding-right: 20px;
+}
+
+.toast-close{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toast-accent{
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+}
+
+.toast-success .toast-icon{ background: color-mix(in srgb, var(--success) 20%, var(--white)); color: var(--success); }
+.toast-success .toast-accent{ background: var(--success); }
+
+.toast-warning .toast-icon{ background: color-mix(in srgb, var(--warning) 25%, var(--white)); color: var(--warning); }
+.toast-warning .toast-accent{ background: var(--warning); }
+
+.toast-error .toast-icon{ background: color-mix(in srgb, var(--danger) 20%, var(--white)); color: var(--danger); }
+.toast-error .toast-accent{ background: var(--danger); }
+
+@keyframes toast-in{
+  from{
+    opacity: 0;
+    transform: translate3d(14px, -6px, 0) scale(0.98);
+  }
+  to{
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes toast-out{
+  from{
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to{
+    opacity: 0;
+    transform: translate3d(14px, -4px, 0) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .toast-card,
+  .toast-card.toast-leaving{
+    animation: none;
+  }
+}
+
 /* Example CSS variables usage comment:
   Use tokens like var(--btn-primary-bg) and theme classes .theme-light/.theme-dark on the root element.
 */

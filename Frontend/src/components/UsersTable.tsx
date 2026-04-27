@@ -3,16 +3,19 @@ import '../styles/theme.css';
 import dataService from '../services/dataService';
 import UserForm from './UserForm';
 import Modal from './modal/Modal';
+import ConfirmModal from './modal/ConfirmModal';
 import Switch from './Switch';
 import { getPasswordPolicyIssues, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
+import { useAlert } from './alerts/AlertProvider';
 
 type User = { id: string; name: string; email: string; phone?: string; role: string; active?: boolean };
 
 const UsersTable: React.FC = () => {
+  const { showAlert } = useAlert();
   const [rows, setRows] = useState<User[]>([]);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [openForm, setOpenForm] = useState(false);
@@ -28,7 +31,16 @@ const UsersTable: React.FC = () => {
 
   const filtered = rows.filter(r => r.name.toLowerCase().includes(query.toLowerCase()) || r.email.toLowerCase().includes(query.toLowerCase()));
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visible = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const safePage = Math.min(page, pages);
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, pageSize]);
+
+  useEffect(() => {
+    if (page > pages) setPage(pages);
+  }, [page, pages]);
 
   const handleDelete = async (id: string) => {
     setDeleting({ id });
@@ -69,20 +81,24 @@ const UsersTable: React.FC = () => {
     setResetSubmitted(true);
     if (!newPassword) {
       setResetError('Ingrese nueva contraseña');
+      showAlert({ type: 'warning', title: 'Advertencia', message: 'Debes ingresar la nueva contraseña.' });
       return;
     }
     if (!isStrongPassword(newPassword)) {
       setResetError(PASSWORD_POLICY_MESSAGE);
+      showAlert({ type: 'warning', title: 'Advertencia', message: PASSWORD_POLICY_MESSAGE });
       return;
     }
     try {
       setResetLoading(true);
       setResetError('');
       await dataService.resetPassword(resetting.id, newPassword);
-      alert('Contraseña actualizada correctamente.');
+      showAlert({ type: 'success', title: 'Exito', message: 'Contrasena actualizada correctamente.' });
       setResetting(null);
       setNewPassword('');
       await load();
+    } catch {
+      showAlert({ type: 'error', title: 'Error', message: 'No se pudo actualizar la contrasena.' });
     } finally {
       setResetLoading(false);
     }
@@ -98,20 +114,21 @@ const UsersTable: React.FC = () => {
         <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo usuario</button>
       </div>
 
-      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Eliminar usuario">
-        <div>
-          <p>¿Confirmas que deseas eliminar este usuario?</p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-            <button className="btn" onClick={() => setDeleting(null)} disabled={deletingLoading}>Cancelar</button>
-            <button className="btn btn-primary" onClick={confirmDelete} disabled={deletingLoading}>{deletingLoading ? 'Eliminando...' : 'Eliminar'}</button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmModal
+        open={!!deleting}
+        title="Eliminar usuario"
+        message="¿Confirmas que deseas eliminar este usuario?"
+        confirmText="Eliminar"
+        loading={deletingLoading}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => void confirmDelete()}
+      />
 
       <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Cambiar contraseña">
         <div style={{ display: 'grid', gap: 8 }}>
-          <label style={{ fontSize: 12 }}>Nueva contraseña</label>
-          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campo obligatorio</p>
+          <label style={{ fontSize: 12 }}>Nueva contraseña *</label>
+          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
           {showResetIssues && resetIssues.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>
               <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
@@ -174,14 +191,22 @@ const UsersTable: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
-        <div style={{ color: 'var(--muted)' }}>Mostrando {filtered.length} usuarios</div>
-        {pages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, minWidth: 180 }}>
-            <button className="btn" onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
-            <span style={{ margin: '0 8px', minWidth: 32, textAlign: 'center' }}>{page}/{pages}</span>
-            <button className="btn" onClick={() => setPage(p => Math.min(pages, p + 1))}>Next</button>
-          </div>
-        )}
+        <div style={{ color: 'var(--muted)' }}>Mostrando {visible.length} de {filtered.length} usuarios</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
+          >
+            {[5, 10, 20, 50].map((size) => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <button className="btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+          <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
+          <button className="btn" onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+        </div>
       </div>
     </div>
   );

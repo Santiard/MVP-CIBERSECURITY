@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
+import ConfirmModal from "../components/modal/ConfirmModal";
 import dataService from "../services/dataService";
+import { useAlert } from "../components/alerts/AlertProvider";
 import {
   createEvaluation,
   deleteEvaluation,
@@ -17,6 +19,7 @@ type Org = { id_empresa: number; nombre: string; sector: string; tamano: string 
  * No sustituye el catálogo de empresas ni el de evaluaciones; centraliza asignar, reasignar, ver informe y eliminar vínculos.
  */
 const EvaluationAssignmentsPage: React.FC = () => {
+  const { showAlert } = useAlert();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightEmpresa = searchParams.get("empresa");
@@ -30,6 +33,9 @@ const EvaluationAssignmentsPage: React.FC = () => {
   const [reassignOrgId, setReassignOrgId] = useState<string>("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [newEvalOrgId, setNewEvalOrgId] = useState<string>("");
+  const [deleteFor, setDeleteFor] = useState<EvaluationApiRow | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const orgName = useMemo(() => {
     const m = new Map<number, string>();
@@ -65,6 +71,17 @@ const EvaluationAssignmentsPage: React.FC = () => {
     if (Number.isNaN(id)) return rows;
     return rows.filter((r) => r.id_empresa === id);
   }, [rows, orgFilter]);
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, pages);
+  const visibleRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [orgFilter, pageSize]);
+
+  useEffect(() => {
+    if (page > pages) setPage(pages);
+  }, [page, pages]);
 
   const handleReassign = async () => {
     if (!reassignFor || !reassignOrgId) return;
@@ -77,20 +94,38 @@ const EvaluationAssignmentsPage: React.FC = () => {
       setReassignOrgId("");
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Error al reasignar");
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: e instanceof Error ? e.message : "Error al reasignar",
+      });
     } finally {
       setBusyId(null);
     }
   };
 
   const handleDelete = async (ev: EvaluationApiRow) => {
-    if (!confirm(`¿Eliminar la evaluación #${ev.id_evaluacion} de ${orgName.get(ev.id_empresa) ?? "empresa"}?`)) return;
+    setDeleteFor(ev);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteFor) return;
     try {
-      setBusyId(ev.id_evaluacion);
-      await deleteEvaluation(ev.id_evaluacion);
+      setBusyId(deleteFor.id_evaluacion);
+      await deleteEvaluation(deleteFor.id_evaluacion);
+      setDeleteFor(null);
+      showAlert({
+        type: "success",
+        title: "Exito",
+        message: "Evaluacion eliminada correctamente.",
+      });
       await load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Error al eliminar");
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: e instanceof Error ? e.message : "Error al eliminar",
+      });
     } finally {
       setBusyId(null);
     }
@@ -103,7 +138,11 @@ const EvaluationAssignmentsPage: React.FC = () => {
       await load();
       navigate(`/evaluations/${created.id_evaluacion}/workflow`);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "No se pudo crear la evaluación");
+      showAlert({
+        type: "error",
+        title: "Error",
+        message: e instanceof Error ? e.message : "No se pudo crear la evaluacion",
+      });
     } finally {
       setBusyId(null);
     }
@@ -192,7 +231,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                       </td>
                     </tr>
                   )}
-                  {filtered.map((r) => {
+                  {visibleRows.map((r) => {
                     const hi =
                       highlightEmpresa && String(r.id_empresa) === highlightEmpresa
                         ? { background: "rgba(59, 130, 246, 0.08)" }
@@ -248,6 +287,26 @@ const EvaluationAssignmentsPage: React.FC = () => {
               </table>
             </div>
           )}
+          {!loading && !error && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, alignItems: "center" }}>
+              <div style={{ color: "var(--muted)" }}>Mostrando {visibleRows.length} de {filtered.length} evaluaciones</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <label style={{ fontSize: 12, color: "var(--muted)" }}>Filas</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  style={{ padding: 6, borderRadius: 8, border: "1px solid var(--border)" }}
+                >
+                  {[5, 10, 20, 50].map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+                <span style={{ margin: "0 4px", minWidth: 42, textAlign: "center" }}>{safePage}/{pages}</span>
+                <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="card">
@@ -255,11 +314,14 @@ const EvaluationAssignmentsPage: React.FC = () => {
           <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 0 }}>
             Crea una evaluación asociada a la empresa y abre el flujo (alcance + cuestionario).
           </p>
+          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 10 }}>* Campo obligatorio</p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 13 }}>Empresa</label>
+            <label style={{ fontSize: 13 }}>Empresa *</label>
             <select
               value={newEvalOrgId}
               onChange={(e) => setNewEvalOrgId(e.target.value)}
+              required
+              aria-required="true"
               style={{ padding: 8, borderRadius: 8, minWidth: 220, border: "1px solid var(--border)" }}
             >
               <option value="">Seleccione…</option>
@@ -276,7 +338,11 @@ const EvaluationAssignmentsPage: React.FC = () => {
               onClick={() => {
                 const v = Number(newEvalOrgId);
                 if (!v) {
-                  alert("Seleccione una empresa.");
+                  showAlert({
+                    type: "warning",
+                    title: "Advertencia",
+                    message: "Seleccione una empresa.",
+                  });
                   return;
                 }
                 void handleCreateForOrg(v);
@@ -304,9 +370,12 @@ const EvaluationAssignmentsPage: React.FC = () => {
             <div className="card" style={{ width: 400, maxWidth: "92%", padding: 20 }}>
               <h4 style={{ marginTop: 0 }}>Reasignar evaluación #{reassignFor.id_evaluacion}</h4>
               <p style={{ fontSize: 14, color: "var(--muted)" }}>Nueva empresa responsable:</p>
+              <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 8 }}>* Campo obligatorio</p>
               <select
                 value={reassignOrgId}
                 onChange={(e) => setReassignOrgId(e.target.value)}
+                required
+                aria-required="true"
                 style={{ width: "100%", padding: 8, marginBottom: 16, borderRadius: 8 }}
               >
                 {orgs.map((o) => (
@@ -326,6 +395,19 @@ const EvaluationAssignmentsPage: React.FC = () => {
             </div>
           </div>
         )}
+        <ConfirmModal
+          open={deleteFor != null}
+          title={deleteFor ? `Eliminar evaluacion #${deleteFor.id_evaluacion}` : "Eliminar evaluacion"}
+          message={
+            deleteFor
+              ? `¿Confirmas que deseas eliminar la evaluacion de ${orgName.get(deleteFor.id_empresa) ?? "empresa"}?`
+              : "¿Confirmas que deseas eliminar la evaluacion?"
+          }
+          confirmText="Eliminar"
+          loading={deleteFor != null && busyId === deleteFor.id_evaluacion}
+          onCancel={() => setDeleteFor(null)}
+          onConfirm={() => void confirmDelete()}
+        />
       </div>
     </Layout>
   );

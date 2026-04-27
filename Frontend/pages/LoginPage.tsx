@@ -35,6 +35,7 @@ function messageFromFastApiBody(body: unknown): string | null {
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -150,6 +151,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <h3 style={{marginTop:8, marginBottom:6}}>Iniciar sesión</h3>
+        <p style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 0, marginBottom: 14 }}>* Campos obligatorios</p>
 
         {error ? (
           <div
@@ -171,25 +173,48 @@ const LoginPage: React.FC = () => {
           </div>
         ) : null}
 
-        <label style={{display:'block', textAlign:'center', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Correo Electrónico</label>
+        <label style={{display:'block', textAlign:'center', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Correo Electrónico *</label>
         <input
           type="email"
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Ingresa tu correo electrónico"
+          required
           style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:12, boxSizing:'border-box', textAlign:'center'}}
         />
 
-        <label style={{display:'block', textAlign:'center', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Contraseña</label>
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Ingresa tu contraseña"
-          style={{width:'100%', padding:'12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', marginBottom:18, boxSizing:'border-box', textAlign:'center'}}
-        />
+        <label style={{display:'block', textAlign:'center', fontSize:13, color:'var(--gray-600)', marginBottom:6}}>Contraseña *</label>
+        <div style={{position: 'relative', marginBottom: 18}}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Ingresa tu contraseña"
+            required
+            style={{width:'100%', padding:'12px 52px 12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', boxSizing:'border-box', textAlign:'center'}}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              right: 10,
+              transform: 'translateY(-50%)',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--link-color)',
+              fontSize: 12,
+              cursor: 'pointer',
+              padding: '4px 6px',
+            }}
+          >
+            {showPassword ? 'Ocultar' : 'Ver'}
+          </button>
+        </div>
 
         {showPasswordIssues && passwordIssues.length > 0 && (
           <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--danger)', marginBottom: 12 }}>
