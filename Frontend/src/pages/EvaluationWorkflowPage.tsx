@@ -42,6 +42,9 @@ const EvaluationWorkflowPage: React.FC = () => {
 
   const [questionsFlat, setQuestionsFlat] = useState<{ controlName: string; question: Question }[]>([]);
   const [answersForm, setAnswersForm] = useState<Record<string, { valor: string; comentario: string }>>({});
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+
+  const isResolved = (evaluation?.estado ?? "").toLowerCase().includes("final");
 
   const loadBase = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
@@ -125,6 +128,7 @@ const EvaluationWorkflowPage: React.FC = () => {
 
   const handleSaveAnswers = async () => {
     if (!Number.isFinite(idNum) || !evaluation) return;
+    if (isResolved) return;
     setSaving(true);
     setError(null);
     try {
@@ -143,12 +147,16 @@ const EvaluationWorkflowPage: React.FC = () => {
           delete merged[q.id];
         }
       }
-      const updated = await patchEvaluation(idNum, { answers: merged });
+      const updated = await patchEvaluation(idNum, {
+        answers: merged,
+        estado: "Finalizada",
+      });
       setEvaluation(updated);
+      setLastSavedAt(new Date().toLocaleString("es-CO"));
       showAlert({
         type: "success",
         title: "Exito",
-        message: "Respuestas guardadas correctamente.",
+        message: "Cuestionario guardado y finalizado correctamente.",
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al guardar respuestas";
@@ -184,7 +192,12 @@ const EvaluationWorkflowPage: React.FC = () => {
           </Link>
         </div>
         {evaluation && (
-          <p style={{ color: "var(--muted)", fontSize: 14 }}>Empresa #{evaluation.id_empresa}</p>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>
+            Empresa #{evaluation.id_empresa} · Estado:{" "}
+            <strong style={{ color: isResolved ? "var(--success)" : "var(--warning)" }}>
+              {evaluation.estado || "Pendiente"}
+            </strong>
+          </p>
         )}
 
         <div className="card" style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
@@ -238,6 +251,7 @@ const EvaluationWorkflowPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={selectedControlIds.has(cid)}
+                      disabled={saving || isResolved}
                       onChange={() => toggleControl(cid)}
                       id={`ctrl-${q.id}`}
                     />
@@ -249,9 +263,19 @@ const EvaluationWorkflowPage: React.FC = () => {
                 );
               })}
             </ul>
-            <button type="button" className="btn btn-primary" disabled={saving} onClick={() => void handleSaveScopeAndContinue()}>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={saving || isResolved}
+              onClick={() => void handleSaveScopeAndContinue()}
+            >
               {saving ? "Guardando…" : "Guardar alcance y continuar"}
             </button>
+            {isResolved && (
+              <p style={{ marginTop: 10, color: "var(--success)", fontSize: 13 }}>
+                Esta evaluacion ya fue finalizada. El alcance esta bloqueado.
+              </p>
+            )}
           </div>
         )}
 
@@ -262,6 +286,23 @@ const EvaluationWorkflowPage: React.FC = () => {
               Una respuesta por pregunta: valor numérico 1–5 (madurez) y comentario opcional. Se guardan en{" "}
               <code>PATCH /evaluations/{idNum}</code> con el campo <code>answers</code>.
             </p>
+            {isResolved && (
+              <div
+                style={{
+                  marginTop: 8,
+                  marginBottom: 8,
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  background: "color-mix(in srgb, var(--success) 16%, var(--surface))",
+                  border: "1px solid color-mix(in srgb, var(--success) 35%, var(--border))",
+                  color: "var(--on-success)",
+                  fontSize: 13,
+                }}
+              >
+                Cuestionario resuelto. Las respuestas estan bloqueadas.
+                {lastSavedAt ? ` Ultimo guardado: ${lastSavedAt}.` : ""}
+              </div>
+            )}
             {questionsFlat.length === 0 ? (
               <p style={{ color: "var(--muted)" }}>
                 No hay preguntas en los controles seleccionados. Revise el catálogo o la semilla de datos.
@@ -288,6 +329,7 @@ const EvaluationWorkflowPage: React.FC = () => {
                           min={1}
                           max={5}
                           value={answersForm[q.id]?.valor ?? ""}
+                          disabled={saving || isResolved}
                           onChange={(e) =>
                             setAnswersForm((prev) => ({
                               ...prev,
@@ -302,6 +344,7 @@ const EvaluationWorkflowPage: React.FC = () => {
                         <input
                           type="text"
                           value={answersForm[q.id]?.comentario ?? ""}
+                          disabled={saving || isResolved}
                           onChange={(e) =>
                             setAnswersForm((prev) => ({
                               ...prev,
@@ -323,10 +366,10 @@ const EvaluationWorkflowPage: React.FC = () => {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={saving || questionsFlat.length === 0}
+                disabled={saving || questionsFlat.length === 0 || isResolved}
                 onClick={() => void handleSaveAnswers()}
               >
-                {saving ? "Guardando…" : "Guardar respuestas"}
+                {isResolved ? "Cuestionario finalizado" : saving ? "Guardando…" : "Guardar respuestas"}
               </button>
               <Link to={`/reports/${idNum}`} className="btn" style={{ textDecoration: "none" }}>
                 Ver informe
