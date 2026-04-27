@@ -5,19 +5,24 @@ type NavItem = {
   label: string;
 };
 
-/** Administrador: catálogo, usuarios, empresas, asignaciones, evaluaciones, riesgos catalogados, informes. */
+/**
+ * Orden de navegación alineado al flujo operativo:
+ * Dashboard → usuarios → organizaciones → cuestionarios → evaluaciones → asignaciones → informes → vulnerabilidades.
+ */
 const ADMIN_NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/users', label: 'Usuarios' },
   { to: '/organizations', label: 'Organizaciones' },
   { to: '/questionnaires', label: 'Cuestionarios' },
   { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/reports', label: 'Reportes' },
   { to: '/vulnerabilities', label: 'Vulnerabilidades' },
-  { to: '/users', label: 'Usuarios' },
 ];
 
-/** Evaluador: operar evaluaciones y empresas; ver cuestionarios; sin gestión de usuarios ni catálogo crítico. */
+/**
+ * Evaluador: entrada → panel → empresas → catálogo de formularios → evaluaciones → vínculos empresa–evaluación → informes.
+ */
 const EVALUATOR_NAV: NavItem[] = [
   { to: '/HomePage', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
@@ -28,7 +33,7 @@ const EVALUATOR_NAV: NavItem[] = [
   { to: '/reports', label: 'Reportes' },
 ];
 
-/** Usuario de empresa: solo evaluaciones donde participa e informes asociados. */
+/** Usuario de empresa: trabajo primero (evaluaciones), luego informes. */
 const USER_NAV: NavItem[] = [
   { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/reports', label: 'Reportes' },

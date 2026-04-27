@@ -12,6 +12,7 @@ import {
   type EvaluationDetail,
 } from "../services/evaluationApi";
 import { useAlert } from "../components/alerts/AlertProvider";
+import { getCurrentRole, getStoredAuthUser } from "../utils/auth";
 
 type QuestionnaireRow = Awaited<ReturnType<typeof dataService.getQuestionnaires>>[number];
 
@@ -45,6 +46,14 @@ const EvaluationWorkflowPage: React.FC = () => {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   const isResolved = (evaluation?.estado ?? "").toLowerCase().includes("final");
+
+  const authRole = getCurrentRole();
+  const authUser = getStoredAuthUser();
+  const isAssignee =
+    evaluation != null && authUser != null && Number(authUser.id) === evaluation.id_usuario;
+  /** Solo el usuario empresa titular completa el cuestionario; admin/evaluador solo definen alcance. */
+  const canRespondToQuestionnaire = authRole === "user" && isAssignee;
+  const isStaffAssignor = authRole === "admin" || authRole === "evaluator";
 
   const loadBase = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
@@ -81,6 +90,14 @@ const EvaluationWorkflowPage: React.FC = () => {
 
   const handleSaveScopeAndContinue = async () => {
     if (!Number.isFinite(idNum)) return;
+    if (authRole === "user" && evaluation && !isAssignee) {
+      showAlert({
+        type: "warning",
+        title: "Sin permiso",
+        message: "No eres el usuario titular de esta evaluación; no puedes modificar el alcance.",
+      });
+      return;
+    }
     if (selectedControlIds.size === 0) {
       showAlert({
         type: "warning",
@@ -93,6 +110,18 @@ const EvaluationWorkflowPage: React.FC = () => {
     setError(null);
     try {
       await syncEvaluationControls(idNum, selectedControlIds);
+      await loadBase();
+
+      if (isStaffAssignor) {
+        showAlert({
+          type: "success",
+          title: "Alcance guardado",
+          message:
+            "Los formularios quedaron asignados a esta evaluación. Quien debe responder el cuestionario es el usuario titular de la empresa (rol usuario), iniciando sesión con su cuenta.",
+        });
+        return;
+      }
+
       const linked = await listEvaluationControls(idNum);
       const pairs: { controlName: string; question: Question }[] = [];
       for (const c of linked) {
@@ -111,6 +140,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!canRespondToQuestionnaire) return;
     if (step !== 2 || questionsFlat.length === 0 || !evaluation) return;
     setAnswersForm((prev) => {
       const next = { ...prev };
@@ -124,10 +154,11 @@ const EvaluationWorkflowPage: React.FC = () => {
       }
       return next;
     });
-  }, [step, questionsFlat, evaluation]);
+  }, [step, questionsFlat, evaluation, canRespondToQuestionnaire]);
 
   const handleSaveAnswers = async () => {
     if (!Number.isFinite(idNum) || !evaluation) return;
+    if (!canRespondToQuestionnaire) return;
     if (isResolved) return;
     setSaving(true);
     setError(null);
@@ -199,8 +230,24 @@ const EvaluationWorkflowPage: React.FC = () => {
             </strong>
           </p>
         )}
+        {evaluation && authRole === "user" && !isAssignee && (
+          <div
+            role="alert"
+            style={{
+              marginTop: 12,
+              padding: "12px 14px",
+              borderRadius: 8,
+              border: "1px solid color-mix(in srgb, var(--warning) 35%, var(--border))",
+              background: "color-mix(in srgb, var(--warning) 14%, var(--surface))",
+              fontSize: 14,
+            }}
+          >
+            Esta evaluación tiene otro usuario como titular. Solo esa cuenta puede responder el cuestionario. Si
+            necesitáis ajustar el alcance, hacedlo con una sesión de administrador o evaluador.
+          </div>
+        )}
 
-        <div className="card" style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="card" style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <span
             style={{
               fontWeight: 600,
@@ -209,15 +256,24 @@ const EvaluationWorkflowPage: React.FC = () => {
           >
             1 · Alcance
           </span>
-          <span style={{ color: "var(--muted)" }}>→</span>
-          <span
-            style={{
-              fontWeight: 600,
-              color: step === 2 ? "var(--blue-600, #2563eb)" : "var(--muted)",
-            }}
-          >
-            2 · Cuestionario
-          </span>
+          {!isStaffAssignor && (
+            <>
+              <span style={{ color: "var(--muted)" }}>→</span>
+              <span
+                style={{
+                  fontWeight: 600,
+                  color: step === 2 ? "var(--blue-600, #2563eb)" : "var(--muted)",
+                }}
+              >
+                2 · Cuestionario
+              </span>
+            </>
+          )}
+          {isStaffAssignor && (
+            <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: 8 }}>
+              (El cuestionario lo completa solo el usuario empresa titular.)
+            </span>
+          )}
         </div>
 
         {loading && <p style={{ marginTop: 16 }}>Cargando…</p>}
@@ -231,8 +287,15 @@ const EvaluationWorkflowPage: React.FC = () => {
           <div className="card" style={{ marginTop: 20 }}>
             <h3 style={{ marginTop: 0 }}>Seleccionar controles en alcance</h3>
             <p style={{ fontSize: 14, color: "var(--muted)" }}>
-              Marque uno o más cuestionarios (controles) que formarán parte de esta evaluación. Al continuar se
+              Marque uno o más cuestionarios (controles) que formarán parte de esta evaluación. Al guardar se
               sincronizarán con el servidor (enlaces en <code>evaluacion_control</code>).
+              {isStaffAssignor && (
+                <>
+                  {" "}
+                  Como administrador o evaluador solo defines el alcance; el usuario empresa titular completará las
+                  preguntas en esta misma pantalla al iniciar sesión con su cuenta.
+                </>
+              )}
             </p>
             <ul style={{ listStyle: "none", padding: 0, margin: "16px 0" }}>
               {questionnaires.map((q) => {
@@ -251,7 +314,11 @@ const EvaluationWorkflowPage: React.FC = () => {
                     <input
                       type="checkbox"
                       checked={selectedControlIds.has(cid)}
-                      disabled={saving || isResolved}
+                      disabled={
+                        saving ||
+                        isResolved ||
+                        (authRole === "user" && evaluation != null && !isAssignee)
+                      }
                       onChange={() => toggleControl(cid)}
                       id={`ctrl-${q.id}`}
                     />
@@ -266,10 +333,18 @@ const EvaluationWorkflowPage: React.FC = () => {
             <button
               type="button"
               className="btn btn-primary"
-              disabled={saving || isResolved}
+              disabled={
+                saving ||
+                isResolved ||
+                (authRole === "user" && evaluation != null && !isAssignee)
+              }
               onClick={() => void handleSaveScopeAndContinue()}
             >
-              {saving ? "Guardando…" : "Guardar alcance y continuar"}
+              {saving
+                ? "Guardando…"
+                : isStaffAssignor
+                  ? "Guardar alcance"
+                  : "Guardar alcance y continuar al cuestionario"}
             </button>
             {isResolved && (
               <p style={{ marginTop: 10, color: "var(--success)", fontSize: 13 }}>
@@ -279,7 +354,7 @@ const EvaluationWorkflowPage: React.FC = () => {
           </div>
         )}
 
-        {!loading && evaluation && step === 2 && (
+        {!loading && evaluation && step === 2 && canRespondToQuestionnaire && (
           <div className="card" style={{ marginTop: 20 }}>
             <h3 style={{ marginTop: 0 }}>Responder preguntas</h3>
             <p style={{ fontSize: 14, color: "var(--muted)" }}>

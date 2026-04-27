@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 
 from app.access_control import get_assigned_organization_ids, is_admin, is_org_user, is_staff
 from app.db import engine
-from infraestructure.database import EmpresaORM, UsuarioORM, UsuarioOrganizacionORM
+from infraestructure.database import EmpresaORM, RolORM, UsuarioORM, UsuarioOrganizacionORM
 from interfaces.middlewares.auth_middleware import auth_middleware
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -24,6 +24,36 @@ def _user_ids_from_payload(data: dict) -> list[int] | None:
         except (TypeError, ValueError):
             raise HTTPException(status_code=422, detail="user_ids contiene valores no numéricos")
     return list(dict.fromkeys(out))
+
+
+def _validate_org_member_user_ids(session: Session, id_empresa: int, user_ids: list[int]) -> None:
+    """Solo rol «user» activo y sin vínculos con empresas distintas de `id_empresa`."""
+    rol_user = session.exec(select(RolORM).where(RolORM.nombre == "user")).first()
+    if rol_user is None:
+        raise HTTPException(status_code=500, detail="No existe el rol «user» en la base de datos.")
+    uid_rol_user = rol_user.id_rol
+    for uid in user_ids:
+        u = session.get(UsuarioORM, uid)
+        if u is None:
+            raise HTTPException(status_code=422, detail=f"Usuario {uid} no existe.")
+        if not u.activo:
+            raise HTTPException(status_code=422, detail=f"Usuario {uid} está inactivo.")
+        if u.id_rol != uid_rol_user:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Solo pueden asignarse usuarios con rol «usuario» de empresa (usuario {uid}).",
+            )
+        conflicto = session.exec(
+            select(UsuarioOrganizacionORM).where(
+                UsuarioOrganizacionORM.id_usuario == uid,
+                UsuarioOrganizacionORM.id_empresa != id_empresa,
+            )
+        ).first()
+        if conflicto is not None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"El usuario {uid} ya está asignado a otra empresa.",
+            )
 
 
 def _sync_usuario_empresa(session: Session, id_empresa: int, user_ids: list[int]) -> None:
@@ -67,6 +97,7 @@ def create_organization(input_data: dict, current_user=Depends(auth_middleware))
         session.refresh(empresa)
         assert empresa.id_empresa is not None
         if user_ids_payload is not None:
+            _validate_org_member_user_ids(session, empresa.id_empresa, user_ids_payload)
             _sync_usuario_empresa(session, empresa.id_empresa, user_ids_payload)
             session.commit()
         session.refresh(empresa)
@@ -85,6 +116,56 @@ def list_organizations(current_user=Depends(auth_middleware)):
             return []
         stmt = select(EmpresaORM).where(EmpresaORM.id_empresa.in_(allowed_ids))
         return session.exec(stmt).all()
+
+
+@router.get("/eligible-members")
+def list_eligible_organization_members(
+    for_empresa: int | None = None,
+    current_user=Depends(auth_middleware),
+):
+    """Usuarios con rol «user» elegibles para asignar a una empresa.
+
+    - Sin `for_empresa`: solo usuarios sin ningún vínculo en `usuario_organizacion`.
+    - Con `for_empresa`: usuarios sin vínculo con **otra** empresa (incluye sin vínculo o ya miembros de esta).
+    Staff únicamente.
+    """
+    if not is_staff(current_user):
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    with Session(engine) as session:
+        rol_user = session.exec(select(RolORM).where(RolORM.nombre == "user")).first()
+        if rol_user is None:
+            raise HTTPException(status_code=500, detail="No existe el rol «user» en la base de datos.")
+        stmt_users = select(UsuarioORM).where(
+            UsuarioORM.id_rol == rol_user.id_rol,
+            UsuarioORM.activo == True,  # noqa: E712
+        )
+        candidates = list(session.exec(stmt_users).all())
+
+        if for_empresa is None:
+            enlaces = session.exec(select(UsuarioOrganizacionORM)).all()
+            linked_ids = {ln.id_usuario for ln in enlaces}
+            eligible = [u for u in candidates if u.id_usuario not in linked_ids]
+        else:
+            emp = session.get(EmpresaORM, for_empresa)
+            if emp is None:
+                raise HTTPException(status_code=404, detail="Empresa no encontrada")
+            otros = session.exec(
+                select(UsuarioOrganizacionORM).where(UsuarioOrganizacionORM.id_empresa != for_empresa)
+            ).all()
+            conflict_ids = {ln.id_usuario for ln in otros}
+            eligible = [u for u in candidates if u.id_usuario not in conflict_ids]
+
+        return [
+            {
+                "id_usuario": u.id_usuario,
+                "nombre": u.nombre,
+                "correo": u.correo,
+                "activo": u.activo,
+            }
+            for u in eligible
+            if u.id_usuario is not None
+        ]
 
 
 @router.get("/{org_id}/users")
@@ -166,6 +247,7 @@ def update_organization(org_id: int, input_data: dict, current_user=Depends(auth
         session.commit()
         session.refresh(empresa)
         if user_ids_payload is not None:
+            _validate_org_member_user_ids(session, org_id, user_ids_payload)
             _sync_usuario_empresa(session, org_id, user_ids_payload)
             session.commit()
             session.refresh(empresa)

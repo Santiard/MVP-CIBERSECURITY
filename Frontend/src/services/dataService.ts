@@ -296,6 +296,23 @@ const dataService = {
       `/organizations/${id_empresa}/users`,
     );
   },
+  /** Usuarios rol «user» elegibles para membresía: sin otra empresa (crear) o sin conflicto con esta empresa (editar). */
+  getEligibleOrganizationMembers: async (forEmpresaId?: number): Promise<User[]> => {
+    const q =
+      forEmpresaId != null
+        ? `?for_empresa=${encodeURIComponent(String(forEmpresaId))}`
+        : '';
+    const rows = await readJson<Array<{ id_usuario: number; nombre: string; correo: string; activo?: boolean }>>(
+      `/organizations/eligible-members${q}`,
+    );
+    return rows.map((u) => ({
+      id: String(u.id_usuario),
+      name: u.nombre,
+      email: u.correo,
+      role: 'user',
+      active: u.activo ?? true,
+    }));
+  },
   updateOrg: async (id_empresa: number, patch: Partial<Org> & { user_ids?: number[] }) => {
     const body: Record<string, unknown> = {};
     if (patch.nombre !== undefined) body.name = patch.nombre;

@@ -21,7 +21,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
   const [tamano, setTamano] = useState(initial?.tamano || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { showAlert } = useAlert();
-  const [allUsers, setAllUsers] = useState<AppUser[]>([]);
+  const [eligibleUsers, setEligibleUsers] = useState<AppUser[]>([]);
   const [memberUserIds, setMemberUserIds] = useState<number[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -38,9 +38,11 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
     setLoadingUsers(true);
     (async () => {
       try {
-        const users = await dataService.getUsers();
+        const users = await dataService.getEligibleOrganizationMembers(
+          initial?.id_empresa != null ? initial.id_empresa : undefined,
+        );
         if (cancelled) return;
-        setAllUsers(users as AppUser[]);
+        setEligibleUsers(users as AppUser[]);
         if (initial?.id_empresa) {
           const members = await dataService.listOrganizationUsers(initial.id_empresa);
           if (cancelled) return;
@@ -50,7 +52,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
         }
       } catch {
         if (!cancelled) {
-          setAllUsers([]);
+          setEligibleUsers([]);
           setMemberUserIds([]);
         }
       } finally {
@@ -197,9 +199,9 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
         >
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Usuarios de la empresa</div>
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.45 }}>
-            Marca qué cuentas pueden operar en el contexto de esta organización (tabla de asignación usuario–empresa).
-            El inicio de sesión sigue siendo por usuario; aquí defines a qué empresa pertenecen para datos y permisos
-            del API.
+            Solo se listan cuentas con rol <strong>usuario de empresa</strong> (no administradores ni evaluadores) que
+            aún <strong>no están asignados a otra organización</strong>. Cada persona solo puede pertenecer a una
+            empresa a la vez.
           </p>
           {loadingUsers ? (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>Cargando usuarios…</div>
@@ -213,10 +215,12 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
                 padding: 8,
               }}
             >
-              {allUsers.length === 0 ? (
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>No hay usuarios cargados.</span>
+              {eligibleUsers.length === 0 ? (
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  No hay usuarios disponibles (o sin otra empresa asignada).
+                </span>
               ) : (
-                allUsers.map((u) => {
+                eligibleUsers.map((u) => {
                   const idNum = Number(u.id);
                   const disabled = !u.active;
                   const checked = memberUserIds.includes(idNum);
@@ -240,7 +244,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
                         onChange={() => !disabled && toggleMember(idNum)}
                       />
                       <span>
-                        {u.name} <span style={{ color: 'var(--muted)' }}>({u.email})</span> — {u.role}
+                        {u.name} <span style={{ color: 'var(--muted)' }}>({u.email})</span>
                       </span>
                     </label>
                   );

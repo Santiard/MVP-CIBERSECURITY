@@ -26,13 +26,20 @@ const AdminDashboardPage: React.FC = () => {
     <Layout>
       <div style={{ padding: 24 }}>
         <h2 style={{ marginTop: 0 }}>{isAdmin ? 'Panel administrativo' : 'Panel de trabajo'}</h2>
+        <p style={{ color: 'var(--muted)', marginTop: 8, marginBottom: 0, fontSize: 14, maxWidth: 720 }}>
+          Orden sugerido de alta:{' '}
+          <strong>{isAdmin ? 'usuarios → organizaciones → cuestionarios' : 'organizaciones → cuestionarios'}</strong>, luego
+          evaluar y revisar informes — igual que en la barra lateral.
+        </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 20, marginTop: 16 }}>
-          <AdminCard title="Cuestionarios" subtitle="Ver cuestionarios" to="/questionnaires" />
+          {isAdmin && <AdminCard title="Usuarios" subtitle="Roles y cuentas (primer paso habitual)" to="/users" />}
           <AdminCard title="Organizaciones" subtitle="Empresas registradas" to="/organizations" />
-          {isAdmin && <AdminCard title="Usuarios" subtitle="Administrar usuarios" to="/users" />}
-          <AdminCard title="Evaluaciones" subtitle="Historial y flujo" to="/evaluations" />
+          <AdminCard title="Cuestionarios" subtitle="Controles y preguntas del catálogo" to="/questionnaires" />
+          <AdminCard title="Evaluaciones" subtitle="Historial y flujo por evaluación" to="/evaluations" />
           <AdminCard title="Asignaciones" subtitle="Empresa ↔ evaluación" to="/asignaciones" />
+          <AdminCard title="Reportes" subtitle="Seguimiento e informes" to="/reports" />
+          {isAdmin && <AdminCard title="Vulnerabilidades" subtitle="Catálogo y registro" to="/vulnerabilities" />}
         </div>
       </div>
     </Layout>

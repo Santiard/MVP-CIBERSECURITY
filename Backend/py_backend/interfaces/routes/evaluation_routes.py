@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.access_control import get_assigned_organization_ids, is_org_user, is_staff
+from app.access_control import get_assigned_organization_ids, is_org_user, is_staff, role_lower
 from app.db import engine
 from app.schemas import (
     ControlLinkedRead,
@@ -130,10 +130,12 @@ def update_evaluation(
     input_data: EvaluationUpdate,
     current_user: dict = Depends(auth_middleware),
 ):
+    titular_uid: int | None = None
     with Session(engine) as session:
         item = session.get(EvaluacionORM, evaluation_id)
         if item is None:
             raise HTTPException(status_code=404, detail="Evaluación no encontrada")
+        titular_uid = item.id_usuario
         if is_org_user(current_user):
             allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
             if item.id_empresa not in allowed:
@@ -147,6 +149,12 @@ def update_evaluation(
                 raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
 
     patch = input_data.model_dump(exclude_unset=True)
+    if "answers" in patch and patch.get("answers") is not None and titular_uid is not None:
+        if role_lower(current_user) != "user" or int(current_user["user_id"]) != titular_uid:
+            raise HTTPException(
+                status_code=403,
+                detail="Solo el usuario titular de la evaluación (rol «user») puede guardar respuestas del cuestionario.",
+            )
     if is_org_user(current_user):
         if patch.get("user_id") is not None and int(patch["user_id"]) != int(current_user["user_id"]):
             raise HTTPException(status_code=403, detail="No puede reasignar la evaluación a otro usuario")
