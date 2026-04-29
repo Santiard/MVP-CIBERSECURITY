@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import Column, JSON
@@ -28,6 +28,7 @@ class UsuarioORM(SQLModel, table=True):
     rol: Optional["RolORM"] = Relationship(back_populates="usuarios")
     evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="usuario")
     asignaciones_empresa: list["UsuarioOrganizacionORM"] = Relationship(back_populates="usuario")
+    password_reset_tokens: list["PasswordResetTokenORM"] = Relationship(back_populates="usuario")
 
 
 class EmpresaORM(SQLModel, table=True):
@@ -236,6 +237,21 @@ class VulnerabilidadORM(SQLModel, table=True):
         back_populates="vulnerabilidades",
         link_model=RiesgoVulnerabilidadORM,
     )
+
+
+class PasswordResetTokenORM(SQLModel, table=True):
+    """Token opaco de un solo uso para restablecer contraseña (hash persistido)."""
+
+    __tablename__ = "password_reset_tokens"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    id_usuario: int = Field(foreign_key="usuarios.id_usuario", index=True)
+    token_hash: str = Field(max_length=64, unique=True, index=True)
+    expires_at: datetime = Field()
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    used_at: Optional[datetime] = Field(default=None)
+
+    usuario: Optional["UsuarioORM"] = Relationship(back_populates="password_reset_tokens")
 
 
 class UsuarioOrganizacionORM(SQLModel, table=True):

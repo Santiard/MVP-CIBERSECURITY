@@ -242,8 +242,9 @@ const LoginPage: React.FC = () => {
           <Link to="/register" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>
             Crear cuenta
           </Link>
-          <a href="/RecoverPage" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>Recuperar contraseña</a>
-          <a href="/dashboard" style={{color:'var(--muted)', textDecoration:'none', fontSize:13}}>Entrar como invitado</a>
+          <Link to="/recover-password" style={{color:'var(--link-color)', textDecoration:'none', fontSize:13}}>
+            Recuperar contraseña
+          </Link>
         </div>
       </form>
     </div>

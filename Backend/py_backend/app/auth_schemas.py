@@ -14,9 +14,19 @@ class LoginResponse(BaseModel):
     role: str
 
 
-class RecoverPasswordRequest(BaseModel):
+class RequestPasswordResetBody(BaseModel):
     email: str
+
+
+class ConfirmPasswordResetBody(BaseModel):
+    token: str
     new_password: str
+
+
+class PasswordResetNeutralResponse(BaseModel):
+    """Siempre igual para no revelar si el correo está registrado."""
+
+    message: str = "Si existe una cuenta con ese correo, recibirás instrucciones en breve."
 
 
 class RegisterRequest(BaseModel):

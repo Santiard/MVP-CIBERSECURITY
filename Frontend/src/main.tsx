@@ -31,6 +31,7 @@ function AppRoutes() {
         <Route path="/LoginPage" element={<LoginPage />} />
         <Route path="/register" element={<PublicRegisterPage />} />
         <Route path="/RecoverPage" element={<RecoverPage />} />
+        <Route path="/recover-password" element={<RecoverPage />} />
         <Route
           path="/HomePage"
           element={

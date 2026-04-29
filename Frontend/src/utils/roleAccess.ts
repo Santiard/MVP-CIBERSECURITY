@@ -56,7 +56,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
   }
 
   if (role === 'evaluator') {
-    if (path === '/HomePage' || path === '/RecoverPage') return true;
+    if (path === '/HomePage' || path === '/RecoverPage' || path === '/recover-password') return true;
     if (path === '/dashboard') return true;
     if (path === '/questionnaires') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
@@ -67,7 +67,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
   }
 
   if (role === 'user') {
-    if (path === '/RecoverPage') return true;
+    if (path === '/RecoverPage' || path === '/recover-password') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
     if (path === '/reports' || /^\/reports\/[^/]+$/.test(path) || /^\/reports\/[^/]+\/report$/.test(path)) return true;
     return false;

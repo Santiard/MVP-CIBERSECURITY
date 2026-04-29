@@ -4,13 +4,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 
 from app.auth import create_access_token
-from app.auth_schemas import LoginRequest, LoginResponse, RecoverPasswordRequest, RegisterRequest
+from app.auth_schemas import LoginRequest, LoginResponse, RegisterRequest
 from app.db import engine, init_db
 from app.seed import seed_data_if_enabled
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database import RolORM, UsuarioORM
 from interfaces.routes.core_entities_routes import router as core_entities_router
 from interfaces.routes.evaluation_routes import router as evaluation_router
+from interfaces.routes.password_reset_routes import router as password_reset_router
 from interfaces.routes.organization_routes import router as organization_router
 
 app = FastAPI(title="MVP CIBERSECURITY - FastAPI Backend")
@@ -71,26 +72,6 @@ def login(payload: LoginRequest) -> LoginResponse:
         )
 
 
-@app.post("/auth/recover-password")
-def recover_password(payload: RecoverPasswordRequest) -> dict[str, str]:
-    email = payload.email.strip().lower()
-    new_password = payload.new_password
-
-    if not is_strong_password(new_password):
-        raise HTTPException(status_code=422, detail=PASSWORD_POLICY_MESSAGE)
-
-    with Session(engine) as session:
-        user = session.exec(select(UsuarioORM).where(UsuarioORM.correo == email)).first()
-        if user is None:
-            raise HTTPException(status_code=404, detail="No existe usuario con ese correo")
-
-        user.password = new_password
-        session.add(user)
-        session.commit()
-
-    return {"message": "Contraseña actualizada correctamente"}
-
-
 @app.post("/auth/register")
 def register(payload: RegisterRequest) -> LoginResponse:
     """Alta pública: crea usuario con rol `user` e inicia sesión (misma respuesta que login)."""
@@ -135,6 +116,7 @@ def register(payload: RegisterRequest) -> LoginResponse:
         )
 
 
+app.include_router(password_reset_router)
 app.include_router(evaluation_router)
 app.include_router(organization_router)
 app.include_router(core_entities_router)
