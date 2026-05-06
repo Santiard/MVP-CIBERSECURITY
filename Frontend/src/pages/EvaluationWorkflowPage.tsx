@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
+import BackButton from "../components/BackButton";
 import dataService, { type Question } from "../services/dataService";
 import {
   detachEvaluationControl,
@@ -44,6 +45,22 @@ const EvaluationWorkflowPage: React.FC = () => {
   const [questionsFlat, setQuestionsFlat] = useState<{ controlName: string; question: Question }[]>([]);
   const [answersForm, setAnswersForm] = useState<Record<string, { valor: string; comentario: string }>>({});
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+
+  const autoSaveTimer = useRef<number | null>(null);
+  const [autoSaving, setAutoSaving] = useState(false);
+
+  const totalQuestions = questionsFlat.length;
+  const answeredCount = questionsFlat.filter(({ question: q }) => {
+    const id = q.id;
+    const form = answersForm[id];
+    const saved = evaluation?.answers?.[id];
+    const valor = form?.valor ?? saved?.valor;
+    const comentario = form?.comentario ?? saved?.comentario;
+    const hasValor = valor !== undefined && String(valor).trim() !== "";
+    const hasComentario = comentario !== undefined && String(comentario).trim() !== "";
+    return hasValor || hasComentario;
+  }).length;
+  const progressPercent = totalQuestions === 0 ? 0 : Math.round((answeredCount / totalQuestions) * 100);
 
   const isResolved = (evaluation?.estado ?? "").toLowerCase().includes("final");
 
@@ -202,6 +219,62 @@ const EvaluationWorkflowPage: React.FC = () => {
     }
   };
 
+  // Partial autosave (debounced) — saves answers but does NOT finalize the evaluation
+  const saveAnswersPartial = async () => {
+    if (!Number.isFinite(idNum) || !evaluation) return;
+    if (!canRespondToQuestionnaire) return;
+    if (isResolved) return;
+    const merged: Record<string, AnswerValue> = { ...evaluation.answers };
+    for (const { question: q } of questionsFlat) {
+      const row = answersForm[q.id] ?? { valor: "", comentario: "" };
+      const vStr = row.valor.trim();
+      const valor = vStr === "" ? undefined : Number(vStr);
+      const comentario = row.comentario.trim() === "" ? undefined : row.comentario.trim();
+      if (valor !== undefined && (Number.isNaN(valor) || valor < 1 || valor > 5)) {
+        // don't autosave invalid entries
+        setError(`La pregunta "${q.text.slice(0, 48)}…" requiere un valor entre 1 y 5 o vacío.`);
+        return;
+      }
+      if (valor !== undefined || comentario !== undefined) {
+        merged[q.id] = { valor, comentario };
+      } else {
+        delete merged[q.id];
+      }
+    }
+    setAutoSaving(true);
+    try {
+      const updated = await patchEvaluation(idNum, { answers: merged });
+      setEvaluation(updated);
+      setLastSavedAt(new Date().toLocaleString("es-CO"));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al auto-guardar respuestas");
+    } finally {
+      setAutoSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    // debounce autosave when answers change
+    if (autoSaveTimer.current) {
+      window.clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = null;
+    }
+    if (!canRespondToQuestionnaire || step !== 2 || isResolved) return;
+    // only schedule if there is at least one question
+    if (questionsFlat.length === 0) return;
+    autoSaveTimer.current = window.setTimeout(() => {
+      void saveAnswersPartial();
+    }, 1500) as unknown as number;
+    return () => {
+      if (autoSaveTimer.current) {
+        window.clearTimeout(autoSaveTimer.current);
+        autoSaveTimer.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answersForm, step, canRespondToQuestionnaire, isResolved, questionsFlat]);
+
   if (!Number.isFinite(idNum)) {
     return (
       <Layout>
@@ -216,8 +289,47 @@ const EvaluationWorkflowPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: 24, maxWidth: 900 }}>
+        {step === 2 && totalQuestions > 0 && (
+          <>
+            <style>{`@keyframes moveGradient { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }`}</style>
+            <div style={{ position: "sticky", top: 0, zIndex: 40, background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))", padding: "10px 0", marginTop: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.04)" }}>
+              <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1, marginRight: 12 }}>
+                    <div style={{ background: "rgba(0,0,0,0.06)", height: 12, borderRadius: 999, overflow: "hidden", border: "1px solid rgba(0,0,0,0.04)" }}>
+                      <div
+                        style={{
+                          width: `${progressPercent}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, var(--blue-600), #06b6d4)",
+                          transition: "width 400ms ease",
+                          boxShadow: "inset 0 -2px 8px rgba(0,0,0,0.08)",
+                          backgroundSize: "200% 100%",
+                          animation: "moveGradient 6s linear infinite",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ textAlign: "right", minWidth: 160 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{progressPercent}% completo</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>{answeredCount}/{totalQuestions} preguntas respondidas</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>{autoSaving ? "Guardando…" : lastSavedAt ? `Guardado: ${lastSavedAt}` : "Sin guardar"}</div>
+                    </div>
+                    <div style={{ width: 48, height: 48, borderRadius: 999, display: "grid", placeItems: "center", background: "linear-gradient(135deg, #fff, rgba(255,255,255,0.6))", boxShadow: "0 2px 8px rgba(2,6,23,0.08)", border: "1px solid rgba(0,0,0,0.06)" }}>
+                      <div style={{ fontWeight: 700, color: "var(--blue-700)" }}>{progressPercent}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <h2 style={{ margin: 0 }}>Flujo de evaluación #{idNum}</h2>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <BackButton fallback="/asignaciones" />
+            <h2 style={{ margin: 0 }}>Flujo de evaluación #{idNum}</h2>
+          </div>
           <Link to="/asignaciones" className="btn" style={{ textDecoration: "none" }}>
             Asignaciones
           </Link>
@@ -265,13 +377,13 @@ const EvaluationWorkflowPage: React.FC = () => {
                   color: step === 2 ? "var(--blue-600, #2563eb)" : "var(--muted)",
                 }}
               >
-                2 · Cuestionario
+                2 · Formulario
               </span>
             </>
           )}
           {isStaffAssignor && (
             <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: 8 }}>
-              (El cuestionario lo completa solo el usuario empresa titular.)
+              (El formulario lo completa solo el usuario empresa titular.)
             </span>
           )}
         </div>
@@ -285,15 +397,15 @@ const EvaluationWorkflowPage: React.FC = () => {
 
         {!loading && evaluation && step === 1 && (
           <div className="card" style={{ marginTop: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Seleccionar controles en alcance</h3>
+            <h3 style={{ marginTop: 0 }}>Seleccionar formularios en alcance</h3>
             <p style={{ fontSize: 14, color: "var(--muted)" }}>
-              Marque uno o más cuestionarios (controles) que formarán parte de esta evaluación. Al guardar se
+              Marque uno o más formularios (controles) que formarán parte de esta evaluación. Al guardar se
               sincronizarán con el servidor (enlaces en <code>evaluacion_control</code>).
               {isStaffAssignor && (
                 <>
                   {" "}
                   Como administrador o evaluador solo defines el alcance; el usuario empresa titular completará las
-                  preguntas en esta misma pantalla al iniciar sesión con su cuenta.
+                  preguntas del formulario en esta misma pantalla al iniciar sesión con su cuenta.
                 </>
               )}
             </p>

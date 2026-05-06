@@ -49,13 +49,13 @@ const QuestionnairesTable: React.FC = () => {
 
   return (
     <div className="card">
-      <h2 style={{ marginTop: 0 }}>Cuestionarios</h2>
+      <h2 style={{ marginTop: 0 }}>Formularios</h2>
       <QuestionnaireForm open={openForm} initial={editing || undefined} onClose={() => { setOpenForm(false); setEditing(null); }} onSaved={load} saveFn={handleSave} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ color: 'var(--muted)' }}>Listado de cuestionarios registrados</div>
+        <div style={{ color: 'var(--muted)' }}>Listado de formularios registrados</div>
         <div>
-          <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo cuestionario</button>
+          <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo formulario</button>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ const QuestionnairesTable: React.FC = () => {
         </table>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
-        <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} cuestionarios</div>
+        <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} formularios</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
           <select

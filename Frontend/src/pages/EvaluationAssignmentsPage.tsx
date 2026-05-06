@@ -29,8 +29,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orgFilter, setOrgFilter] = useState<string>("");
-  const [reassignFor, setReassignFor] = useState<EvaluationApiRow | null>(null);
-  const [reassignOrgId, setReassignOrgId] = useState<string>("");
+  
   const [busyId, setBusyId] = useState<number | null>(null);
   const [newEvalOrgId, setNewEvalOrgId] = useState<string>("");
   const [deleteFor, setDeleteFor] = useState<EvaluationApiRow | null>(null);
@@ -83,26 +82,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
     if (page > pages) setPage(pages);
   }, [page, pages]);
 
-  const handleReassign = async () => {
-    if (!reassignFor || !reassignOrgId) return;
-    const newId = Number(reassignOrgId);
-    if (Number.isNaN(newId)) return;
-    try {
-      setBusyId(reassignFor.id_evaluacion);
-      await patchEvaluation(reassignFor.id_evaluacion, { id_empresa: newId });
-      setReassignFor(null);
-      setReassignOrgId("");
-      await load();
-    } catch (e) {
-      showAlert({
-        type: "error",
-        title: "Error",
-        message: e instanceof Error ? e.message : "Error al reasignar",
-      });
-    } finally {
-      setBusyId(null);
-    }
-  };
+  
 
   const handleDelete = async (ev: EvaluationApiRow) => {
     setDeleteFor(ev);
@@ -151,38 +131,9 @@ const EvaluationAssignmentsPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: 24, maxWidth: 1100 }}>
-        <h2 style={{ marginTop: 0 }}>Asignaciones: empresa ↔ evaluación</h2>
+        <h2 style={{ marginTop: 0 }}>ASIGNACIONES DE FORMULARIOS A EMPRESA</h2>
 
-        <div
-          className="card"
-          style={{
-            marginBottom: 20,
-            background: "var(--surface-muted, rgba(0,0,0,0.03))",
-            fontSize: 14,
-            lineHeight: 1.55,
-          }}
-        >
-          <strong>Organización del producto</strong>
-          <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
-            <li>
-              <strong>Organizaciones</strong>: alta y edición del catálogo de empresas (datos generales).
-            </li>
-            <li>
-              <strong>Evaluaciones</strong>: listado global del inventario de evaluaciones (fechas, estados).
-            </li>
-            <li>
-              <strong>Esta pantalla</strong>: operar la <em>relación</em> evaluación–empresa (crear una evaluación ya
-              ligada a una empresa, reasignar de una empresa a otra, abrir informe o eliminar la evaluación).
-            </li>
-          </ul>
-          <p style={{ margin: "12px 0 0", color: "var(--muted)" }}>
-            El alcance y el cuestionario por evaluación se abren con <strong>Alcance y cuestionario</strong> (URL{" "}
-            <code>/evaluations/:evaluationId/workflow</code>); aquí se consolida sobre todo la empresa asignada a cada
-            evaluación.
-          </p>
-        </div>
-
-        <div className="card" style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+        <div className="card" style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
           <label style={{ fontSize: 13, color: "var(--muted)" }}>Filtrar por empresa</label>
           <select
             value={orgFilter}
@@ -205,6 +156,18 @@ const EvaluationAssignmentsPage: React.FC = () => {
           <Link to="/evaluations" className="btn" style={{ textDecoration: "none" }}>
             Ir a evaluaciones
           </Link>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => {
+              const fallbackOrgId = highlightEmpresa ?? orgFilter ?? (orgs[0] ? String(orgs[0].id_empresa) : "");
+              setNewEvalOrgId(fallbackOrgId);
+              const dialog = document.getElementById("new-evaluation-dialog") as HTMLDialogElement | null;
+              dialog?.showModal();
+            }}
+          >
+            Asignar evaluación
+          </button>
         </div>
 
         <div className="card" style={{ minHeight: 200 }}>
@@ -250,7 +213,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                             className="btn btn-primary"
                             style={{ textDecoration: "none", marginRight: 8 }}
                           >
-                            Alcance y cuestionario
+                            Editar alcance de la evaluación
                           </Link>
                           <Link
                             to={`/reports/${r.id_evaluacion}`}
@@ -259,17 +222,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                           >
                             Ver informe
                           </Link>
-                          <button
-                            type="button"
-                            className="btn"
-                            disabled={busyId === r.id_evaluacion}
-                            onClick={() => {
-                              setReassignFor(r);
-                              setReassignOrgId(String(r.id_empresa));
-                            }}
-                          >
-                            Reasignar empresa
-                          </button>
+                          {/* Reasignación deshabilitada: la empresa responsable no se puede cambiar desde aquí */}
                           <button
                             type="button"
                             className="btn"
@@ -309,28 +262,68 @@ const EvaluationAssignmentsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="card">
-          <h3 style={{ marginTop: 0 }}>Nueva evaluación ligada a una empresa</h3>
-          <p style={{ fontSize: 14, color: "var(--muted)", marginTop: 0 }}>
-            Crea una evaluación asociada a la empresa y abre el flujo (alcance + cuestionario).
-          </p>
-          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 10 }}>* Campo obligatorio</p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 13 }}>Empresa *</label>
-            <select
-              value={newEvalOrgId}
-              onChange={(e) => setNewEvalOrgId(e.target.value)}
-              required
-              aria-required="true"
-              style={{ padding: 8, borderRadius: 8, minWidth: 220, border: "1px solid var(--border)" }}
+        <dialog
+          id="new-evaluation-dialog"
+          style={{
+            width: "min(640px, calc(100vw - 32px))",
+            border: "none",
+            borderRadius: "var(--radius-md)",
+            padding: 0,
+            background: "var(--surface)",
+            color: "var(--text-primary)",
+            boxShadow: "var(--shadow-md)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{
+            background: "linear-gradient(135deg, var(--blue-700) 0%, var(--blue-500) 100%)",
+            padding: "20px 24px",
+            borderBottom: "1px solid color-mix(in srgb, var(--blue-400) 50%, transparent)",
+            color: "white",
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: 4, fontWeight: 600 }}>Nueva evaluación ligada a una empresa</h3>
+            <p style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>Crea una evaluación asociada a la empresa y abre el flujo (alcance + cuestionario).</p>
+          </div>
+          <div style={{ padding: "24px" }}>
+            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 10 }}>* Campo obligatorio</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 13, marginBottom: 8, fontWeight: 500 }}>Empresa *</label>
+                <select
+                  value={newEvalOrgId}
+                  onChange={(e) => setNewEvalOrgId(e.target.value)}
+                  required
+                  aria-required="true"
+                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 }}
+                >
+                  <option value="">Seleccione…</option>
+                  {orgs.map((o) => (
+                    <option key={o.id_empresa} value={String(o.id_empresa)}>
+                      {o.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            padding: "16px 24px",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface-muted, rgba(0,0,0,0.02))",
+          }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const dialog = document.getElementById("new-evaluation-dialog") as HTMLDialogElement | null;
+                dialog?.close();
+              }}
             >
-              <option value="">Seleccione…</option>
-              {orgs.map((o) => (
-                <option key={o.id_empresa} value={String(o.id_empresa)}>
-                  {o.nombre}
-                </option>
-              ))}
-            </select>
+              Cancelar
+            </button>
             <button
               type="button"
               className="btn btn-primary"
@@ -346,55 +339,16 @@ const EvaluationAssignmentsPage: React.FC = () => {
                   return;
                 }
                 void handleCreateForOrg(v);
+                const dialog = document.getElementById("new-evaluation-dialog") as HTMLDialogElement | null;
+                dialog?.close();
               }}
             >
               Crear y abrir flujo
             </button>
           </div>
-        </div>
+        </dialog>
 
-        {reassignFor && (
-          <div
-            role="dialog"
-            aria-modal
-            style={{
-              position: "fixed",
-              inset: 0,
-              background: "rgba(0,0,0,0.45)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 50,
-            }}
-          >
-            <div className="card" style={{ width: 400, maxWidth: "92%", padding: 20 }}>
-              <h4 style={{ marginTop: 0 }}>Reasignar evaluación #{reassignFor.id_evaluacion}</h4>
-              <p style={{ fontSize: 14, color: "var(--muted)" }}>Nueva empresa responsable:</p>
-              <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 8 }}>* Campo obligatorio</p>
-              <select
-                value={reassignOrgId}
-                onChange={(e) => setReassignOrgId(e.target.value)}
-                required
-                aria-required="true"
-                style={{ width: "100%", padding: 8, marginBottom: 16, borderRadius: 8 }}
-              >
-                {orgs.map((o) => (
-                  <option key={o.id_empresa} value={String(o.id_empresa)}>
-                    {o.nombre}
-                  </option>
-                ))}
-              </select>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                <button type="button" className="btn" onClick={() => setReassignFor(null)}>
-                  Cancelar
-                </button>
-                <button type="button" className="btn btn-primary" disabled={busyId != null} onClick={() => void handleReassign()}>
-                  Guardar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Reasignación removida: no se permite cambiar empresa desde esta vista */}
         <ConfirmModal
           open={deleteFor != null}
           title={deleteFor ? `Eliminar evaluacion #${deleteFor.id_evaluacion}` : "Eliminar evaluacion"}

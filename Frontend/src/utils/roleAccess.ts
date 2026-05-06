@@ -7,13 +7,13 @@ type NavItem = {
 
 /**
  * Orden de navegación alineado al flujo operativo:
- * Dashboard → usuarios → organizaciones → cuestionarios → evaluaciones → asignaciones → informes → vulnerabilidades.
+ * Dashboard → usuarios → organizaciones → formularios → evaluaciones → asignaciones → informes → vulnerabilidades.
  */
 const ADMIN_NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/users', label: 'Usuarios' },
   { to: '/organizations', label: 'Organizaciones' },
-  { to: '/questionnaires', label: 'Cuestionarios' },
+  { to: '/questionnaires', label: 'Formularios' },
   { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/reports', label: 'Reportes' },
@@ -27,7 +27,7 @@ const EVALUATOR_NAV: NavItem[] = [
   { to: '/HomePage', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/organizations', label: 'Organizaciones' },
-  { to: '/questionnaires', label: 'Cuestionarios' },
+  { to: '/questionnaires', label: 'Formularios' },
   { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/reports', label: 'Reportes' },
