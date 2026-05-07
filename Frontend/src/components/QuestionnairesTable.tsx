@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import dataService from '../services/dataService';
 import QuestionnaireForm from './QuestionnaireForm';
 import QuestionsTable from './QuestionsTable';
-import Modal from './modal/Modal';
 
 type Q = { id: string; name: string; dimensions: number; active: boolean };
 
@@ -14,8 +13,6 @@ const QuestionnairesTable: React.FC = () => {
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Q | null>(null);
   const [questionsForId, setQuestionsForId] = useState<string | null>(null);
-  const [questionsModalOpen, setQuestionsModalOpen] = useState(false);
-  const [selectedQuestionnaireForModal, setSelectedQuestionnaireForModal] = useState<Q | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -83,32 +80,27 @@ const QuestionnairesTable: React.FC = () => {
                     <span style={{ padding: '6px 10px', borderRadius: 9999, background: r.active ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)', color: r.active ? 'var(--success)' : 'var(--danger)', fontWeight:700 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
                   </td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
-                    <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={() => { setSelectedQuestionnaireForModal(r); setQuestionsModalOpen(true); }}>
-                      Contenido de Preguntas
+                    <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={() => setQuestionsForId((cur) => (cur === r.id ? null : r.id))}>
+                      {questionsForId === r.id ? 'Ocultar preguntas' : 'Preguntas'}
                     </button>
-                    <button type="button" className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar Datos del Formulario</button>
+                    <button type="button" className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
                     <button type="button" className="btn" style={{ marginLeft: 8 }} onClick={() => handleToggle(r.id)}>{r.active ? 'Desactivar' : 'Activar'}</button>
                   </td>
                 </tr>
-
+                {questionsForId === r.id && (
+                  <tr>
+                    <td colSpan={4} style={{ padding: 0, borderTop: '1px solid var(--border)', background: 'var(--surface-muted, rgba(0,0,0,0.02))' }}>
+                      <div style={{ padding: '8px 12px 16px' }}>
+                        <QuestionsTable controlId={Number(r.id)} questionnaireName={r.name} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </React.Fragment>
             ))}
           </tbody>
         </table>
       </div>
-
-      <Modal 
-        open={questionsModalOpen} 
-        onClose={() => { setQuestionsModalOpen(false); setSelectedQuestionnaireForModal(null); }} 
-        title={selectedQuestionnaireForModal ? `Preguntas · ${selectedQuestionnaireForModal.name}` : 'Preguntas'}
-      >
-        {selectedQuestionnaireForModal && (
-          <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-            <QuestionsTable controlId={Number(selectedQuestionnaireForModal.id)} questionnaireName={selectedQuestionnaireForModal.name} />
-          </div>
-        )}
-      </Modal>
-
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
         <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} formularios</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

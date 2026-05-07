@@ -25,7 +25,6 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const [role, setRole] = useState(initial?.role || 'user');
   const [active, setActive] = useState(initial?.active ?? true);
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { showAlert } = useAlert();
@@ -42,7 +41,6 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
     setRole(initial?.role || 'user');
     setActive(initial?.active ?? true);
     setPassword('');
-    setConfirmPassword('');
     setSubmitted(false);
     setErrors({});
   }, [initial, open]);
@@ -77,13 +75,6 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
       newErrors.password = PASSWORD_POLICY_MESSAGE;
     }
 
-    // Validar que las contraseñas coincidan
-    if (password || confirmPassword) {
-      if (password !== confirmPassword) {
-        newErrors.confirmPassword = 'Las contraseñas no coinciden';
-      }
-    }
-
     // Validar email duplicado
     const emailExists = await dataService.checkUserEmailExists(email, initial?.id);
     if (emailExists) {
@@ -113,13 +104,9 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
     try {
       if (initial?.id) {
         const payload: Record<string, unknown> = { name: nameTrim, email: emailTrim, phone, role, active };
-        if (password) {
-          if (password !== confirmPassword) throw new Error('Las contraseñas no coinciden');
-          payload.password = password;
-        }
+        if (password) payload.password = password;
         await dataService.updateUser(initial.id, payload as any);
       } else {
-        if (password !== confirmPassword) throw new Error('Las contraseñas no coinciden');
         await dataService.createUser({ name: nameTrim, email: emailTrim, phone, role, active, password } as any);
       }
       showAlert({
@@ -192,28 +179,6 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
             ))}
           </ul>
         </div>
-      )}
-
-      {password && (
-        <>
-          <label style={{ fontSize: 12 }}>Confirmar contraseña *</label>
-          <input
-            type="password"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            placeholder="Repite tu contraseña"
-            required={!!password}
-            style={{
-              padding: 8,
-              borderRadius: 8,
-              border: errors.confirmPassword ? '1px solid var(--danger)' : '1px solid var(--border)'
-            }}
-          />
-          {errors.confirmPassword && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.confirmPassword}</div>}
-          {confirmPassword && password === confirmPassword && (
-            <div style={{ fontSize: 12, color: 'var(--success)', marginTop: -4 }}>✓ Las contraseñas coinciden</div>
-          )}
-        </>
       )}
 
       <div
