@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import BackButton from "../components/BackButton";
 import dataService, { type Question } from "../services/dataService";
@@ -30,6 +30,7 @@ async function syncEvaluationControls(evaluationId: number, desiredIds: Set<numb
 
 const EvaluationWorkflowPage: React.FC = () => {
   const { showAlert } = useAlert();
+  const navigate = useNavigate();
   const { evaluationId } = useParams<{ evaluationId: string }>();
   const idNum = evaluationId ? Number(evaluationId) : NaN;
 
@@ -136,6 +137,7 @@ const EvaluationWorkflowPage: React.FC = () => {
           message:
             "Los formularios quedaron asignados a esta evaluación. Quien debe responder el cuestionario es el usuario titular de la empresa (rol usuario), iniciando sesión con su cuenta.",
         });
+        navigate("/asignaciones");
         return;
       }
 

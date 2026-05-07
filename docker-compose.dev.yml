@@ -1,4 +1,4 @@
-dservices:
+services:
   db:
     image: postgres:15-alpine
     environment:
@@ -27,8 +27,8 @@ dservices:
     command: ["/bin/sh", "/app/docker-entrypoint.sh"]
 
   frontend:
-    image: node:18-alpine
-    working_dir: /app
+    build:
+      context: ./Frontend
     environment:
       DEV_CMD: npm run dev -- --host 0.0.0.0 --port 5173
       NODE_ENV: development

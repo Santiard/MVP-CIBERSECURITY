@@ -197,12 +197,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
             borderTop: '1px solid var(--border)',
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Usuarios de la empresa</div>
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.45 }}>
-            Solo se listan cuentas con rol <strong>usuario de empresa</strong> (no administradores ni evaluadores) que
-            aún <strong>no están asignados a otra organización</strong>. Cada persona solo puede pertenecer a una
-            empresa a la vez.
-          </p>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Usuarios disponibles para la empresa</div>
           {loadingUsers ? (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>Cargando usuarios…</div>
           ) : (

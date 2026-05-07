@@ -29,8 +29,6 @@ def _evaluacion_con_acceso(session: Session, evaluation_id: int, current_user: d
         allowed = set(get_assigned_organization_ids(session, int(current_user["user_id"])))
         if ev.id_empresa not in allowed:
             raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
-        if ev.id_usuario != int(current_user["user_id"]):
-            raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
     return ev
 
 
@@ -110,7 +108,7 @@ def list_evaluations(
             allowed_ids = get_assigned_organization_ids(session, uid)
             if not allowed_ids:
                 return []
-            stmt = stmt.where(EvaluacionORM.id_empresa.in_(allowed_ids)).where(EvaluacionORM.id_usuario == uid)
+            stmt = stmt.where(EvaluacionORM.id_empresa.in_(allowed_ids))
             if org_filter is not None and org_filter not in allowed_ids:
                 return []
         rows = session.exec(stmt).all()
