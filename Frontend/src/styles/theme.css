@@ -6,6 +6,16 @@
   --blue-400: #2EA1FF;
   --cyan-300: #00E5FF;
 
+  /* Additional Dashboard Colors */
+  --purple-500: #A855F7;
+  --purple-700: #7E22CE;
+  --orange-400: #FB923C;
+  --orange-500: #F97316;
+  --orange-700: #C2410C;
+  --green-500: #22C55E;
+  --green-700: #15803D;
+  --red-500: #EF4444;
+
   /* Neutrals */
   --gray-900: #0B0F14;
   --gray-800: #111827;
@@ -179,6 +189,27 @@ body{
   border: none;
 }
 .btn:active{ transform: translateY(1px); }
+
+.btn-icon {
+  padding: 8px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+.btn-icon:hover {
+  background: var(--surface-muted, rgba(0,0,0,0.04));
+}
+.btn-icon.btn-primary {
+  background: var(--btn-primary-bg);
+  border: none;
+}
+.btn-icon.btn-primary:hover {
+  background: var(--btn-primary-hover);
+}
 
 .btn-primary{
   background: var(--btn-primary-bg);

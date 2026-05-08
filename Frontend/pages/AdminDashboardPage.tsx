@@ -56,9 +56,15 @@ const AdminDashboardPage: React.FC = () => {
   const evaluatorUsers = users.filter(u => u.role === 'evaluator').length;
   const regularUsers = users.filter(u => u.role === 'user').length;
 
-  const pendingEvals = evals.filter(e => e.estado === 'pendiente' || !e.estado).length;
-  const inProgressEvals = evals.filter(e => e.estado === 'en progreso').length;
-  const finishedEvals = evals.filter(e => e.estado === 'finalizado').length;
+  const pendingEvals = evals.filter(e => {
+    const st = (e.estado || '').toLowerCase();
+    return st === 'pendiente' || st === '';
+  }).length;
+  const inProgressEvals = evals.filter(e => (e.estado || '').toLowerCase() === 'en progreso').length;
+  const finishedEvals = evals.filter(e => {
+    const st = (e.estado || '').toLowerCase();
+    return st === 'finalizado' || st === 'finalizada';
+  }).length;
 
   return (
     <Layout>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import '../src/styles/theme.css';
-import logo from '../src/images/logoRAY.png';
+import logo from '../src/images/logoRAY.svg';
 import { getPasswordPolicyIssues, PASSWORD_POLICY_MESSAGE } from '../src/utils/passwordPolicy';
 
 const API_BASE =

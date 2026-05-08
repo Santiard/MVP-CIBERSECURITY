@@ -15,6 +15,16 @@ type Props = {
 
 const SIZE_OPTIONS = ['Pequeña', 'Mediana', 'Grande'] as const;
 
+const SECTOR_OPTIONS = [
+  'Agropecuario Extractivo',
+  'Industrial Construcción',
+  'Servicios Comercio',
+  'Financiero y Asegurador',
+  'Tecnologías de la Información y Telecomunicaciones',
+  'Comercio al por Mayor y Menor',
+  'Mensajería'
+] as const;
+
 const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) => {
   const [nombre, setNombre] = useState(initial?.nombre || '');
   const [sector, setSector] = useState(initial?.sector || '');
@@ -154,7 +164,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
         )}
 
         <label style={{ fontSize: 12 }}>Sector *</label>
-        <input
+        <select
           value={sector}
           onChange={(e) => setSector(e.target.value)}
           required
@@ -163,7 +173,14 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
             borderRadius: 8,
             border: errors.sector ? '1px solid var(--danger)' : '1px solid var(--border)',
           }}
-        />
+        >
+          <option value="">Seleccione…</option>
+          {SECTOR_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
         {errors.sector && (
           <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.sector}</div>
         )}

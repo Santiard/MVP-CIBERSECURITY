@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
 import BackButton from "../components/BackButton";
 import dataService, { type Question } from "../services/dataService";
@@ -13,6 +13,7 @@ import {
   type EvaluationDetail,
 } from "../services/evaluationApi";
 import { useAlert } from "../components/alerts/AlertProvider";
+import viewIcon from "../images/ojo.svg";
 import { getCurrentRole, getStoredAuthUser } from "../utils/auth";
 
 type QuestionnaireRow = Awaited<ReturnType<typeof dataService.getQuestionnaires>>[number];
@@ -32,6 +33,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   const { showAlert } = useAlert();
   const { evaluationId } = useParams<{ evaluationId: string }>();
   const idNum = evaluationId ? Number(evaluationId) : NaN;
+  const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(true);
@@ -77,11 +79,20 @@ const EvaluationWorkflowPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [ev, linked, qs] = await Promise.all([
+      const [ev, linked, qsRaw] = await Promise.all([
         getEvaluationById(idNum),
         listEvaluationControls(idNum),
         dataService.getQuestionnaires(),
       ]);
+
+      const qsWithQuestions = await Promise.all(
+        qsRaw.map(async (q) => {
+          const questions = await dataService.getQuestionsByControl(q.id);
+          return questions.length > 0 ? q : null;
+        })
+      );
+      const qs = qsWithQuestions.filter((q): q is QuestionnaireRow => q !== null);
+
       setEvaluation(ev);
       setQuestionnaires(qs);
       setSelectedControlIds(new Set(linked.map((c) => c.id_control)));
@@ -148,6 +159,7 @@ const EvaluationWorkflowPage: React.FC = () => {
           message:
             "Los formularios quedaron asignados a esta evaluación. Quien debe responder el cuestionario es el usuario titular de la empresa (rol usuario), iniciando sesión con su cuenta.",
         });
+        navigate("/asignaciones");
         return;
       }
 
@@ -570,8 +582,8 @@ const EvaluationWorkflowPage: React.FC = () => {
               >
                 {isResolved ? "Cuestionario finalizado" : saving ? "Guardando…" : "Guardar respuestas"}
               </button>
-              <Link to={`/reports/${idNum}`} className="btn" style={{ textDecoration: "none" }}>
-                Ver informe
+              <Link to={`/reports/${idNum}`} className="btn btn-icon" style={{ textDecoration: "none" }} title="Ver informe">
+                <img src={viewIcon} alt="Ver informe" width={18} height={18} />
               </Link>
             </div>
           </div>

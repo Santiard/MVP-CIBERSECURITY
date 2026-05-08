@@ -78,24 +78,26 @@ const VulnerabilitiesPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
-                <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} vulnerabilidades</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                    style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
-                  >
-                    {[5, 10, 20, 50].map((size) => (
-                      <option key={size} value={size}>{size}</option>
-                    ))}
-                  </select>
-                  <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
-                  <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
-                  <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+              {rows.length > 5 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+                  <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} vulnerabilidades</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => setPageSize(Number(e.target.value))}
+                      style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
+                    >
+                      {[5, 10, 20, 50].map((size) => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
+                    <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+                    <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
+                    <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div style={{ height: 16 }} />

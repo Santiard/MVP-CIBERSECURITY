@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import '../src/styles/theme.css';
-import logo from '../src/images/logoRAY.png';
+import logo from '../src/images/logoRAY.svg';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getPasswordPolicyIssues,

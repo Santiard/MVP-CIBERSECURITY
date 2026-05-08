@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import exitIcon from '../images/exit.png';
+import exitIcon from '../images/exit.svg';
 import '../styles/theme.css';
 import { getCurrentRole } from '../utils/auth';
 import { getNavItemsByRole } from '../utils/roleAccess';

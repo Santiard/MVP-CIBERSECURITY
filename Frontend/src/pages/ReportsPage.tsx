@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { Link } from 'react-router-dom';
 import { listReports, ReportListItem } from '../services/reportApi';
+import viewIcon from '../images/ojo.svg';
 
 const ReportsPage: React.FC = () => {
   const [rows, setRows] = useState<ReportListItem[]>([]);
@@ -57,31 +58,35 @@ const ReportsPage: React.FC = () => {
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.title}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.date}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
-                    <Link to={`/reports/${r.id}`} className="btn">Ver</Link>
+                    <Link to={`/reports/${r.id}`} className="btn btn-icon" title="Ver">
+                      <img src={viewIcon} alt="Ver" width={18} height={18} />
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
-          <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} reportes</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
-            >
-              {[5, 10, 20, 50].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
-            <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
-            <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+        {rows.length > 5 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+            <div style={{ color: 'var(--muted)' }}>Mostrando {visibleRows.length} de {rows.length} reportes</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
+              >
+                {[5, 10, 20, 50].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+              <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
+              <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Layout>
   );

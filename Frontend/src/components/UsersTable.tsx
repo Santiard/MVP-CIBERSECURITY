@@ -7,6 +7,9 @@ import ConfirmModal from './modal/ConfirmModal';
 import Switch from './Switch';
 import { getPasswordPolicyIssues, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 import { useAlert } from './alerts/AlertProvider';
+import ResetPasswordModal from './modal/ResetPasswordModal';
+import editIcon from '../images/edit.svg';
+import deleteIcon from '../images/icons8-basura-llena(1).svg';
 
 type User = { id: string; name: string; email: string; phone?: string; role: string; active?: boolean };
 
@@ -190,9 +193,13 @@ const UsersTable: React.FC = () => {
                     />
                     <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
                   </div>
-                  <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }}>Editar</button>
+                  <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
+                    <img src={editIcon} alt="Editar" width={18} height={18} />
+                  </button>
                   <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleResetPassword(r.id)}>Cambiar contraseña</button>
-                  <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)}>Eliminar</button>
+                  <button className="btn btn-icon" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)} title="Eliminar">
+                    <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
+                  </button>
                 </td>
               </tr>
             ))}
@@ -200,24 +207,26 @@ const UsersTable: React.FC = () => {
         </table>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
-        <div style={{ color: 'var(--muted)' }}>Mostrando {visible.length} de {filtered.length} usuarios</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
-          >
-            {[5, 10, 20, 50].map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-          <button className="btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
-          <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
-          <button className="btn" onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+      {filtered.length > 5 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+          <div style={{ color: 'var(--muted)' }}>Mostrando {visible.length} de {filtered.length} usuarios</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
+            >
+              {[5, 10, 20, 50].map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <button className="btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+            <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
+            <button className="btn" onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

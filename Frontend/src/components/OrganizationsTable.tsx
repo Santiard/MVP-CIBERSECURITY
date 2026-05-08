@@ -5,6 +5,9 @@ import dataService from '../services/dataService';
 import OrganizationForm from './OrganizationForm';
 import ConfirmModal from './modal/ConfirmModal';
 import { useAlert } from './alerts/AlertProvider';
+import editIcon from '../images/edit.svg';
+import deleteIcon from '../images/icons8-basura-llena(1).svg';
+import viewIcon from '../images/ojo.svg';
 
 type Org = { id_empresa: number; nombre: string; sector: string; tamano: string };
 
@@ -102,11 +105,17 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.tamano}</td>
                 <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
                   {/* Ver siempre disponible */}
-                  <a href={`/organizations/${r.id_empresa}`} className="btn btn-primary" style={{ textDecoration: 'none', padding: '8px 12px', borderRadius: 8, color: 'var(--white)' }}>VER</a>
+                  <a href={`/organizations/${r.id_empresa}`} className="btn btn-icon btn-primary" style={{ textDecoration: 'none', borderRadius: 8, color: 'var(--white)' }} title="Ver">
+                    <img src={viewIcon} alt="Ver" width={18} height={18} />
+                  </a>
                   {mode === 'admin' && (
                     <>
-                      <button className="btn" onClick={() => { setEditing(r); setOpenForm(true); }} style={{ marginLeft: 8 }}>Editar</button>
-                      <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id_empresa)}>Eliminar</button>
+                      <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} style={{ marginLeft: 8 }} title="Editar">
+                        <img src={editIcon} alt="Editar" width={18} height={18} />
+                      </button>
+                      <button className="btn btn-icon" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id_empresa)} title="Eliminar">
+                        <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
+                      </button>
                     </>
                   )}
                 </td>
@@ -115,24 +124,26 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
           </tbody>
         </table>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
-        <div style={{ color: 'var(--muted)' }}>Mostrando {visible.length} de {filtered.length} organizaciones</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value))}
-            style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
-          >
-            {[5, 10, 20, 50].map((size) => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-          <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
-          <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
-          <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+      {filtered.length > 5 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+          <div style={{ color: 'var(--muted)' }}>Mostrando {visible.length} de {filtered.length} organizaciones</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Filas</label>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              style={{ padding: 6, borderRadius: 8, border: '1px solid var(--border)' }}
+            >
+              {[5, 10, 20, 50].map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
+            <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
+            <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

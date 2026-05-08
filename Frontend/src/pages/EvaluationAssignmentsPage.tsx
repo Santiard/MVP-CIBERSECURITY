@@ -13,6 +13,10 @@ import {
   type EvaluationApiRow,
 } from "../services/evaluationApi";
 import { getCurrentRole } from "../utils/auth";
+import editIcon from "../images/edit.svg";
+import deleteIcon from "../images/icons8-basura-llena(1).svg";
+import refreshIcon from "../images/refresh-page-option.svg";
+import viewIcon from "../images/ojo.svg";
 
 type Org = { id_empresa: number; nombre: string; sector: string; tamano: string };
 type User = { id: string; name: string; role: string; email: string };
@@ -197,8 +201,8 @@ const EvaluationAssignmentsPage: React.FC = () => {
               </option>
             ))}
           </select>
-          <button type="button" className="btn" onClick={() => load()} disabled={loading}>
-            Actualizar
+          <button type="button" className="btn btn-icon" onClick={() => load()} disabled={loading} title="Actualizar">
+            <img src={refreshIcon} alt="Actualizar" width={18} height={18} />
           </button>
           <Link to="/organizations" className="btn" style={{ textDecoration: "none" }}>
             Ir a organizaciones
@@ -264,7 +268,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
                           <button
                             type="button"
-                            className="btn btn-primary"
+                            className="btn btn-icon btn-primary"
                             style={{ marginRight: 8 }}
                             onClick={() => {
                               setEditEval(r);
@@ -275,25 +279,28 @@ const EvaluationAssignmentsPage: React.FC = () => {
                                 dialog?.showModal();
                               }, 10);
                             }}
+                            title="Editar"
                           >
-                            Editar
+                            <img src={editIcon} alt="Editar" width={18} height={18} />
                           </button>
                           <Link
                             to={`/reports/${r.id_evaluacion}`}
-                            className="btn"
+                            className="btn btn-icon"
                             style={{ textDecoration: "none", marginRight: 8 }}
+                            title="Ver informe"
                           >
-                            Ver informe
+                            <img src={viewIcon} alt="Ver informe" width={18} height={18} />
                           </Link>
                           {/* Reasignación deshabilitada: la empresa responsable no se puede cambiar desde aquí */}
                           <button
                             type="button"
-                            className="btn"
+                            className="btn btn-icon"
                             style={{ marginLeft: 8 }}
                             disabled={busyId === r.id_evaluacion}
                             onClick={() => handleDelete(r)}
+                            title="Eliminar"
                           >
-                            Eliminar
+                            <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
                           </button>
                         </td>
                       </tr>
@@ -303,7 +310,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
               </table>
             </div>
           )}
-          {!loading && !error && (
+          {!loading && !error && filtered.length > 5 && (
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, alignItems: "center" }}>
               <div style={{ color: "var(--muted)" }}>Mostrando {visibleRows.length} de {filtered.length} evaluaciones</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
