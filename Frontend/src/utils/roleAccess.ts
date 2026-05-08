@@ -14,8 +14,8 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/users', label: 'Usuarios' },
   { to: '/organizations', label: 'Organizaciones' },
   { to: '/questionnaires', label: 'Formularios' },
-  { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/asignaciones', label: 'Asignaciones' },
+  { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/reports', label: 'Reportes' },
   { to: '/vulnerabilities', label: 'Vulnerabilidades' },
 ];
@@ -28,8 +28,8 @@ const EVALUATOR_NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/organizations', label: 'Organizaciones' },
   { to: '/questionnaires', label: 'Formularios' },
-  { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/asignaciones', label: 'Asignaciones' },
+  { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/reports', label: 'Reportes' },
 ];
 

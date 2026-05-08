@@ -38,6 +38,7 @@ class EvaluationCreate(BaseModel):
     )
     answers: Optional[Dict[str, Any]] = None
     user_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("user_id", "id_usuario"))
+    evaluator_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("evaluator_id", "id_evaluador"))
     fecha: Optional[date] = None
     estado: Optional[str] = None
 
@@ -52,6 +53,7 @@ class EvaluationUpdate(BaseModel):
     organization_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("organization_id", "id_empresa"))
     answers: Optional[Dict[str, Any]] = None
     user_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("user_id", "id_usuario"))
+    evaluator_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("evaluator_id", "id_evaluador"))
     estado: Optional[str] = None
     fecha: Optional[date] = None
 
@@ -66,9 +68,11 @@ class EvaluationRead(BaseModel):
     answers: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
     user_id: Optional[int] = None
+    evaluator_id: Optional[int] = None
     id_evaluacion: Optional[int] = None
     id_empresa: Optional[int] = None
     id_usuario: Optional[int] = None
+    id_evaluador: Optional[int] = None
     fecha: Optional[date] = None
     estado: Optional[str] = None
 

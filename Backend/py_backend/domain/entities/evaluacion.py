@@ -17,6 +17,7 @@ class Evaluacion:
     id_empresa: int
     usuario: Usuario
     empresa: Empresa
+    id_evaluador: int | None = None
     respuestas: list[object] = field(default_factory=list)
     resultados: list[object] = field(default_factory=list)
     score: object | None = None

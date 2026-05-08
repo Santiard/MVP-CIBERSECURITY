@@ -49,6 +49,7 @@ const UsersTable: React.FC = () => {
   const handleResetPassword = async (id: string) => {
     setResetting({ id });
     setNewPassword('');
+    setConfirmNewPassword('');
     setResetError('');
     setResetSubmitted(false);
   };
@@ -57,6 +58,7 @@ const UsersTable: React.FC = () => {
   const [deletingLoading, setDeletingLoading] = useState(false);
   const [resetting, setResetting] = useState<{ id: string; } | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetSubmitted, setResetSubmitted] = useState(false);
@@ -79,9 +81,14 @@ const UsersTable: React.FC = () => {
   const confirmReset = async () => {
     if (!resetting) return;
     setResetSubmitted(true);
-    if (!newPassword) {
-      setResetError('Ingrese nueva contraseña');
-      showAlert({ type: 'warning', title: 'Advertencia', message: 'Debes ingresar la nueva contraseña.' });
+    if (!newPassword || !confirmNewPassword) {
+      setResetError('Ingrese y confirme la nueva contraseña');
+      showAlert({ type: 'warning', title: 'Advertencia', message: 'Debes ingresar y confirmar la nueva contraseña.' });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setResetError('Las contraseñas no coinciden');
+      showAlert({ type: 'warning', title: 'Advertencia', message: 'Las contraseñas no coinciden.' });
       return;
     }
     if (!isStrongPassword(newPassword)) {
@@ -96,6 +103,7 @@ const UsersTable: React.FC = () => {
       showAlert({ type: 'success', title: 'Exito', message: 'Contrasena actualizada correctamente.' });
       setResetting(null);
       setNewPassword('');
+      setConfirmNewPassword('');
       await load();
     } catch {
       showAlert({ type: 'error', title: 'Error', message: 'No se pudo actualizar la contrasena.' });
@@ -124,11 +132,13 @@ const UsersTable: React.FC = () => {
         onConfirm={() => void confirmDelete()}
       />
 
-      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Cambiar contraseña">
+      <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setConfirmNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Cambiar contraseña">
         <div style={{ display: 'grid', gap: 8 }}>
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campo obligatorio</p>
+          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
           <label style={{ fontSize: 12 }}>Nueva contraseña *</label>
           <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+          <label style={{ fontSize: 12 }}>Confirmar contraseña *</label>
+          <input type="password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
           {showResetIssues && resetIssues.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>
               <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
@@ -140,9 +150,9 @@ const UsersTable: React.FC = () => {
             </div>
           )}
           {resetError && <div style={{ fontSize: 12, color: 'var(--danger)' }}>{resetError}</div>}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); setResetError(''); setResetSubmitted(false); }} disabled={resetLoading}>Cancelar</button>
-            <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading || !newPassword || resetIssues.length > 0}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); setConfirmNewPassword(''); setResetError(''); setResetSubmitted(false); }} disabled={resetLoading}>Cancelar</button>
+            <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading || !newPassword || !confirmNewPassword || resetIssues.length > 0}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
           </div>
         </div>
       </Modal>

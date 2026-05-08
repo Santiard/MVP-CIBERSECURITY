@@ -13,6 +13,7 @@ import {
 } from "../services/evaluationApi";
 
 type Org = { id_empresa: number; nombre: string; sector: string; tamano: string };
+type User = { id: string; name: string; role: string; email: string };
 
 /**
  * Hub dedicado: relación empresa (organización) ↔ evaluación.
@@ -25,6 +26,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
   const highlightEmpresa = searchParams.get("empresa");
 
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const [evaluators, setEvaluators] = useState<User[]>([]);
   const [rows, setRows] = useState<EvaluationApiRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +34,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
   
   const [busyId, setBusyId] = useState<number | null>(null);
   const [newEvalOrgId, setNewEvalOrgId] = useState<string>("");
+  const [newEvalEvaluatorId, setNewEvalEvaluatorId] = useState<string>("");
   const [deleteFor, setDeleteFor] = useState<EvaluationApiRow | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -42,13 +45,24 @@ const EvaluationAssignmentsPage: React.FC = () => {
     return m;
   }, [orgs]);
 
+  const evalName = useMemo(() => {
+    const m = new Map<number, string>();
+    evaluators.forEach((e) => m.set(Number(e.id), e.name));
+    return m;
+  }, [evaluators]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [o, ev] = await Promise.all([dataService.getOrgs() as Promise<Org[]>, listEvaluations()]);
+      const [o, ev, users] = await Promise.all([
+        dataService.getOrgs() as Promise<Org[]>, 
+        listEvaluations(),
+        dataService.getUsers()
+      ]);
       setOrgs(o);
       setRows(ev);
+      setEvaluators(users.filter(u => u.role === "evaluator"));
     } catch {
       setError("No se pudieron cargar datos. ¿Sesión activa y API disponible?");
     } finally {
@@ -111,10 +125,10 @@ const EvaluationAssignmentsPage: React.FC = () => {
     }
   };
 
-  const handleCreateForOrg = async (id_empresa: number) => {
+  const handleCreateForOrg = async (id_empresa: number, id_evaluador?: number) => {
     try {
       setBusyId(-1);
-      const created = await createEvaluation({ id_empresa });
+      const created = await createEvaluation({ id_empresa, id_evaluador });
       await load();
       navigate(`/evaluations/${created.id_evaluacion}/workflow`);
     } catch (e) {
@@ -130,7 +144,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: 24, maxWidth: 1100 }}>
+      <div style={{ padding: 24 }}>
         <h2 style={{ marginTop: 0 }}>ASIGNACIONES DE FORMULARIOS A EMPRESA</h2>
 
         <div className="card" style={{ marginBottom: 16, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
@@ -180,6 +194,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                 <thead>
                   <tr style={{ textAlign: "left", color: "var(--muted)" }}>
                     <th style={{ padding: "10px 8px" }}>Empresa</th>
+                    <th style={{ padding: "10px 8px" }}>Evaluador Asignado</th>
                     <th style={{ padding: "10px 8px" }}>ID eval.</th>
                     <th style={{ padding: "10px 8px" }}>Fecha</th>
                     <th style={{ padding: "10px 8px" }}>Estado</th>
@@ -189,7 +204,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                 <tbody>
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={5} style={{ padding: 16, color: "var(--muted)" }}>
+                      <td colSpan={6} style={{ padding: 16, color: "var(--muted)" }}>
                         No hay evaluaciones para este filtro.
                       </td>
                     </tr>
@@ -203,6 +218,9 @@ const EvaluationAssignmentsPage: React.FC = () => {
                       <tr key={r.id_evaluacion} style={hi}>
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)" }}>
                           {orgName.get(r.id_empresa) ?? `Empresa #${r.id_empresa}`}
+                        </td>
+                        <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)", color: r.id_evaluador ? "inherit" : "var(--muted)" }}>
+                          {r.id_evaluador ? evalName.get(r.id_evaluador) ?? `Usuario #${r.id_evaluador}` : "Sin asignar"}
                         </td>
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)" }}>{r.id_evaluacion}</td>
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
@@ -304,6 +322,24 @@ const EvaluationAssignmentsPage: React.FC = () => {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 13, marginBottom: 8, fontWeight: 500 }}>Evaluador *</label>
+                <select
+                  value={newEvalEvaluatorId}
+                  onChange={(e) => setNewEvalEvaluatorId(e.target.value)}
+                  required
+                  aria-required="true"
+                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 }}
+                >
+                  <option value="">Seleccione el evaluador asignado…</option>
+                  {evaluators.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.name} ({e.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
           <div style={{
@@ -330,15 +366,16 @@ const EvaluationAssignmentsPage: React.FC = () => {
               disabled={busyId === -1}
               onClick={() => {
                 const v = Number(newEvalOrgId);
-                if (!v) {
+                const evId = Number(newEvalEvaluatorId);
+                if (!v || !evId) {
                   showAlert({
                     type: "warning",
                     title: "Advertencia",
-                    message: "Seleccione una empresa.",
+                    message: "Seleccione una empresa y un evaluador.",
                   });
                   return;
                 }
-                void handleCreateForOrg(v);
+                void handleCreateForOrg(v, evId);
                 const dialog = document.getElementById("new-evaluation-dialog") as HTMLDialogElement | null;
                 dialog?.close();
               }}

@@ -12,9 +12,17 @@ const roleLabel: Record<string, string> = {
 const Layout: React.FC<{children?: React.ReactNode}> = ({ children }) => {
   const user = getStoredAuthUser();
   const role = user?.role?.trim().toLowerCase() ?? '';
+  const [userOrgName, setUserOrgName] = React.useState(localStorage.getItem('userOrgName') || '');
+
+  React.useEffect(() => {
+    const handleStorage = () => setUserOrgName(localStorage.getItem('userOrgName') || '');
+    window.addEventListener('userOrgNameChanged', handleStorage);
+    return () => window.removeEventListener('userOrgNameChanged', handleStorage);
+  }, []);
+
   const welcome =
     user?.name != null && user.name.trim() !== ''
-      ? `Hola, ${user.name.trim()} · ${roleLabel[role] ?? 'Cuenta'}`
+      ? `Hola, ${user.name.trim()} · ${roleLabel[role] ?? 'Cuenta'} ${userOrgName && role === 'user' ? `· ${userOrgName}` : ''}`
       : `Bienvenido · ${roleLabel[role] ?? 'Sesión activa'}`;
 
   return (

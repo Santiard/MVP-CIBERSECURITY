@@ -31,6 +31,9 @@ def _evaluacion_con_acceso(session: Session, evaluation_id: int, current_user: d
             raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
         if ev.id_usuario != int(current_user["user_id"]):
             raise HTTPException(status_code=403, detail="No autorizado para esta evaluación")
+    elif role_lower(current_user) == "evaluator":
+        if ev.id_evaluador is not None and ev.id_evaluador != int(current_user["user_id"]):
+            raise HTTPException(status_code=403, detail="No autorizado: Evaluación asignada a otro evaluador")
     return ev
 
 
@@ -42,9 +45,11 @@ def _eval_to_read(e: EvaluacionORM) -> EvaluationRead:
         answers=e.datos_respuestas or {},
         created_at=e.creado_en,
         user_id=e.id_usuario,
+        evaluator_id=e.id_evaluador,
         id_evaluacion=e.id_evaluacion,
         id_empresa=e.id_empresa,
         id_usuario=e.id_usuario,
+        id_evaluador=e.id_evaluador,
         fecha=e.fecha,
         estado=e.estado,
     )
@@ -87,6 +92,10 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
 
     payload = input_data.model_dump()
     payload["user_id"] = uid
+    if input_data.evaluator_id is not None:
+        payload["evaluator_id"] = input_data.evaluator_id
+    elif role_lower(current_user) == "evaluator":
+        payload["evaluator_id"] = self_uid
     payload["fecha"] = fecha_eval
     if not payload.get("estado"):
         payload["estado"] = "pendiente"
@@ -98,13 +107,18 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
 def list_evaluations(
     organization_id: int | None = None,
     id_empresa: int | None = None,
+    evaluator_id: int | None = None,
+    id_evaluador: int | None = None,
     current_user: dict = Depends(auth_middleware),
 ):
     org_filter = organization_id if organization_id is not None else id_empresa
+    eval_filter = evaluator_id if evaluator_id is not None else id_evaluador
     with Session(engine) as session:
         stmt = select(EvaluacionORM)
         if org_filter is not None:
             stmt = stmt.where(EvaluacionORM.id_empresa == org_filter)
+        if eval_filter is not None:
+            stmt = stmt.where(EvaluacionORM.id_evaluador == eval_filter)
         if is_org_user(current_user):
             uid = int(current_user["user_id"])
             allowed_ids = get_assigned_organization_ids(session, uid)
@@ -113,6 +127,9 @@ def list_evaluations(
             stmt = stmt.where(EvaluacionORM.id_empresa.in_(allowed_ids)).where(EvaluacionORM.id_usuario == uid)
             if org_filter is not None and org_filter not in allowed_ids:
                 return []
+        elif role_lower(current_user) == "evaluator":
+            uid = int(current_user["user_id"])
+            stmt = stmt.where((EvaluacionORM.id_evaluador == uid) | (EvaluacionORM.id_evaluador == None))
         rows = session.exec(stmt).all()
         return [_eval_to_read(e) for e in rows]
 
@@ -161,6 +178,8 @@ def update_evaluation(
     repo_patch: dict = {}
     if "organization_id" in patch and patch["organization_id"] is not None:
         repo_patch["organization_id"] = patch["organization_id"]
+    if "evaluator_id" in patch:
+        repo_patch["evaluator_id"] = patch["evaluator_id"]
     if "answers" in patch:
         repo_patch["answers"] = patch["answers"]
     if "user_id" in patch and patch["user_id"] is not None:

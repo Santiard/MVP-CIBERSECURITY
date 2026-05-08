@@ -13,6 +13,7 @@ class CreateEvaluationUseCase:
             "organization_id": int(input_dto.organization_id),
             "answers": input_dto.answers or {},
             "user_id": input_dto.user_id,
+            "evaluator_id": input_dto.evaluator_id,
             "fecha": input_dto.fecha,
             "estado": input_dto.estado,
         }

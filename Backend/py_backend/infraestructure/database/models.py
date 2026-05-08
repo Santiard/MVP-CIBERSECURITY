@@ -26,7 +26,14 @@ class UsuarioORM(SQLModel, table=True):
     id_rol: int = Field(foreign_key="roles.id_rol")
 
     rol: Optional["RolORM"] = Relationship(back_populates="usuarios")
-    evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="usuario")
+    evaluaciones_titular: list["EvaluacionORM"] = Relationship(
+        back_populates="usuario",
+        sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_usuario"}
+    )
+    evaluaciones_asignadas: list["EvaluacionORM"] = Relationship(
+        back_populates="evaluador",
+        sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_evaluador"}
+    )
     asignaciones_empresa: list["UsuarioOrganizacionORM"] = Relationship(back_populates="usuario")
     password_reset_tokens: list["PasswordResetTokenORM"] = Relationship(back_populates="usuario")
 
@@ -65,10 +72,18 @@ class EvaluacionORM(SQLModel, table=True):
     estado: str = Field()
     id_usuario: int = Field(foreign_key="usuarios.id_usuario")
     id_empresa: int = Field(foreign_key="empresas.id_empresa")
+    id_evaluador: Optional[int] = Field(default=None, foreign_key="usuarios.id_usuario")
     datos_respuestas: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     creado_en: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-    usuario: Optional["UsuarioORM"] = Relationship(back_populates="evaluaciones")
+    usuario: Optional["UsuarioORM"] = Relationship(
+        back_populates="evaluaciones_titular",
+        sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_usuario"}
+    )
+    evaluador: Optional["UsuarioORM"] = Relationship(
+        back_populates="evaluaciones_asignadas",
+        sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_evaluador"}
+    )
     empresa: Optional["EmpresaORM"] = Relationship(back_populates="evaluaciones")
     respuestas: list["RespuestaORM"] = Relationship(back_populates="evaluacion")
     resultados: list["ResultadoORM"] = Relationship(back_populates="evaluacion")

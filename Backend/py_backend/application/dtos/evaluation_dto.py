@@ -9,5 +9,6 @@ class EvaluationDTO(BaseModel):
     organization_id: int
     answers: Optional[dict[str, Any]] = None
     user_id: Optional[int] = None
+    evaluator_id: Optional[int] = None
     fecha: Optional[date] = None
     estado: Optional[str] = None

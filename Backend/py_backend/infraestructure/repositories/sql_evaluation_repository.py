@@ -25,6 +25,7 @@ class SqlEvaluationRepository(EvaluationRepository):
             "organization_id": payload.organization_id,
             "answers": payload.answers,
             "user_id": evaluation.get("user_id"),
+            "evaluator_id": evaluation.get("evaluator_id"),
             "fecha": evaluation.get("fecha"),
             "estado": evaluation.get("estado"),
         }

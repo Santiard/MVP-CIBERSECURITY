@@ -7,6 +7,8 @@ import dataService from "../services/dataService";
 import { listEvaluations, type EvaluationApiRow } from "../services/evaluationApi";
 import { getCurrentRole } from "../utils/auth";
 import { isStaffRole } from "../utils/roleAccess";
+import EvaluationProgress from "./EvaluationProgress";
+import ProgressCell from "./ProgressCell";
 
 type Org = { id_empresa: number; nombre: string };
 
@@ -16,17 +18,27 @@ const EvaluationsTable: React.FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [rowsData, setRowsData] = useState<EvaluationApiRow[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
+  const [evaluators, setEvaluators] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const [data, o] = await Promise.all([listEvaluations(), dataService.getOrgs() as Promise<Org[]>]);
+        const [data, o, users] = await Promise.all([listEvaluations(), dataService.getOrgs() as Promise<Org[]>, dataService.getUsers()]);
         setRowsData(data);
         setOrgs(o);
+        setEvaluators(users);
+        if (!isStaffRole(getCurrentRole()) && data.length > 0) {
+          const org = o.find(x => x.id_empresa === data[0].id_empresa);
+          if (org && org.nombre !== localStorage.getItem("userOrgName")) {
+            localStorage.setItem("userOrgName", org.nombre);
+            window.dispatchEvent(new Event("userOrgNameChanged"));
+          }
+        }
       } catch {
         setError("No se pudieron cargar las evaluaciones");
       } finally {
@@ -42,6 +54,12 @@ const EvaluationsTable: React.FC = () => {
     orgs.forEach((o) => m.set(o.id_empresa, o.nombre));
     return m;
   }, [orgs]);
+
+  const evalName = useMemo(() => {
+    const m = new Map<number, string>();
+    evaluators.forEach((u) => m.set(u.id, u.name));
+    return m;
+  }, [evaluators]);
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -86,17 +104,19 @@ const EvaluationsTable: React.FC = () => {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-              <th style={{ padding: "12px 8px" }}>Organización</th>
-              <th style={{ padding: "12px 8px" }}>ID</th>
+              {staff && <th style={{ padding: "12px 8px" }}>Organización</th>}
+              {staff && <th style={{ padding: "12px 8px" }}>ID</th>}
               <th style={{ padding: "12px 8px" }}>Fecha</th>
-              <th style={{ padding: "12px 8px" }}>Estado</th>
+              {!staff && <th style={{ padding: "12px 8px" }}>Evaluador asignado</th>}
+              <th style={{ padding: "12px 8px" }}>{staff ? 'Estado' : 'Etapa'}</th>
+              {!staff && <th style={{ padding: "12px 8px" }}>Avance</th>}
               <th style={{ padding: "12px 8px" }}>Acción</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={5} style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                <td colSpan={staff ? 5 : 4} style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
                   Cargando evaluaciones...
                 </td>
               </tr>
@@ -104,7 +124,7 @@ const EvaluationsTable: React.FC = () => {
             {!loading && error && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={staff ? 5 : 4}
                   style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", color: "var(--danger)" }}
                 >
                   {error}
@@ -114,38 +134,70 @@ const EvaluationsTable: React.FC = () => {
             {!loading &&
               !error &&
               visibleRows.map((r) => (
-                <tr key={r.id_evaluacion}>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
-                    {orgName.get(r.id_empresa) ?? `Empresa #${r.id_empresa}`}
-                  </td>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.id_evaluacion}</td>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
-                    <Badge status={r.estado || "pendiente"} />
-                  </td>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                    <Link
-                      to={`/evaluations/${r.id_evaluacion}/workflow`}
-                      className="btn btn-primary"
-                      style={{
-                        padding: "8px 12px",
-                        borderRadius: 8,
-                        textDecoration: "none",
-                        display: "inline-block",
-                        marginRight: 8,
-                      }}
-                    >
-                      Flujo
-                    </Link>
-                    <Link
-                      to={`/reports/${r.id_evaluacion}`}
-                      className="btn"
-                      style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", display: "inline-block" }}
-                    >
-                      Informe
-                    </Link>
-                  </td>
-                </tr>
+                <React.Fragment key={r.id_evaluacion}>
+                  <tr>
+                    {staff && (
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                        {orgName.get(r.id_empresa) ?? `Empresa #${r.id_empresa}`}
+                      </td>
+                    )}
+                    {staff && <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.id_evaluacion}</td>}
+                    <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
+                    {!staff && (
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", color: r.id_evaluador ? "inherit" : "var(--muted)" }}>
+                        {r.id_evaluador ? evalName.get(r.id_evaluador) ?? `Usuario #${r.id_evaluador}` : "Sin asignar"}
+                      </td>
+                    )}
+                    <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                      <Badge status={r.estado || "pendiente"} />
+                    </td>
+                    {!staff && (
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", minWidth: 100 }}>
+                        <ProgressCell evaluationId={r.id_evaluacion} />
+                      </td>
+                    )}
+                    <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                      {!staff ? (
+                        <Link
+                          to={`/evaluations/${r.id_evaluacion}/workflow`}
+                          className="btn btn-primary"
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 8,
+                            textDecoration: "none",
+                            display: "inline-block",
+                            marginRight: 8,
+                          }}
+                        >
+                          Responder
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => setExpandedId(expandedId === r.id_evaluacion ? null : r.id_evaluacion)}
+                          style={{ marginRight: 8 }}
+                        >
+                          {expandedId === r.id_evaluacion ? "Ocultar progreso" : "Ver progreso ▾"}
+                        </button>
+                      )}
+                      <Link
+                        to={`/reports/${r.id_evaluacion}`}
+                        className="btn"
+                        style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", display: "inline-block" }}
+                      >
+                        Informe
+                      </Link>
+                    </td>
+                  </tr>
+                  {expandedId === r.id_evaluacion && staff && (
+                    <tr>
+                      <td colSpan={5} style={{ padding: 0 }}>
+                        <EvaluationProgress evaluationId={r.id_evaluacion} />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
           </tbody>
         </table>

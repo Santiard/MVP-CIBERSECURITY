@@ -85,6 +85,18 @@ const EvaluationWorkflowPage: React.FC = () => {
       setEvaluation(ev);
       setQuestionnaires(qs);
       setSelectedControlIds(new Set(linked.map((c) => c.id_control)));
+
+      if (authRole === "user") {
+        const pairs: { controlName: string; question: Question }[] = [];
+        for (const c of linked) {
+          const qs2 = await dataService.getQuestionsByControl(String(c.id_control));
+          for (const q of qs2) {
+            pairs.push({ controlName: c.nombre, question: q });
+          }
+        }
+        setQuestionsFlat(pairs);
+        setStep(2);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar la evaluación");
     } finally {
@@ -288,12 +300,12 @@ const EvaluationWorkflowPage: React.FC = () => {
 
   return (
     <Layout>
-      <div style={{ padding: 24, maxWidth: 900 }}>
+      <div style={{ padding: 24 }}>
         {step === 2 && totalQuestions > 0 && (
           <>
             <style>{`@keyframes moveGradient { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }`}</style>
             <div style={{ position: "sticky", top: 0, zIndex: 40, background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))", padding: "10px 0", marginTop: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.04)" }}>
-              <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
+              <div style={{ margin: "0 auto", padding: "0 24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                   <div style={{ flex: 1, marginRight: 12 }}>
                     <div style={{ background: "rgba(0,0,0,0.06)", height: 12, borderRadius: 999, overflow: "hidden", border: "1px solid rgba(0,0,0,0.04)" }}>

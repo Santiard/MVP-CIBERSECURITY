@@ -5,7 +5,7 @@ type Props = {
   open: boolean;
   initial?: { id?: string; name?: string; description?: string; dimensions?: number; active?: boolean };
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (result?: any) => void;
   saveFn: (payload: { name: string; description: string; dimensions: number; active: boolean }) => Promise<any>;
 };
 
@@ -45,13 +45,13 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
 
     setSaving(true);
     try {
-      await saveFn({ name: name.trim(), description: description.trim(), dimensions, active });
+      const result = await saveFn({ name: name.trim(), description: description.trim(), dimensions, active });
       showAlert({
         type: 'success',
         title: 'Exito',
         message: initial?.id ? 'Cuestionario actualizado correctamente.' : 'Cuestionario creado correctamente.',
       });
-      onSaved();
+      onSaved(result);
       onClose();
     } catch {
       showAlert({

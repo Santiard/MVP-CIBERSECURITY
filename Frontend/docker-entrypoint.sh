@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-if [ ! -d node_modules ]; then
+if [ ! -d "node_modules/vite" ]; then
   echo "Installing frontend dependencies..."
-  npm ci --silent
+  npm install
 fi
 
 DEV_CMD=${DEV_CMD:-"npm run dev -- --host 0.0.0.0 --port 5173"}

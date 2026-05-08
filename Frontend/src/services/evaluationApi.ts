@@ -11,6 +11,8 @@ export type EvaluationApiRow = {
   /** Alias útil para vistas que lean la API en inglés */
   organization_id?: number;
   user_id?: number;
+  evaluator_id?: number;
+  id_evaluador?: number;
   id?: number;
   created_at?: string | null;
 };
@@ -59,6 +61,7 @@ function normalizeEvaluation(raw: Record<string, unknown>): EvaluationApiRow {
     fecha = String(raw.fecha).slice(0, 10);
   }
   const estado = String(raw.estado ?? "");
+  const id_evaluador = raw.id_evaluador != null ? Number(raw.id_evaluador) : (raw.evaluator_id != null ? Number(raw.evaluator_id) : undefined);
   const created_at =
     raw.created_at != null
       ? String(raw.created_at)
@@ -73,6 +76,8 @@ function normalizeEvaluation(raw: Record<string, unknown>): EvaluationApiRow {
     estado,
     organization_id: id_empresa,
     user_id: id_usuario,
+    evaluator_id: id_evaluador,
+    id_evaluador,
     id: id_evaluacion,
     created_at,
   };
@@ -133,6 +138,7 @@ export async function getEvaluationById(id: string | number): Promise<Evaluation
 export async function createEvaluation(payload: {
   id_empresa: number;
   id_usuario?: number;
+  id_evaluador?: number;
   fecha?: string;
   estado?: string;
 }): Promise<EvaluationDetail> {
@@ -141,6 +147,7 @@ export async function createEvaluation(payload: {
     body: JSON.stringify({
       id_empresa: payload.id_empresa,
       id_usuario: payload.id_usuario,
+      evaluator_id: payload.id_evaluador,
       fecha: payload.fecha,
       estado: payload.estado,
     }),

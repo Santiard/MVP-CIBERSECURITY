@@ -39,18 +39,26 @@ const QuestionnairesTable: React.FC = () => {
     await load();
   };
 
-  const handleSave = async (payload: { name: string; dimensions: number; active: boolean }) => {
+  const handleSave = async (payload: { name: string; description: string; dimensions: number; active: boolean }) => {
     if (editing?.id) {
-      await dataService.updateQuestionnaire(editing.id, payload as any);
+      return await dataService.updateQuestionnaire(editing.id, payload as any);
     } else {
-      await dataService.createQuestionnaire(payload as any);
+      return await dataService.createQuestionnaire(payload as any);
+    }
+  };
+
+  const handleSaved = async (result?: Q) => {
+    await load();
+    if (result && !editing?.id) {
+      setSelectedQuestionnaireForModal(result);
+      setQuestionsModalOpen(true);
     }
   };
 
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Formularios</h2>
-      <QuestionnaireForm open={openForm} initial={editing || undefined} onClose={() => { setOpenForm(false); setEditing(null); }} onSaved={load} saveFn={handleSave} />
+      <QuestionnaireForm open={openForm} initial={editing || undefined} onClose={() => { setOpenForm(false); setEditing(null); }} onSaved={handleSaved} saveFn={handleSave} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ color: 'var(--muted)' }}>Listado de formularios registrados</div>

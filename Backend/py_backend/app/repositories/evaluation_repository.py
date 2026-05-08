@@ -29,6 +29,7 @@ class SQLEvaluationRepository:
             item = EvaluacionORM(
                 id_empresa=org_id,
                 id_usuario=user_id,
+                id_evaluador=data.get("evaluator_id"),
                 fecha=data.get("fecha") or date.today(),
                 estado=str(data.get("estado") or "pendiente"),
                 datos_respuestas=answers if answers else None,
@@ -57,6 +58,8 @@ class SQLEvaluationRepository:
                 item.datos_respuestas = payload["answers"]
             if "user_id" in payload and payload["user_id"] is not None:
                 item.id_usuario = int(payload["user_id"])
+            if "evaluator_id" in payload:
+                item.id_evaluador = payload["evaluator_id"] if payload["evaluator_id"] is None else int(payload["evaluator_id"])
             if "estado" in payload and payload["estado"] is not None:
                 item.estado = str(payload["estado"])
             if "fecha" in payload and payload["fecha"] is not None:
