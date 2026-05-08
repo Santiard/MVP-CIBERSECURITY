@@ -17,6 +17,7 @@ services:
       DATABASE_URL: postgresql+psycopg2://mvp_user:mvp_pass@db:5432/mvp_db
       SEED_ON_STARTUP: "true"
       PASSWORD_RESET_FRONTEND_BASE: "http://localhost:3001"
+      RESEND_API_KEY: "re_d3uxmzH4_PKQjBovPYojygsjMT8SyrEut"
     ports:
       - "8000:8000"
     depends_on:
