@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
 import BackButton from "../components/BackButton";
 import dataService, { type Question } from "../services/dataService";
@@ -34,6 +34,8 @@ const EvaluationWorkflowPage: React.FC = () => {
   const { evaluationId } = useParams<{ evaluationId: string }>();
   const idNum = evaluationId ? Number(evaluationId) : NaN;
   const navigate = useNavigate();
+  const location = useLocation();
+  const respondMode = new URLSearchParams(location.search).get("respond") === "1";
 
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(true);
@@ -54,13 +56,13 @@ const EvaluationWorkflowPage: React.FC = () => {
   const totalQuestions = questionsFlat.length;
   const answeredCount = questionsFlat.filter(({ question: q }) => {
     const id = q.id;
-    const form = answersForm[id];
-    const saved = evaluation?.answers?.[id];
-    const valor = form?.valor ?? saved?.valor;
-    const comentario = form?.comentario ?? saved?.comentario;
-    const hasValor = valor !== undefined && String(valor).trim() !== "";
-    const hasComentario = comentario !== undefined && String(comentario).trim() !== "";
-    return hasValor || hasComentario;
+    // Check local (in-progress) form first
+    const localValor = answersForm[id]?.valor;
+    if (localValor !== undefined && String(localValor).trim() !== "" && Number(localValor) >= 1) return true;
+    // Fallback to server-saved answers
+    const savedValor = evaluation?.answers?.[id]?.valor;
+    if (savedValor !== undefined && String(savedValor).trim() !== "" && Number(savedValor) >= 1) return true;
+    return false;
   }).length;
   const progressPercent = totalQuestions === 0 ? 0 : Math.round((answeredCount / totalQuestions) * 100);
 
@@ -70,9 +72,11 @@ const EvaluationWorkflowPage: React.FC = () => {
   const authUser = getStoredAuthUser();
   const isAssignee =
     evaluation != null && authUser != null && Number(authUser.id) === evaluation.id_usuario;
-  /** Solo el usuario empresa titular completa el cuestionario; admin/evaluador solo definen alcance. */
-  const canRespondToQuestionnaire = authRole === "user" && isAssignee;
-  const isStaffAssignor = authRole === "admin" || authRole === "evaluator";
+  /** El usuario empresa titular Y el evaluador asignado (en modo responder) pueden completar el cuestionario. */
+  const isEvaluatorResponding = authRole === "evaluator" && respondMode;
+  const canRespondToQuestionnaire = (authRole === "user" && isAssignee) || isEvaluatorResponding;
+  /** Staff assignor = admin o evaluador gestionando el alcance (NO cuando está respondiendo). */
+  const isStaffAssignor = authRole === "admin" || (authRole === "evaluator" && !respondMode);
 
   const loadBase = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
@@ -97,7 +101,7 @@ const EvaluationWorkflowPage: React.FC = () => {
       setQuestionnaires(qs);
       setSelectedControlIds(new Set(linked.map((c) => c.id_control)));
 
-      if (authRole === "user") {
+      if (authRole === "user" || (authRole === "evaluator" && respondMode)) {
         const pairs: { controlName: string; question: Question }[] = [];
         for (const c of linked) {
           const qs2 = await dataService.getQuestionsByControl(String(c.id_control));
@@ -219,16 +223,24 @@ const EvaluationWorkflowPage: React.FC = () => {
           delete merged[q.id];
         }
       }
+      // Determine status: only finalize when ALL questions have a valid valor
+      const allAnswered = questionsFlat.every(({ question: q }) => {
+        const v = merged[q.id]?.valor;
+        return v !== undefined && Number(v) >= 1;
+      });
+      const newEstado = allAnswered ? "Finalizada" : "En progreso";
       const updated = await patchEvaluation(idNum, {
         answers: merged,
-        estado: "Finalizada",
+        estado: newEstado,
       });
       setEvaluation(updated);
       setLastSavedAt(new Date().toLocaleString("es-CO"));
       showAlert({
         type: "success",
-        title: "Exito",
-        message: "Cuestionario guardado y finalizado correctamente.",
+        title: "Guardado",
+        message: allAnswered
+          ? "Evaluación completada y finalizada correctamente."
+          : "Respuestas guardadas. Puedes continuar completando las preguntas pendientes.",
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al guardar respuestas";
@@ -267,7 +279,7 @@ const EvaluationWorkflowPage: React.FC = () => {
     }
     setAutoSaving(true);
     try {
-      const updated = await patchEvaluation(idNum, { answers: merged });
+      const updated = await patchEvaluation(idNum, { answers: merged, estado: "En progreso" });
       setEvaluation(updated);
       setLastSavedAt(new Date().toLocaleString("es-CO"));
       setError(null);
@@ -325,11 +337,9 @@ const EvaluationWorkflowPage: React.FC = () => {
                         style={{
                           width: `${progressPercent}%`,
                           height: "100%",
-                          background: "linear-gradient(90deg, var(--blue-600), #06b6d4)",
+                          background: "var(--blue-500)",
                           transition: "width 400ms ease",
-                          boxShadow: "inset 0 -2px 8px rgba(0,0,0,0.08)",
-                          backgroundSize: "200% 100%",
-                          animation: "moveGradient 6s linear infinite",
+                          borderRadius: 999,
                         }}
                       />
                     </div>
@@ -494,8 +504,7 @@ const EvaluationWorkflowPage: React.FC = () => {
           <div className="card" style={{ marginTop: 20 }}>
             <h3 style={{ marginTop: 0 }}>Responder preguntas</h3>
             <p style={{ fontSize: 14, color: "var(--muted)" }}>
-              Una respuesta por pregunta: valor numérico 1–5 (madurez) y comentario opcional. Se guardan en{" "}
-              <code>PATCH /evaluations/{idNum}</code> con el campo <code>answers</code>.
+              Seleccione un valor del 1 al 5 por cada pregunta y agregue un comentario si lo considera necesario.
             </p>
             {isResolved && (
               <div
@@ -533,22 +542,46 @@ const EvaluationWorkflowPage: React.FC = () => {
                     <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>{controlName}</div>
                     <div style={{ fontWeight: 600, marginBottom: 12 }}>{q.text}</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
-                      <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+                      <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
                         Valor (1–5)
-                        <input
-                          type="number"
-                          min={1}
-                          max={5}
-                          value={answersForm[q.id]?.valor ?? ""}
-                          disabled={saving || isResolved}
-                          onChange={(e) =>
-                            setAnswersForm((prev) => ({
-                              ...prev,
-                              [q.id]: { valor: e.target.value, comentario: prev[q.id]?.comentario ?? "" },
-                            }))
-                          }
-                          style={{ padding: 8, borderRadius: 8, width: 100, border: "1px solid var(--border)" }}
-                        />
+                        <div style={{ display: "flex", gap: 6 }}>
+                          {[1, 2, 3, 4, 5].map((v) => {
+                            const current = Number(answersForm[q.id]?.valor ?? evaluation?.answers?.[q.id]?.valor ?? 0);
+                            const selected = current === v;
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                disabled={saving || isResolved}
+                                onClick={() =>
+                                  setAnswersForm((prev) => ({
+                                    ...prev,
+                                    [q.id]: { valor: String(v), comentario: prev[q.id]?.comentario ?? "" },
+                                  }))
+                                }
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  borderRadius: 8,
+                                  border: selected ? "2px solid var(--blue-600)" : "1px solid var(--border)",
+                                  background: selected ? "var(--blue-600)" : "var(--background)",
+                                  color: selected ? "#fff" : "var(--gray-700)",
+                                  fontWeight: selected ? 700 : 400,
+                                  fontSize: 14,
+                                  cursor: saving || isResolved ? "not-allowed" : "pointer",
+                                  transition: "all 0.15s",
+                                  outline: "none",
+                                  appearance: "none" as const,
+                                  WebkitAppearance: "none" as const,
+                                  flexShrink: 0,
+                                }}
+                                onMouseDown={(e) => e.preventDefault()}
+                              >
+                                {v}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </label>
                       <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 200, fontSize: 13 }}>
                         Comentario
@@ -580,7 +613,13 @@ const EvaluationWorkflowPage: React.FC = () => {
                 disabled={saving || questionsFlat.length === 0 || isResolved}
                 onClick={() => void handleSaveAnswers()}
               >
-                {isResolved ? "Cuestionario finalizado" : saving ? "Guardando…" : "Guardar respuestas"}
+                {isResolved
+                  ? "Evaluación finalizada"
+                  : saving
+                    ? "Guardando…"
+                    : progressPercent === 100
+                      ? "Finalizar evaluación"
+                      : "Guardar avance"}
               </button>
               <Link to={`/reports/${idNum}`} className="btn btn-icon" style={{ textDecoration: "none" }} title="Ver informe">
                 <img src={viewIcon} alt="Ver informe" width={18} height={18} />

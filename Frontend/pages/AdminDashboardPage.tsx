@@ -163,11 +163,11 @@ const AdminDashboardPage: React.FC = () => {
             <div className="card" style={{ padding: 24 }}>
               <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, color: 'var(--blue-700)' }}>Accesos Rápidos</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {isAdmin && <a href="/users" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>👥 Gestión de Usuarios</a>}
-                <a href="/organizations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>🏢 Organizaciones</a>
-                <a href="/questionnaires" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>📝 Catálogo de Formularios</a>
-                <a href="/evaluations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>🛡️ Evaluaciones</a>
-                <a href="/reports" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>📊 Reportes Ejecutivos</a>
+                {isAdmin && <a href="/users" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Gestión de Usuarios</a>}
+                <a href="/organizations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Organizaciones</a>
+                <a href="/questionnaires" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Catálogo de Formularios</a>
+                <a href="/evaluations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Evaluaciones</a>
+                <a href="/reports" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Reportes Ejecutivos</a>
               </div>
             </div>
           </div>

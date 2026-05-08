@@ -166,11 +166,17 @@ def update_evaluation(
                 raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
 
     patch = input_data.model_dump(exclude_unset=True)
-    if "answers" in patch and patch.get("answers") is not None and titular_uid is not None:
-        if role_lower(current_user) != "user" or int(current_user["user_id"]) != titular_uid:
+    if "answers" in patch and patch.get("answers") is not None:
+        with Session(engine) as session:
+            ev = session.get(EvaluacionORM, evaluation_id)
+        role = role_lower(current_user)
+        uid = int(current_user["user_id"])
+        is_titular = role == "user" and titular_uid is not None and uid == titular_uid
+        is_assigned_evaluator = role == "evaluator" and ev is not None and ev.id_evaluador == uid
+        if not is_titular and not is_assigned_evaluator and role != "admin":
             raise HTTPException(
                 status_code=403,
-                detail="Solo el usuario titular de la evaluación (rol «user») puede guardar respuestas del cuestionario.",
+                detail="Solo el usuario titular o el evaluador asignado pueden guardar respuestas del cuestionario.",
             )
     if is_org_user(current_user):
         if patch.get("user_id") is not None and int(patch["user_id"]) != int(current_user["user_id"]):

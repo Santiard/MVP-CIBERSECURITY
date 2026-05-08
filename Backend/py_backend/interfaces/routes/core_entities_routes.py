@@ -134,7 +134,7 @@ _register_single_pk_crud(
     UsuarioORM,
     "id_usuario",
     validate_password=True,
-    read_roles=("admin",),
+    read_roles=("admin", "evaluator"),
     write_roles=("admin",),
 )
 _register_single_pk_crud(

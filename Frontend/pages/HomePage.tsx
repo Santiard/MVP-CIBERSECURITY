@@ -19,15 +19,15 @@ const HomePage: React.FC = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24, textAlign: 'left' }}>
           <div className="card" style={{ padding: 24, background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)' }}>
-            <h3 style={{ color: 'var(--blue-600)', marginTop: 0, fontSize: '1.2rem' }}>🛡️ Gestión de Riesgos</h3>
+            <h3 style={{ color: 'var(--blue-600)', marginTop: 0, fontSize: '1.2rem' }}>Gestión de Riesgos</h3>
             <p style={{ fontSize: 14, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>Identifica y categoriza los riesgos de tu organización alineados a controles estandarizados y mejores prácticas.</p>
           </div>
           <div className="card" style={{ padding: 24, background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)' }}>
-            <h3 style={{ color: 'var(--blue-600)', marginTop: 0, fontSize: '1.2rem' }}>📊 Reportes Dinámicos</h3>
+            <h3 style={{ color: 'var(--blue-600)', marginTop: 0, fontSize: '1.2rem' }}>Reportes Dinámicos</h3>
             <p style={{ fontSize: 14, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>Visualiza el nivel de madurez y el porcentaje de cumplimiento mediante reportes visuales detallados.</p>
           </div>
           <div className="card" style={{ padding: 24, background: 'linear-gradient(to bottom right, #ffffff, #f8fafc)' }}>
-            <h3 style={{ color: 'var(--blue-600)', marginTop: 0, fontSize: '1.2rem' }}>📝 Evaluaciones Ágiles</h3>
+            <h3 style={{ color: 'var(--blue-600)', marginTop: 0, fontSize: '1.2rem' }}>Evaluaciones Ágiles</h3>
             <p style={{ fontSize: 14, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>Asigna y responde formularios de manera eficiente, manteniendo siempre el progreso sincronizado.</p>
           </div>
         </div>
