@@ -129,7 +129,7 @@ def list_evaluations(
                 return []
         elif role_lower(current_user) == "evaluator":
             uid = int(current_user["user_id"])
-            stmt = stmt.where((EvaluacionORM.id_evaluador == uid) | (EvaluacionORM.id_evaluador == None))
+            stmt = stmt.where(EvaluacionORM.id_evaluador == uid)
         rows = session.exec(stmt).all()
         return [_eval_to_read(e) for e in rows]
 

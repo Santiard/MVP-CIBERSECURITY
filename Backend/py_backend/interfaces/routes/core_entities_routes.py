@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import SQLModel, Session, select
 
-from app.access_control import require_admin, require_roles
+from app.access_control import require_admin, require_roles, role_lower
 from app.db import engine
 from app.schemas import RiskRead
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
@@ -49,8 +49,20 @@ def _register_single_pk_crud(
     write_deps = [Depends(require_roles(*write_roles))] if write_roles else []
 
     @router.get(f"/{resource}", name=f"list_{resource}", dependencies=read_deps)
-    def list_items(session: Session = Depends(_get_session), _model: type[SQLModel] = model):
-        rows = session.exec(select(_model)).all()
+    def list_items(session: Session = Depends(_get_session), _model: type[SQLModel] = model, current_user: dict = Depends(auth_middleware)):
+        if resource == "questionnaires" and role_lower(current_user) == "evaluator":
+            from infraestructure.database.models import EvaluacionControlORM, EvaluacionORM, ControlORM
+            uid = int(current_user["user_id"])
+            stmt = (
+                select(_model)
+                .join(EvaluacionControlORM, EvaluacionControlORM.id_control == ControlORM.id_control)
+                .join(EvaluacionORM, EvaluacionORM.id_evaluacion == EvaluacionControlORM.id_evaluacion)
+                .where(EvaluacionORM.id_evaluador == uid)
+                .distinct()
+            )
+        else:
+            stmt = select(_model)
+        rows = session.exec(stmt).all()
         return [_serialize(row) for row in rows]
 
     @router.get(f"/{resource}/{{item_id}}", name=f"get_{resource}", dependencies=read_deps)

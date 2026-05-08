@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.access_control import get_assigned_organization_ids, is_admin, is_org_user, is_staff
+from app.access_control import get_assigned_organization_ids, is_admin, is_org_user, is_staff, role_lower
 from app.db import engine
-from infraestructure.database import EmpresaORM, RolORM, UsuarioORM, UsuarioOrganizacionORM
+from infraestructure.database import EmpresaORM, RolORM, UsuarioORM, UsuarioOrganizacionORM, EvaluacionORM
 from interfaces.middlewares.auth_middleware import auth_middleware
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -107,15 +107,25 @@ def create_organization(input_data: dict, current_user=Depends(auth_middleware))
 @router.get("")
 def list_organizations(current_user=Depends(auth_middleware)):
     with Session(engine) as session:
-        if not is_org_user(current_user):
-            if not is_staff(current_user):
+        if is_org_user(current_user):
+            allowed_ids = get_assigned_organization_ids(session, int(current_user["user_id"]))
+            if not allowed_ids:
                 return []
+            stmt = select(EmpresaORM).where(EmpresaORM.id_empresa.in_(allowed_ids))
+            return session.exec(stmt).all()
+        elif role_lower(current_user) == "evaluator":
+            uid = int(current_user["user_id"])
+            stmt = (
+                select(EmpresaORM)
+                .join(EvaluacionORM, EmpresaORM.id_empresa == EvaluacionORM.id_empresa)
+                .where(EvaluacionORM.id_evaluador == uid)
+                .distinct()
+            )
+            return session.exec(stmt).all()
+        elif is_admin(current_user):
             return session.exec(select(EmpresaORM)).all()
-        allowed_ids = get_assigned_organization_ids(session, int(current_user["user_id"]))
-        if not allowed_ids:
+        else:
             return []
-        stmt = select(EmpresaORM).where(EmpresaORM.id_empresa.in_(allowed_ids))
-        return session.exec(stmt).all()
 
 
 @router.get("/eligible-members")

@@ -26,11 +26,11 @@ const ADMIN_NAV: NavItem[] = [
 const EVALUATOR_NAV: NavItem[] = [
   { to: '/HomePage', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/organizations', label: 'Organizaciones' },
-  { to: '/questionnaires', label: 'Formularios' },
+  { to: '/organizations', label: 'Mis Organizaciones' },
+  { to: '/questionnaires', label: 'Mis Formularios' },
   { to: '/asignaciones', label: 'Asignaciones' },
-  { to: '/evaluations', label: 'Evaluaciones' },
-  { to: '/reports', label: 'Reportes' },
+  { to: '/evaluations', label: 'Mis Evaluaciones' },
+  { to: '/reports', label: 'Mis Reportes' },
 ];
 
 /** Usuario de empresa: trabajo primero (evaluaciones), luego informes. */

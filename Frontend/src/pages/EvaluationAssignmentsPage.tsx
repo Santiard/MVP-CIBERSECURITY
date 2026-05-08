@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import ConfirmModal from "../components/modal/ConfirmModal";
+import EvaluatorSummaryPage from "./EvaluatorSummaryPage";
 import dataService from "../services/dataService";
 import { useAlert } from "../components/alerts/AlertProvider";
 import {
@@ -11,6 +12,7 @@ import {
   patchEvaluation,
   type EvaluationApiRow,
 } from "../services/evaluationApi";
+import { getCurrentRole } from "../utils/auth";
 
 type Org = { id_empresa: number; nombre: string; sector: string; tamano: string };
 type User = { id: string; name: string; role: string; email: string };
@@ -36,6 +38,9 @@ const EvaluationAssignmentsPage: React.FC = () => {
   const [newEvalOrgId, setNewEvalOrgId] = useState<string>("");
   const [newEvalEvaluatorId, setNewEvalEvaluatorId] = useState<string>("");
   const [deleteFor, setDeleteFor] = useState<EvaluationApiRow | null>(null);
+  const [editEval, setEditEval] = useState<EvaluationApiRow | null>(null);
+  const [editOrgId, setEditOrgId] = useState<string>("");
+  const [editEvaluatorId, setEditEvaluatorId] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -142,6 +147,37 @@ const EvaluationAssignmentsPage: React.FC = () => {
     }
   };
 
+  const handleEditAssignment = async (goToWorkflow = false) => {
+    if (!editEval) return;
+    try {
+      setBusyId(editEval.id_evaluacion);
+      await patchEvaluation(editEval.id_evaluacion, {
+        id_empresa: Number(editOrgId),
+        id_evaluador: editEvaluatorId ? Number(editEvaluatorId) : undefined,
+      });
+      showAlert({ type: "success", title: "Éxito", message: "Asignación actualizada correctamente" });
+      await load();
+      if (goToWorkflow) {
+        navigate(`/evaluations/${editEval.id_evaluacion}/workflow`);
+      }
+    } catch (e) {
+      showAlert({ type: "error", title: "Error", message: e instanceof Error ? e.message : "Error al actualizar" });
+    } finally {
+      setBusyId(null);
+      const dialog = document.getElementById("edit-evaluation-dialog") as HTMLDialogElement | null;
+      dialog?.close();
+      setEditEval(null);
+    }
+  };
+
+  if (getCurrentRole() === "evaluator") {
+    return (
+      <Layout>
+        <EvaluatorSummaryPage />
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div style={{ padding: 24 }}>
@@ -226,13 +262,22 @@ const EvaluationAssignmentsPage: React.FC = () => {
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)" }}>{r.estado}</td>
                         <td style={{ padding: "12px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                          <Link
-                            to={`/evaluations/${r.id_evaluacion}/workflow`}
+                          <button
+                            type="button"
                             className="btn btn-primary"
-                            style={{ textDecoration: "none", marginRight: 8 }}
+                            style={{ marginRight: 8 }}
+                            onClick={() => {
+                              setEditEval(r);
+                              setEditOrgId(String(r.id_empresa));
+                              setEditEvaluatorId(r.id_evaluador ? String(r.id_evaluador) : "");
+                              setTimeout(() => {
+                                const dialog = document.getElementById("edit-evaluation-dialog") as HTMLDialogElement | null;
+                                dialog?.showModal();
+                              }, 10);
+                            }}
                           >
-                            Editar alcance de la evaluación
-                          </Link>
+                            Editar
+                          </button>
                           <Link
                             to={`/reports/${r.id_evaluacion}`}
                             className="btn"
@@ -381,6 +426,91 @@ const EvaluationAssignmentsPage: React.FC = () => {
               }}
             >
               Crear y abrir flujo
+            </button>
+          </div>
+        </dialog>
+
+        {/* Modal de edición */}
+        <dialog
+          id="edit-evaluation-dialog"
+          style={{
+            padding: 0,
+            border: "none",
+            borderRadius: 12,
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
+            width: "90%",
+            maxWidth: 500,
+          }}
+        >
+          <div style={{ padding: "24px 24px 16px" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Editar Asignación</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>Empresa (Organización)</label>
+                <select
+                  value={editOrgId}
+                  onChange={(e) => setEditOrgId(e.target.value)}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)" }}
+                >
+                  <option value="">-- Seleccione una empresa --</option>
+                  {orgs.map((o) => (
+                    <option key={o.id_empresa} value={String(o.id_empresa)}>
+                      {o.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>Evaluador Asignado</label>
+                <select
+                  value={editEvaluatorId}
+                  onChange={(e) => setEditEvaluatorId(e.target.value)}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)" }}
+                >
+                  <option value="">-- Seleccione un evaluador (opcional) --</option>
+                  {evaluators.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 8,
+            padding: "16px 24px",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface-muted, rgba(0,0,0,0.02))",
+          }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const dialog = document.getElementById("edit-evaluation-dialog") as HTMLDialogElement | null;
+                dialog?.close();
+                setEditEval(null);
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busyId === (editEval?.id_evaluacion ?? -1)}
+              onClick={() => handleEditAssignment(false)}
+            >
+              Guardar
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={busyId === (editEval?.id_evaluacion ?? -1)}
+              onClick={() => handleEditAssignment(true)}
+            >
+              Guardar y editar alcance
             </button>
           </div>
         </dialog>
