@@ -8,6 +8,8 @@ type Q = { id: string; name: string; dimensions: number; active: boolean };
 
 const QuestionnairesTable: React.FC = () => {
   const [rows, setRows] = useState<Q[]>([]);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -25,11 +27,19 @@ const QuestionnairesTable: React.FC = () => {
   useEffect(() => { load(); }, []);
   useEffect(() => {
     setPage(1);
-  }, [pageSize]);
+  }, [query, statusFilter, pageSize]);
 
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const filtered = rows.filter(r => {
+    if (statusFilter !== '') {
+      const isActive = statusFilter === 'true';
+      if (r.active !== isActive) return false;
+    }
+    return r.name.toLowerCase().includes(query.toLowerCase());
+  });
+
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pages);
-  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const visibleRows = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -61,9 +71,14 @@ const QuestionnairesTable: React.FC = () => {
       <h2 style={{ marginTop: 0 }}>Formularios</h2>
       <QuestionnaireForm open={openForm} initial={editing || undefined} onClose={() => { setOpenForm(false); setEditing(null); }} onSaved={handleSaved} saveFn={handleSave} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ color: 'var(--muted)' }}>Listado de formularios registrados</div>
-        <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <input placeholder="Buscar por nombre..." value={query} onChange={e => setQuery(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', flex: '1 1 200px' }} />
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
+          <option value="">Todos los estados</option>
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+        <div style={{ marginLeft: 'auto' }}>
           <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo formulario</button>
         </div>
       </div>

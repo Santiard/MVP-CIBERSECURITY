@@ -14,6 +14,9 @@ type Org = { id_empresa: number; nombre: string };
 
 const EvaluationsTable: React.FC = () => {
   const [filter, setFilter] = useState("");
+  const [evaluatorFilter, setEvaluatorFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [orgFilter, setOrgFilter] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [rowsData, setRowsData] = useState<EvaluationApiRow[]>([]);
@@ -28,19 +31,28 @@ const EvaluationsTable: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const [data, o, users] = await Promise.all([listEvaluations(), dataService.getOrgs() as Promise<Org[]>, dataService.getUsers()]);
+
+        // Load evaluations first — this is the critical request
+        const data = await listEvaluations();
         setRowsData(data);
-        setOrgs(o);
+
+        // Orgs & users are supplementary — non-staff roles may get 403, ignore errors
+        const [o, users] = await Promise.all([
+          dataService.getOrgs().catch(() => [] as Org[]),
+          dataService.getUsers().catch(() => [] as { id: number; name: string }[]),
+        ]);
+        setOrgs(o as Org[]);
         setEvaluators(users);
+
         if (!isStaffRole(getCurrentRole()) && data.length > 0) {
-          const org = o.find(x => x.id_empresa === data[0].id_empresa);
+          const org = (o as Org[]).find(x => x.id_empresa === data[0].id_empresa);
           if (org && org.nombre !== localStorage.getItem("userOrgName")) {
             localStorage.setItem("userOrgName", org.nombre);
             window.dispatchEvent(new Event("userOrgNameChanged"));
           }
         }
       } catch {
-        setError("No se pudieron cargar las evaluaciones");
+        setError("No se pudieron cargar las evaluaciones. Verifica tu conexión e intenta de nuevo.");
       } finally {
         setLoading(false);
       }
@@ -63,23 +75,26 @@ const EvaluationsTable: React.FC = () => {
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return rowsData;
     return rowsData.filter((r) => {
+      if (evaluatorFilter && r.id_evaluador !== Number(evaluatorFilter)) return false;
+      if (statusFilter && r.estado !== statusFilter) return false;
+      if (orgFilter && r.id_empresa !== Number(orgFilter)) return false;
+
+      if (!q) return true;
       const name = (orgName.get(r.id_empresa) ?? "").toLowerCase();
       return (
         name.includes(q) ||
-        String(r.id_evaluacion).includes(q) ||
-        (r.estado || "").toLowerCase().includes(q)
+        String(r.id_evaluacion).includes(q)
       );
     });
-  }, [filter, rowsData, orgName]);
+  }, [filter, evaluatorFilter, statusFilter, orgFilter, rowsData, orgName]);
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, pages);
   const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [filter, pageSize]);
+  }, [filter, evaluatorFilter, statusFilter, orgFilter, pageSize]);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -96,8 +111,44 @@ const EvaluationsTable: React.FC = () => {
         </p>
       )}
       <h2 style={{ marginTop: 8 }}>Evaluaciones</h2>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por empresa, id o estado" />
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <div style={{ flex: "1 1 200px" }}>
+          <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por empresa, ID..." />
+        </div>
+        {staff && (
+          <select
+            value={orgFilter}
+            onChange={(e) => setOrgFilter(e.target.value)}
+            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px" }}
+          >
+            <option value="">Todas las empresas</option>
+            {orgs.map((o) => (
+              <option key={o.id_empresa} value={o.id_empresa}>{o.nombre}</option>
+            ))}
+          </select>
+        )}
+        {!staff && (
+          <select
+            value={evaluatorFilter}
+            onChange={(e) => setEvaluatorFilter(e.target.value)}
+            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px" }}
+          >
+            <option value="">Todos los evaluadores</option>
+            {evaluators.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
+        )}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px" }}
+        >
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="en proceso">En progreso</option>
+          <option value="finalizada">Finalizada</option>
+        </select>
       </div>
 
       <div style={{ overflowX: "auto" }}>
@@ -125,9 +176,34 @@ const EvaluationsTable: React.FC = () => {
               <tr>
                 <td
                   colSpan={staff ? 5 : 4}
-                  style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", color: "var(--danger)" }}
+                  style={{ padding: "32px 16px", borderTop: "1px solid var(--border)" }}
                 >
-                  {error}
+                  <div style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                    background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.2)",
+                    borderRadius: 10, padding: "20px 24px",
+                  }}>
+                    <span style={{ fontSize: 22 }}>⚠️</span>
+                    <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: 14 }}>{error}</span>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {!loading && !error && rowsData.length === 0 && (
+              <tr>
+                <td colSpan={staff ? 5 : 4} style={{ padding: "40px 16px", borderTop: "1px solid var(--border)" }}>
+                  <div style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
+                    color: "var(--muted)",
+                  }}>
+                    <span style={{ fontSize: 36 }}>📋</span>
+                    <span style={{ fontWeight: 600, fontSize: 15 }}>Aún no hay evaluaciones registradas</span>
+                    <span style={{ fontSize: 13 }}>
+                      {staff
+                        ? "Crea una nueva evaluación desde el módulo de Asignaciones."
+                        : "Cuando el administrador te asigne una evaluación, aparecerá aquí."}
+                    </span>
+                  </div>
                 </td>
               </tr>
             )}

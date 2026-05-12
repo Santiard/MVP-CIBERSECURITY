@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import '../src/styles/theme.css';
 import logo from '../src/images/logoRAY.svg';
 import { getPasswordPolicyIssues, PASSWORD_POLICY_MESSAGE } from '../src/utils/passwordPolicy';
+import PasswordToggle from '../src/components/PasswordToggle';
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
@@ -152,6 +153,8 @@ function ConfirmResetForm({ token }: PropsToken) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
 
   const passwordIssues = getPasswordPolicyIssues(newPassword);
   const showPasswordIssues = submitted || newPassword.length > 0;
@@ -248,22 +251,24 @@ function ConfirmResetForm({ token }: PropsToken) {
       <label style={{ display: 'block', textAlign: 'left', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
         Nueva contraseña *
       </label>
-      <input
-        type="password"
-        autoComplete="new-password"
-        value={newPassword}
-        onChange={(e) => setNewPassword(e.target.value)}
-        placeholder="Mínimo 8 caracteres según política"
-        style={{
-          width: '100%',
-          padding: '12px 14px',
-          borderRadius: 8,
-          border: errors.newPassword ? '1px solid var(--danger)' : '1px solid var(--gray-200)',
-          marginBottom: 8,
-          boxSizing: 'border-box',
-          textAlign: 'center',
-        }}
-      />
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <input
+          type={showNewPwd ? 'text' : 'password'}
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Mínimo 8 caracteres según política"
+          style={{
+            width: '100%',
+            padding: '12px 44px 12px 14px',
+            borderRadius: 8,
+            border: errors.newPassword ? '1px solid var(--danger)' : '1px solid var(--gray-200)',
+            marginBottom: 0,
+            boxSizing: 'border-box',
+          }}
+        />
+        <PasswordToggle visible={showNewPwd} onToggle={() => setShowNewPwd((v) => !v)} />
+      </div>
 
       {showPasswordIssues && passwordIssues.length > 0 && (
         <div style={{ textAlign: 'left', fontSize: 12, color: 'var(--danger)', marginBottom: 8 }}>
@@ -282,21 +287,24 @@ function ConfirmResetForm({ token }: PropsToken) {
       <label style={{ display: 'block', textAlign: 'left', fontSize: 13, color: 'var(--gray-600)', marginBottom: 6 }}>
         Confirmar contraseña *
       </label>
-      <input
-        type="password"
-        autoComplete="new-password"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '12px 14px',
-          borderRadius: 8,
-          border: errors.confirmPassword ? '1px solid var(--danger)' : '1px solid var(--gray-200)',
-          marginBottom: 8,
-          boxSizing: 'border-box',
-          textAlign: 'center',
-        }}
-      />
+      <div style={{ position: 'relative', marginBottom: 8 }}>
+        <input
+          type={showConfirmPwd ? 'text' : 'password'}
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          placeholder="Repite la contraseña"
+          style={{
+            width: '100%',
+            padding: '12px 44px 12px 14px',
+            borderRadius: 8,
+            border: errors.confirmPassword ? '1px solid var(--danger)' : '1px solid var(--gray-200)',
+            marginBottom: 0,
+            boxSizing: 'border-box',
+          }}
+        />
+        <PasswordToggle visible={showConfirmPwd} onToggle={() => setShowConfirmPwd((v) => !v)} />
+      </div>
       {errors.confirmPassword && (
         <div style={{ fontSize: 12, color: 'var(--danger)', textAlign: 'left', marginBottom: 8 }}>{errors.confirmPassword}</div>
       )}

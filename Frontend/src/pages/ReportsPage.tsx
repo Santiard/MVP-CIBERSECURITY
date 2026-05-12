@@ -3,9 +3,11 @@ import Layout from '../components/Layout';
 import { Link } from 'react-router-dom';
 import { listReports, ReportListItem } from '../services/reportApi';
 import viewIcon from '../images/ojo.svg';
+import FilterInput from '../components/FilterInput';
 
 const ReportsPage: React.FC = () => {
-  const [rows, setRows] = useState<ReportListItem[]>([]);
+  const [rowsData, setRowsData] = useState<ReportListItem[]>([]);
+  const [filter, setFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -14,7 +16,7 @@ const ReportsPage: React.FC = () => {
     const load = async () => {
       try {
         setLoading(true);
-        setRows(await listReports());
+        setRowsData(await listReports());
       } finally {
         setLoading(false);
       }
@@ -22,13 +24,18 @@ const ReportsPage: React.FC = () => {
     load();
   }, []);
 
+  const rows = rowsData.filter((r) => {
+    const q = filter.toLowerCase();
+    return r.title.toLowerCase().includes(q) || r.date.toLowerCase().includes(q);
+  });
+
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, pages);
   const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [pageSize]);
+  }, [filter, pageSize]);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -39,6 +46,9 @@ const ReportsPage: React.FC = () => {
       <div style={{ padding: 24 }}>
         <h2 style={{ marginTop: 0 }}>Reportes</h2>
         <div className="card">
+          <div style={{ marginBottom: 16 }}>
+            <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por título o fecha" />
+          </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>

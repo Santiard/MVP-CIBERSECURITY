@@ -8,6 +8,7 @@ import {
   PASSWORD_POLICY_MESSAGE,
 } from '../src/utils/passwordPolicy';
 import { defaultPathByRole, normalizeRole } from '../src/utils/auth';
+import PasswordToggle from '../src/components/PasswordToggle';
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
@@ -197,25 +198,7 @@ const LoginPage: React.FC = () => {
             required
             style={{width:'100%', padding:'12px 52px 12px 14px', borderRadius:8, border:'1px solid var(--gray-200)', boxSizing:'border-box', textAlign:'center'}}
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword((prev) => !prev)}
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              right: 10,
-              transform: 'translateY(-50%)',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--link-color)',
-              fontSize: 12,
-              cursor: 'pointer',
-              padding: '4px 6px',
-            }}
-          >
-            {showPassword ? 'Ocultar' : 'Ver'}
-          </button>
+          <PasswordToggle visible={showPassword} onToggle={() => setShowPassword((p) => !p)} />
         </div>
 
         {showPasswordIssues && passwordIssues.length > 0 && (

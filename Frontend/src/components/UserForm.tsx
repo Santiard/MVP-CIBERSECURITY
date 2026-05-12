@@ -9,6 +9,7 @@ import {
   PASSWORD_POLICY_MESSAGE,
 } from '../utils/passwordPolicy';
 import { useAlert } from './alerts/AlertProvider';
+import PasswordToggle from './PasswordToggle';
 
 type Props = {
   open?: boolean;
@@ -25,6 +26,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const [role, setRole] = useState(initial?.role || 'user');
   const [active, setActive] = useState(initial?.active ?? true);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { showAlert } = useAlert();
@@ -157,18 +159,23 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
       </select>
 
       <label style={{ fontSize: 12 }}>{initial?.id ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</label>
-      <input
-        type="password"
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        placeholder="Mínimo 8, con mayúscula, minúscula y especial"
-        required={requirePassword}
-        style={{
-          padding: 8,
-          borderRadius: 8,
-          border: errors.password ? '1px solid var(--danger)' : '1px solid var(--border)'
-        }}
-      />
+      <div style={{ position: 'relative' }}>
+        <input
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="Mín. 8 car., mayúscula, minúscula, número y especial"
+          required={requirePassword}
+          style={{
+            width: '100%',
+            padding: '8px 40px 8px 8px',
+            borderRadius: 8,
+            border: errors.password ? '1px solid var(--danger)' : '1px solid var(--border)',
+            boxSizing: 'border-box',
+          }}
+        />
+        <PasswordToggle visible={showPassword} onToggle={() => setShowPassword((v) => !v)} />
+      </div>
       {errors.password && <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>{errors.password}</div>}
       {showPasswordIssues && shouldValidatePassword && passwordIssues.length > 0 && (
         <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>

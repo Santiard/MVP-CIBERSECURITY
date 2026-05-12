@@ -17,6 +17,8 @@ const UsersTable: React.FC = () => {
   const { showAlert } = useAlert();
   const [rows, setRows] = useState<User[]>([]);
   const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -32,14 +34,22 @@ const UsersTable: React.FC = () => {
     setLoading(false);
   };
 
-  const filtered = rows.filter(r => r.name.toLowerCase().includes(query.toLowerCase()) || r.email.toLowerCase().includes(query.toLowerCase()));
+  const filtered = rows.filter(r => {
+    if (roleFilter && r.role !== roleFilter) return false;
+    if (statusFilter !== '') {
+      const isActive = statusFilter === 'true';
+      if (r.active !== isActive) return false;
+    }
+    const q = query.toLowerCase();
+    return r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q);
+  });
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pages);
   const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [query, pageSize]);
+  }, [query, roleFilter, statusFilter, pageSize]);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -120,8 +130,19 @@ const UsersTable: React.FC = () => {
       <h2 style={{ marginTop: 0 }}>Gestión de Usuarios</h2>
       <UserForm open={openForm} onClose={() => setOpenForm(false)} initial={editing || undefined} onSaved={load} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <input placeholder="Buscar por nombre o correo" value={query} onChange={e => setQuery(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <input placeholder="Buscar por nombre o correo" value={query} onChange={e => setQuery(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', flex: '1 1 200px' }} />
+        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
+          <option value="">Todos los roles</option>
+          <option value="admin">Administrador</option>
+          <option value="evaluator">Evaluador</option>
+          <option value="user">Usuario</option>
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
+          <option value="">Todos los estados</option>
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
         <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo usuario</button>
       </div>
 

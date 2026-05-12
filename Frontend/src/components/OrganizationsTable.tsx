@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/theme.css';
 import dataService from '../services/dataService';
@@ -15,6 +15,8 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
   const { showAlert } = useAlert();
   const [rows, setRows] = useState<Org[]>([]);
   const [query, setQuery] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
+  const [tamanoFilter, setTamanoFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -32,14 +34,22 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
     setLoading(false);
   };
 
-  const filtered = rows.filter(r => r.nombre.toLowerCase().includes(query.toLowerCase()) || r.sector.toLowerCase().includes(query.toLowerCase()));
+  const sectors = useMemo(() => Array.from(new Set(rows.map(r => r.sector))).filter(Boolean).sort(), [rows]);
+  const tamanos = useMemo(() => Array.from(new Set(rows.map(r => r.tamano))).filter(Boolean).sort(), [rows]);
+
+  const filtered = rows.filter(r => {
+    if (sectorFilter && r.sector !== sectorFilter) return false;
+    if (tamanoFilter && r.tamano !== tamanoFilter) return false;
+    const q = query.toLowerCase();
+    return r.nombre.toLowerCase().includes(q) || r.sector.toLowerCase().includes(q);
+  });
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pages);
   const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [query, pageSize]);
+  }, [query, sectorFilter, tamanoFilter, pageSize]);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -78,9 +88,17 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
         onConfirm={() => void confirmDelete()}
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <input placeholder="Buscar por nombre o sector" value={query} onChange={e => setQuery(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <input placeholder="Buscar por nombre..." value={query} onChange={e => setQuery(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', flex: '1 1 200px' }} />
+        <select value={sectorFilter} onChange={e => setSectorFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
+          <option value="">Todos los sectores</option>
+          {sectors.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={tamanoFilter} onChange={e => setTamanoFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
+          <option value="">Todos los tamaños</option>
+          {tamanos.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
           <Link to="/asignaciones" className="btn" style={{ textDecoration: 'none' }}>Asignaciones empresa ↔ evaluación</Link>
           <a href="/organizations/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>Nueva organización</a>
         </div>

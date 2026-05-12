@@ -184,7 +184,7 @@ const ReportViewPage: React.FC = () => {
               <div className="card">
                 <h3 style={{ marginTop: 0 }}>Detalle de Respuestas por Formulario</h3>
                 <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 0, marginBottom: 16 }}>
-                  Puntuaciones individuales (escala 1–5) y comentarios del evaluador para cada pregunta.
+                  Scoring individual (escala 1–5) y comentarios del evaluador para cada pregunta.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
                   {controlDetails.map((ctrl) => {

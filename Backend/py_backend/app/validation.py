@@ -2,7 +2,7 @@ import re
 
 
 PASSWORD_POLICY_MESSAGE = (
-    "La contraseña debe tener al menos 8 caracteres, incluir mayúscula, minúscula y carácter especial."
+    "La contraseña debe tener al menos 8 caracteres, incluir mayúscula, minúscula, número y carácter especial."
 )
 
 
@@ -12,6 +12,8 @@ def is_strong_password(value: str) -> bool:
     if not re.search(r"[A-Z]", value):
         return False
     if not re.search(r"[a-z]", value):
+        return False
+    if not re.search(r"[0-9]", value):
         return False
     if not re.search(r"[^A-Za-z0-9]", value):
         return False
