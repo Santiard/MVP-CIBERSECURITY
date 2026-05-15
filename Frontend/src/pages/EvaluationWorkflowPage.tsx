@@ -14,6 +14,8 @@ import {
 } from "../services/evaluationApi";
 import { useAlert } from "../components/alerts/AlertProvider";
 import viewIcon from "../images/ojo.svg";
+import saveIcon from "../images/guardar.svg";
+import checkIcon from "../images/listo.svg";
 import { getCurrentRole, getStoredAuthUser } from "../utils/auth";
 
 type QuestionnaireRow = Awaited<ReturnType<typeof dataService.getQuestionnaires>>[number];
@@ -41,6 +43,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<"saved" | "finalized" | null>(null);
 
   const [evaluation, setEvaluation] = useState<EvaluationDetail | null>(null);
   const [questionnaires, setQuestionnaires] = useState<QuestionnaireRow[]>([]);
@@ -51,6 +54,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   const autoSaveTimer = useRef<number | null>(null);
+  const lastSavedAnswers = useRef<Record<string, { valor: string; comentario: string }>>({});
   const [autoSaving, setAutoSaving] = useState(false);
 
   const totalQuestions = questionsFlat.length;
@@ -235,13 +239,13 @@ const EvaluationWorkflowPage: React.FC = () => {
       });
       setEvaluation(updated);
       setLastSavedAt(new Date().toLocaleString("es-CO"));
-      showAlert({
-        type: "success",
-        title: "Guardado",
-        message: allAnswered
-          ? "Evaluación completada y finalizada correctamente."
-          : "Respuestas guardadas. Puedes continuar completando las preguntas pendientes.",
-      });
+      
+      // Show success screen based on completion status
+      if (allAnswered) {
+        setSuccessMessage("finalized");
+      } else {
+        setSuccessMessage("saved");
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al guardar respuestas";
       setError(msg);
@@ -291,25 +295,38 @@ const EvaluationWorkflowPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // debounce autosave when answers change
-    if (autoSaveTimer.current) {
-      window.clearTimeout(autoSaveTimer.current);
-      autoSaveTimer.current = null;
+    // Set up interval autosave every 5 seconds if there are unsaved changes
+    if (!canRespondToQuestionnaire || step !== 2 || isResolved) {
+      if (autoSaveTimer.current) {
+        window.clearInterval(autoSaveTimer.current);
+        autoSaveTimer.current = null;
+      }
+      return;
     }
-    if (!canRespondToQuestionnaire || step !== 2 || isResolved) return;
-    // only schedule if there is at least one question
-    if (questionsFlat.length === 0) return;
-    autoSaveTimer.current = window.setTimeout(() => {
-      void saveAnswersPartial();
-    }, 1500) as unknown as number;
+    if (questionsFlat.length === 0) {
+      if (autoSaveTimer.current) {
+        window.clearInterval(autoSaveTimer.current);
+        autoSaveTimer.current = null;
+      }
+      return;
+    }
+
+    autoSaveTimer.current = window.setInterval(() => {
+      // Only save if answers have changed since last save
+      const hasChanges = JSON.stringify(answersForm) !== JSON.stringify(lastSavedAnswers.current);
+      if (hasChanges) {
+        lastSavedAnswers.current = JSON.parse(JSON.stringify(answersForm));
+        void saveAnswersPartial();
+      }
+    }, 5000) as unknown as number;
+
     return () => {
       if (autoSaveTimer.current) {
-        window.clearTimeout(autoSaveTimer.current);
+        window.clearInterval(autoSaveTimer.current);
         autoSaveTimer.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answersForm, step, canRespondToQuestionnaire, isResolved, questionsFlat]);
+  }, [step, canRespondToQuestionnaire, isResolved, questionsFlat]);
 
   if (!Number.isFinite(idNum)) {
     return (
@@ -317,6 +334,127 @@ const EvaluationWorkflowPage: React.FC = () => {
         <div style={{ padding: 24 }}>
           <p>Identificador de evaluación no válido.</p>
           <Link to="/asignaciones">Volver a asignaciones</Link>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Success screen when evaluation is saved or finalized
+  if (successMessage) {
+    const isFinalized = successMessage === "finalized";
+    return (
+      <Layout>
+        <div style={{ padding: 24 }}>
+          <div style={{ maxWidth: 600, margin: "0 auto", textAlign: "center", marginTop: 40 }}>
+            <div style={{ marginBottom: 24 }}>
+              <img
+                src={isFinalized ? checkIcon : saveIcon}
+                alt={isFinalized ? "Éxito" : "Guardado"}
+                width={64}
+                height={64}
+                style={{ opacity: 0.9 }}
+              />
+            </div>
+            <h2
+              style={{
+                fontSize: 32,
+                fontWeight: 700,
+                color: isFinalized ? "var(--success)" : "var(--blue-500)",
+                margin: "0 0 12px 0",
+              }}
+            >
+              {isFinalized ? "Evaluación Finalizada" : "Avance Guardado"}
+            </h2>
+            <p style={{ fontSize: 16, color: "var(--muted)", margin: "0 0 32px 0" }}>
+              {isFinalized
+                ? "Tu evaluación se ha guardado y finalizado exitosamente."
+                : "Tus respuestas se han guardado correctamente. Puedes continuar completando las preguntas pendientes."}
+            </p>
+
+            {evaluation && (
+              <div
+                style={{
+                  background: isFinalized
+                    ? "linear-gradient(135deg, rgba(25,118,210,0.08), rgba(46,161,255,0.08))"
+                    : "linear-gradient(135deg, rgba(25,118,210,0.04), rgba(46,161,255,0.04))",
+                  border: `1px solid ${isFinalized ? "var(--blue-400)" : "var(--blue-300)"}`,
+                  borderRadius: 12,
+                  padding: 24,
+                  marginBottom: 32,
+                  textAlign: "left",
+                }}
+              >
+                <h3 style={{ marginTop: 0, marginBottom: 16, color: "var(--blue-700)" }}>
+                  Resumen de la Evaluación
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Empresa</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-on-light)" }}>
+                      #{evaluation.id_empresa}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Estado</div>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: isFinalized ? "var(--success)" : "var(--warning)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      {isFinalized ? "Finalizada" : "En progreso"}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Preguntas Respondidas</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-on-light)" }}>
+                      {answeredCount}/{totalQuestions}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Progreso</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--blue-500)" }}>{progressPercent}%</div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Guardado</div>
+                  <div style={{ fontSize: 14, color: "var(--text-on-light)" }}>{lastSavedAt}</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Link
+                to={`/reports/${idNum}`}
+                className="btn btn-primary"
+                style={{ textDecoration: "none", display: "block", padding: 12, fontSize: 16, fontWeight: 600 }}
+              >
+                {isFinalized ? "Ver Reporte Completo" : "Ver Reporte Parcial"}
+              </Link>
+              <button
+                type="button"
+                className={isFinalized ? "btn" : "btn btn-primary"}
+                onClick={() => setSuccessMessage(null)}
+                style={{ padding: 12, fontSize: 16, fontWeight: 600 }}
+              >
+                {isFinalized ? "Volver a Asignaciones" : "Continuar Respondiendo"}
+              </button>
+              {isFinalized && (
+                <Link
+                  to="/asignaciones"
+                  className="btn"
+                  style={{ textDecoration: "none", display: "block", padding: 12, fontSize: 16 }}
+                >
+                  O volver a Asignaciones
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </Layout>
     );
@@ -563,10 +701,10 @@ const EvaluationWorkflowPage: React.FC = () => {
                                   width: 36,
                                   height: 36,
                                   borderRadius: 8,
-                                  border: selected ? "2px solid var(--blue-600)" : "1px solid var(--border)",
-                                  background: selected ? "var(--blue-600)" : "var(--background)",
-                                  color: selected ? "#fff" : "var(--gray-700)",
-                                  fontWeight: selected ? 700 : 400,
+                                  border: selected ? "2px solid var(--blue-500)" : "1px solid var(--blue-400)",
+                                  background: selected ? "var(--blue-500)" : "var(--white)",
+                                  color: selected ? "#fff" : "var(--blue-500)",
+                                  fontWeight: selected ? 700 : 600,
                                   fontSize: 14,
                                   cursor: saving || isResolved ? "not-allowed" : "pointer",
                                   transition: "all 0.15s",

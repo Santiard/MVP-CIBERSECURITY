@@ -5,6 +5,20 @@ import { listReports, ReportListItem } from '../services/reportApi';
 import viewIcon from '../images/ojo.svg';
 import FilterInput from '../components/FilterInput';
 
+const normalizeEstado = (estado: string) => {
+  const value = (estado || '').trim().toLowerCase();
+  if (value === 'finalizado' || value === 'finalizada' || value === 'completado' || value === 'completada') {
+    return 'finalizada';
+  }
+  if (value === 'en proceso' || value === 'en progreso') {
+    return 'en proceso';
+  }
+  if (value === 'pendiente') {
+    return 'pendiente';
+  }
+  return value;
+};
+
 const ReportsPage: React.FC = () => {
   const [rowsData, setRowsData] = useState<ReportListItem[]>([]);
   const [orgFilter, setOrgFilter] = useState('');
@@ -43,7 +57,7 @@ const ReportsPage: React.FC = () => {
     if (orgFilter && r.orgName !== orgFilter) return false;
     if (dateFilter && r.date !== dateFilter) return false;
     if (evaluatorFilter && r.evaluatorId !== Number(evaluatorFilter)) return false;
-    if (estadoFilter && r.estado !== estadoFilter) return false;
+    if (estadoFilter && normalizeEstado(r.estado) !== estadoFilter) return false;
     return true;
   });
 
@@ -120,7 +134,7 @@ const ReportsPage: React.FC = () => {
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.title}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.date}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', color: r.evaluatorName ? 'inherit' : 'var(--muted)' }}>{r.evaluatorName || 'Sin asignar'}</td>
-                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textTransform: 'capitalize' }}>{r.estado}</td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textTransform: 'capitalize' }}>{normalizeEstado(r.estado)}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
                     <Link to={`/reports/${r.id}`} className="btn btn-icon" title="Ver">
                       <img src={viewIcon} alt="Ver" width={18} height={18} />
