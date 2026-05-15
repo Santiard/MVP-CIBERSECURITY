@@ -6,6 +6,7 @@ import OrganizationForm from './OrganizationForm';
 import OrganizationDetailsModal from './OrganizationDetailsModal';
 import ConfirmModal from './modal/ConfirmModal';
 import { useAlert } from './alerts/AlertProvider';
+import { SECTOR_OPTIONS } from '../constants/organizationOptions';
 import editIcon from '../images/edit.svg';
 import deleteIcon from '../images/icons8-basura-llena(1).svg';
 import viewIcon from '../images/ojo.svg';
@@ -36,7 +37,7 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
     setLoading(false);
   };
 
-  const sectors = useMemo(() => Array.from(new Set(rows.map(r => r.sector))).filter(Boolean).sort(), [rows]);
+  const sectors = useMemo(() => SECTOR_OPTIONS, []);
   const tamanos = useMemo(() => Array.from(new Set(rows.map(r => r.tamano))).filter(Boolean).sort(), [rows]);
 
   const filtered = rows.filter(r => {

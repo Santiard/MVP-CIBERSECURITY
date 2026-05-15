@@ -3,6 +3,7 @@ import dataService from '../services/dataService';
 import QuestionnaireForm from './QuestionnaireForm';
 import QuestionsTable from './QuestionsTable';
 import editIcon from '../images/edit.svg';
+import Switch from './Switch';
 
 type Q = { id: string; name: string; dimensions: number; active: boolean };
 
@@ -53,6 +54,7 @@ const QuestionnairesTable: React.FC = () => {
     await dataService.toggleQuestionnaireActive(id);
     await load();
   };
+
 
   const handleSave = async (payload: { name: string; description: string; dimensions: number; active: boolean }) => {
     if (editing?.id) {
@@ -118,28 +120,19 @@ const QuestionnairesTable: React.FC = () => {
                     <button type="button" className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
                       <img src={editIcon} alt="Editar" width={18} height={18} />
                     </button>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', marginLeft: 16 }} title={r.active ? 'Desactivar' : 'Activar'}>
-                      <input type="checkbox" checked={r.active} onChange={() => handleToggle(r.id)} style={{ display: 'none' }} />
-                      <div style={{
-                        width: 36,
-                        height: 20,
-                        background: r.active ? 'var(--blue-500)' : 'var(--gray-400)',
-                        borderRadius: 20,
-                        position: 'relative',
-                        transition: 'background 0.2s'
-                      }}>
-                        <div style={{
-                          width: 16,
-                          height: 16,
-                          background: '#fff',
-                          borderRadius: '50%',
-                          position: 'absolute',
-                          top: 2,
-                          left: r.active ? 18 : 2,
-                          transition: 'left 0.2s'
-                        }} />
-                      </div>
-                    </label>
+                    <Switch
+                      checked={!!r.active}
+                      confirmOnDisable={true}
+                      confirmTitle="Desactivar formulario"
+                      confirmMessage="¿Confirmas que deseas desactivar este formulario?"
+                      confirmText="Desactivar"
+                      onChange={async (next) => {
+                        if (next !== !!r.active) {
+                          await handleToggle(r.id);
+                        }
+                      }}
+                      ariaLabel={r.active ? 'Desactivar formulario' : 'Activar formulario'}
+                    />
                   </td>
                 </tr>
               </React.Fragment>

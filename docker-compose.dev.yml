@@ -24,11 +24,12 @@ services:
       - "8000:8000"
     depends_on:
       - db
-    command: ["/bin/sh", "/app/docker-entrypoint.sh"]
+    command: ["/usr/local/bin/docker-entrypoint.sh"]
 
   frontend:
     build:
       context: ./Frontend
+      dockerfile: Dockerfile.dev
     environment:
       DEV_CMD: npm run dev -- --host 0.0.0.0 --port 5173
       NODE_ENV: development
@@ -39,7 +40,7 @@ services:
       - "3001:5173"
     depends_on:
       - backend
-    command: ["/bin/sh", "/app/docker-entrypoint.sh"]
+    command: ["/usr/local/bin/docker-entrypoint.sh"]
 
 volumes:
   db_data:

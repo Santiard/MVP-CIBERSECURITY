@@ -61,7 +61,7 @@ def _register_single_pk_crud(
                 .distinct()
             )
         else:
-            stmt = select(_model)
+            stmt = select(_model).order_by(getattr(_model, pk_name))
         rows = session.exec(stmt).all()
         return [_serialize(row) for row in rows]
 

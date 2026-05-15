@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from './modal/Modal';
 import dataService from '../services/dataService';
 import { useAlert } from './alerts/AlertProvider';
+import { SECTOR_OPTIONS } from '../constants/organizationOptions';
 
 type Org = { id_empresa?: number; nombre?: string; sector?: string; tamano?: string };
 type AppUser = { id: string; name: string; email: string; role: string; active?: boolean };
@@ -14,16 +15,6 @@ type Props = {
 };
 
 const SIZE_OPTIONS = ['Pequeña', 'Mediana', 'Grande'] as const;
-
-const SECTOR_OPTIONS = [
-  'Agropecuario Extractivo',
-  'Industrial Construcción',
-  'Servicios Comercio',
-  'Financiero y Asegurador',
-  'Tecnologías de la Información y Telecomunicaciones',
-  'Comercio al por Mayor y Menor',
-  'Mensajería'
-] as const;
 
 const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) => {
   const [nombre, setNombre] = useState(initial?.nombre || '');

@@ -14,6 +14,11 @@ import deleteIcon from '../images/icons8-basura-llena(1).svg';
 
 type User = { id: string; name: string; email: string; phone?: string; role: string; active?: boolean };
 
+type PendingToggle = {
+  id: string;
+  nextActive: boolean;
+};
+
 const UsersTable: React.FC = () => {
   const { showAlert } = useAlert();
   const [rows, setRows] = useState<User[]>([]);
@@ -25,6 +30,8 @@ const UsersTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [openForm, setOpenForm] = useState(false);
+  const [pendingToggle, setPendingToggle] = useState<PendingToggle | null>(null);
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -101,6 +108,25 @@ const UsersTable: React.FC = () => {
     }
   };
 
+  const confirmToggleUser = async () => {
+    if (!pendingToggle) return;
+    try {
+      setToggleLoading(true);
+      await dataService.toggleUserActive(pendingToggle.id);
+      setPendingToggle(null);
+      await load();
+    } catch {
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'No se pudo actualizar el estado del usuario.'
+      });
+    } finally {
+      setToggleLoading(false);
+    }
+  };
+
+
   const confirmReset = async () => {
     if (!resetting) return;
     setResetSubmitted(true);
@@ -166,6 +192,17 @@ const UsersTable: React.FC = () => {
         onConfirm={() => void confirmDelete()}
       />
 
+      <ConfirmModal
+        open={!!pendingToggle}
+        title={pendingToggle?.nextActive ? 'Activar usuario' : 'Desactivar usuario'}
+        message={pendingToggle?.nextActive ? '¿Confirmas que deseas activar este usuario?' : '¿Confirmas que deseas desactivar este usuario?'}
+        confirmText={pendingToggle?.nextActive ? 'Activar' : 'Desactivar'}
+        loading={toggleLoading}
+        onCancel={() => setPendingToggle(null)}
+        onConfirm={() => void confirmToggleUser()}
+      />
+
+
       <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setConfirmNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Cambiar contraseña">
         <div style={{ display: 'grid', gap: 8 }}>
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
@@ -217,8 +254,7 @@ const UsersTable: React.FC = () => {
                         checked={!!r.active}
                         onChange={async (next) => {
                           if (next !== !!r.active) {
-                            await dataService.toggleUserActive(r.id);
-                            await load();
+                            setPendingToggle({ id: r.id, nextActive: next });
                           }
                         }}
                         ariaLabel={r.active ? 'Desactivar usuario' : 'Activar usuario'}
