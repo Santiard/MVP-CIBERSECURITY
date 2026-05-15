@@ -13,6 +13,8 @@ export type ReportListItem = {
   date: string;
   estado: string;
   orgName: string;
+  evaluatorId?: number;
+  evaluatorName?: string;
 };
 
 export type ReportCategory = {
@@ -132,18 +134,22 @@ async function fetchOrgs(): Promise<OrgApi[]> {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function listReports(): Promise<ReportListItem[]> {
-  const [evaluations, orgs] = await Promise.all([listEvaluations(), fetchOrgs()]);
+  const [evaluations, orgs, users] = await Promise.all([listEvaluations(), fetchOrgs(), fetchUsers()]);
   const orgById = new Map(orgs.map((o) => [o.id_empresa ?? o.id ?? 0, o.nombre ?? o.name ?? ""]));
+  const userById = new Map(users.map((u) => [u.id_usuario, u.nombre]));
 
   return evaluations.map((e) => {
     const orgId = e.organization_id ?? e.id_empresa;
     const orgName = orgById.get(orgId) ?? `Organización #${orgId}`;
+    const evalUserId = e.id_evaluador ?? e.evaluator_id;
     return {
       id: String(e.id_evaluacion),
       title: `Reporte de Evaluación — ${orgName}`,
       date: e.fecha ? String(e.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10),
       estado: e.estado ?? "pendiente",
       orgName,
+      evaluatorId: evalUserId,
+      evaluatorName: evalUserId ? userById.get(evalUserId) : undefined,
     };
   });
 }

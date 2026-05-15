@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Layout from '../components/Layout';
 import { Link } from 'react-router-dom';
 import { listReports, ReportListItem } from '../services/reportApi';
@@ -7,7 +7,10 @@ import FilterInput from '../components/FilterInput';
 
 const ReportsPage: React.FC = () => {
   const [rowsData, setRowsData] = useState<ReportListItem[]>([]);
-  const [filter, setFilter] = useState('');
+  const [orgFilter, setOrgFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [evaluatorFilter, setEvaluatorFilter] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -24,9 +27,24 @@ const ReportsPage: React.FC = () => {
     load();
   }, []);
 
+  const evaluators = useMemo(() => {
+    const map = new Map<number, string>();
+    rowsData.forEach(r => {
+      if (r.evaluatorId && r.evaluatorName) {
+        map.set(r.evaluatorId, r.evaluatorName);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [rowsData]);
+
+  const orgs = useMemo(() => Array.from(new Set(rowsData.map(r => r.orgName))).sort(), [rowsData]);
+
   const rows = rowsData.filter((r) => {
-    const q = filter.toLowerCase();
-    return r.title.toLowerCase().includes(q) || r.date.toLowerCase().includes(q);
+    if (orgFilter && r.orgName !== orgFilter) return false;
+    if (dateFilter && r.date !== dateFilter) return false;
+    if (evaluatorFilter && r.evaluatorId !== Number(evaluatorFilter)) return false;
+    if (estadoFilter && r.estado !== estadoFilter) return false;
+    return true;
   });
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -35,7 +53,7 @@ const ReportsPage: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [filter, pageSize]);
+  }, [orgFilter, dateFilter, evaluatorFilter, estadoFilter, pageSize]);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -46,27 +64,63 @@ const ReportsPage: React.FC = () => {
       <div style={{ padding: 24 }}>
         <h2 style={{ marginTop: 0 }}>Reportes</h2>
         <div className="card">
-          <div style={{ marginBottom: 16 }}>
-            <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por título o fecha" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <select
+              value={orgFilter}
+              onChange={(e) => setOrgFilter(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}
+            >
+              <option value="">Todas las organizaciones</option>
+              {orgs.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px', color: dateFilter ? 'inherit' : 'var(--muted)' }}
+              title="Filtrar por fecha"
+            />
+            <select
+              value={evaluatorFilter}
+              onChange={(e) => setEvaluatorFilter(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}
+            >
+              <option value="">Todos los evaluadores</option>
+              {evaluators.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+            <select
+              value={estadoFilter}
+              onChange={(e) => setEstadoFilter(e.target.value)}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}
+            >
+              <option value="">Todos los estados</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en proceso">En progreso</option>
+              <option value="finalizada">Finalizada</option>
+            </select>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
                 <th style={{ padding: '12px 8px' }}>Título</th>
                 <th style={{ padding: '12px 8px' }}>Fecha</th>
+                <th style={{ padding: '12px 8px' }}>Evaluador</th>
+                <th style={{ padding: '12px 8px' }}>Estado</th>
                 <th style={{ padding: '12px 8px' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={3}>Cargando...</td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={5}>Cargando...</td>
                 </tr>
               )}
               {visibleRows.map(r => (
                 <tr key={r.id}>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.title}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.date}</td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', color: r.evaluatorName ? 'inherit' : 'var(--muted)' }}>{r.evaluatorName || 'Sin asignar'}</td>
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textTransform: 'capitalize' }}>{r.estado}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
                     <Link to={`/reports/${r.id}`} className="btn btn-icon" title="Ver">
                       <img src={viewIcon} alt="Ver" width={18} height={18} />

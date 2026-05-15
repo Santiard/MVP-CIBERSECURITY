@@ -13,7 +13,7 @@ const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
   const { showAlert } = useAlert();
   const [rows, setRows] = useState<Question[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
   const [openForm, setOpenForm] = useState(false);
@@ -105,13 +105,13 @@ const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
           Nueva pregunta
         </button>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="table-responsive-container">
+        <table className="table-responsive">
           <thead>
-            <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-              <th style={{ padding: "12px 8px" }}>Texto</th>
-              <th style={{ padding: "12px 8px" }}>Peso</th>
-              <th style={{ padding: "12px 8px" }}>Acciones</th>
+            <tr>
+              <th>Texto</th>
+              <th>Peso</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import '../styles/theme.css';
 import dataService from '../services/dataService';
 import OrganizationForm from './OrganizationForm';
+import OrganizationDetailsModal from './OrganizationDetailsModal';
 import ConfirmModal from './modal/ConfirmModal';
 import { useAlert } from './alerts/AlertProvider';
 import editIcon from '../images/edit.svg';
@@ -18,10 +19,11 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
   const [sectorFilter, setSectorFilter] = useState('');
   const [tamanoFilter, setTamanoFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [openForm, setOpenForm] = useState(false);
+  const [viewingOrg, setViewingOrg] = useState<Org | null>(null);
   const [deletingOrgId, setDeletingOrgId] = useState<number | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
 
@@ -78,6 +80,7 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Gestión de Organizaciones</h2>
       <OrganizationForm open={openForm} onClose={() => setOpenForm(false)} initial={editing || undefined} onSaved={load} />
+      <OrganizationDetailsModal open={!!viewingOrg} onClose={() => setViewingOrg(null)} org={viewingOrg} />
       <ConfirmModal
         open={deletingOrgId != null}
         title="Eliminar organizacion"
@@ -104,38 +107,39 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="table-responsive-container">
+        <table className="table-responsive">
           <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
-              <th style={{ padding: '12px 8px' }}>Nombre</th>
-              <th style={{ padding: '12px 8px' }}>Sector</th>
-              <th style={{ padding: '12px 8px' }}>Tamaño</th>
-              <th style={{ padding: '12px 8px' }}>Acciones</th>
+            <tr>
+              <th>Nombre</th>
+              <th>Sector</th>
+              <th>Tamaño</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading && <tr><td colSpan={4}>Cargando...</td></tr>}
             {!loading && visible.map(r => (
               <tr key={r.id_empresa}>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.nombre}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.sector}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.tamano}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-                  {/* Ver siempre disponible */}
-                  <a href={`/organizations/${r.id_empresa}`} className="btn btn-icon btn-primary" style={{ textDecoration: 'none', borderRadius: 8, color: 'var(--white)' }} title="Ver">
-                    <img src={viewIcon} alt="Ver" width={18} height={18} />
-                  </a>
-                  {mode === 'admin' && (
-                    <>
-                      <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} style={{ marginLeft: 8 }} title="Editar">
-                        <img src={editIcon} alt="Editar" width={18} height={18} />
-                      </button>
-                      <button className="btn btn-icon" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id_empresa)} title="Eliminar">
-                        <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
-                      </button>
-                    </>
-                  )}
+                <td>{r.nombre}</td>
+                <td>{r.sector}</td>
+                <td>{r.tamano}</td>
+                <td>
+                  <div className="table-actions">
+                    <button type="button" className="btn btn-icon" onClick={() => setViewingOrg(r)} title="Ver detalles">
+                      <img src={viewIcon} alt="Ver" width={18} height={18} />
+                    </button>
+                    {mode === 'admin' && (
+                      <>
+                        <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
+                          <img src={editIcon} alt="Editar" width={18} height={18} />
+                        </button>
+                        <button className="btn btn-icon" onClick={() => handleDelete(r.id_empresa)} title="Eliminar">
+                          <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

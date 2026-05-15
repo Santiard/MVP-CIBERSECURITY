@@ -8,6 +8,7 @@ import Switch from './Switch';
 import { getPasswordPolicyIssues, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 import { useAlert } from './alerts/AlertProvider';
 import ResetPasswordModal from './modal/ResetPasswordModal';
+import { getStoredAuthUser } from '../utils/auth';
 import editIcon from '../images/edit.svg';
 import deleteIcon from '../images/icons8-basura-llena(1).svg';
 
@@ -20,7 +21,7 @@ const UsersTable: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [openForm, setOpenForm] = useState(false);
@@ -56,6 +57,15 @@ const UsersTable: React.FC = () => {
   }, [page, pages]);
 
   const handleDelete = async (id: string) => {
+    const currentUser = getStoredAuthUser();
+    if (currentUser && Number(currentUser.id_usuario) === Number(id)) {
+      showAlert({
+        type: 'error',
+        title: 'No permitido',
+        message: 'No puedes eliminar tu propia cuenta.'
+      });
+      return;
+    }
     setDeleting({ id });
   };
 
@@ -181,46 +191,57 @@ const UsersTable: React.FC = () => {
         </div>
       </Modal>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="table-responsive-container">
+        <table className="table-responsive">
           <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
-              <th style={{ padding: '12px 8px' }}>Nombre</th>
-              <th style={{ padding: '12px 8px' }}>Correo</th>
-              <th style={{ padding: '12px 8px' }}>Teléfono</th>
-              <th style={{ padding: '12px 8px' }}>Rol</th>
-              <th style={{ padding: '12px 8px' }}>Acciones</th>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Teléfono</th>
+              <th>Rol</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading && <tr><td colSpan={5}>Cargando...</td></tr>}
             {!loading && visible.map(r => (
               <tr key={r.id}>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.name}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.email}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.phone}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.role}</td>
-                <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginRight: 12 }}>
-                    <Switch
-                      checked={!!r.active}
-                      onChange={async (next) => {
-                        if (next !== !!r.active) {
-                          await dataService.toggleUserActive(r.id);
-                          await load();
-                        }
+                <td>{r.name}</td>
+                <td>{r.email}</td>
+                <td>{r.phone}</td>
+                <td>{r.role}</td>
+                <td>
+                  <div className="table-actions">
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                      <Switch
+                        checked={!!r.active}
+                        onChange={async (next) => {
+                          if (next !== !!r.active) {
+                            await dataService.toggleUserActive(r.id);
+                            await load();
+                          }
+                        }}
+                        ariaLabel={r.active ? 'Desactivar usuario' : 'Activar usuario'}
+                      />
+                      <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
+                    </div>
+                    <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
+                      <img src={editIcon} alt="Editar" width={18} height={18} />
+                    </button>
+                    <button className="btn" onClick={() => handleResetPassword(r.id)}>Cambiar contraseña</button>
+                    <button
+                      className="btn btn-icon"
+                      style={{
+                        opacity: getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id) ? 0.5 : 1,
+                        cursor: getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id) ? 'not-allowed' : 'pointer'
                       }}
-                      ariaLabel={r.active ? 'Desactivar usuario' : 'Activar usuario'}
-                    />
-                    <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
+                      onClick={() => handleDelete(r.id)}
+                      disabled={getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id)}
+                      title={getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id) ? "No puedes eliminar tu propia cuenta" : "Eliminar"}
+                    >
+                      <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
+                    </button>
                   </div>
-                  <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
-                    <img src={editIcon} alt="Editar" width={18} height={18} />
-                  </button>
-                  <button className="btn" style={{ marginLeft: 8 }} onClick={() => handleResetPassword(r.id)}>Cambiar contraseña</button>
-                  <button className="btn btn-icon" style={{ marginLeft: 8 }} onClick={() => handleDelete(r.id)} title="Eliminar">
-                    <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
-                  </button>
                 </td>
               </tr>
             ))}

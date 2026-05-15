@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import dataService from '../services/dataService';
 import QuestionnaireForm from './QuestionnaireForm';
 import QuestionsTable from './QuestionsTable';
@@ -10,8 +10,9 @@ const QuestionnairesTable: React.FC = () => {
   const [rows, setRows] = useState<Q[]>([]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [dimFilter, setDimFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
   const [loading, setLoading] = useState(false);
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Q | null>(null);
@@ -27,13 +28,16 @@ const QuestionnairesTable: React.FC = () => {
   useEffect(() => { load(); }, []);
   useEffect(() => {
     setPage(1);
-  }, [query, statusFilter, pageSize]);
+  }, [query, statusFilter, dimFilter, pageSize]);
+
+  const dims = useMemo(() => Array.from(new Set(rows.map(r => r.dimensions))).sort((a,b) => a - b), [rows]);
 
   const filtered = rows.filter(r => {
     if (statusFilter !== '') {
       const isActive = statusFilter === 'true';
       if (r.active !== isActive) return false;
     }
+    if (dimFilter && r.dimensions !== Number(dimFilter)) return false;
     return r.name.toLowerCase().includes(query.toLowerCase());
   });
 
@@ -78,19 +82,23 @@ const QuestionnairesTable: React.FC = () => {
           <option value="true">Activo</option>
           <option value="false">Inactivo</option>
         </select>
+        <select value={dimFilter} onChange={e => setDimFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
+          <option value="">Todas las dimensiones</option>
+          {dims.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
         <div style={{ marginLeft: 'auto' }}>
           <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo formulario</button>
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="table-responsive-container">
+        <table className="table-responsive">
           <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
-              <th style={{ padding: '12px 8px' }}>Nombre</th>
-              <th style={{ padding: '12px 8px' }}>Dimensiones</th>
-              <th style={{ padding: '12px 8px' }}>Estado</th>
-              <th style={{ padding: '12px 8px' }}>Acciones</th>
+            <tr>
+              <th>Nombre</th>
+              <th>Dimensiones</th>
+              <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>

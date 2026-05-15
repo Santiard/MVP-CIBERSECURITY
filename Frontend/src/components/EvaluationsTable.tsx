@@ -17,8 +17,9 @@ const EvaluationsTable: React.FC = () => {
   const [evaluatorFilter, setEvaluatorFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [orgFilter, setOrgFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
   const [rowsData, setRowsData] = useState<EvaluationApiRow[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [evaluators, setEvaluators] = useState<{ id: number; name: string }[]>([]);
@@ -79,6 +80,7 @@ const EvaluationsTable: React.FC = () => {
       if (evaluatorFilter && r.id_evaluador !== Number(evaluatorFilter)) return false;
       if (statusFilter && r.estado !== statusFilter) return false;
       if (orgFilter && r.id_empresa !== Number(orgFilter)) return false;
+      if (dateFilter && (!r.fecha || String(r.fecha).slice(0, 10) !== dateFilter)) return false;
 
       if (!q) return true;
       const name = (orgName.get(r.id_empresa) ?? "").toLowerCase();
@@ -87,14 +89,14 @@ const EvaluationsTable: React.FC = () => {
         String(r.id_evaluacion).includes(q)
       );
     });
-  }, [filter, evaluatorFilter, statusFilter, orgFilter, rowsData, orgName]);
+  }, [filter, evaluatorFilter, statusFilter, orgFilter, dateFilter, rowsData, orgName]);
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, pages);
   const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [filter, evaluatorFilter, statusFilter, orgFilter, pageSize]);
+  }, [filter, evaluatorFilter, statusFilter, orgFilter, dateFilter, pageSize]);
 
   useEffect(() => {
     if (page > pages) setPage(pages);
@@ -139,6 +141,13 @@ const EvaluationsTable: React.FC = () => {
             ))}
           </select>
         )}
+        <input 
+          type="date" 
+          value={dateFilter} 
+          onChange={(e) => setDateFilter(e.target.value)} 
+          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px", color: dateFilter ? 'inherit' : 'var(--muted)' }} 
+          title="Filtrar por fecha" 
+        />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -151,17 +160,17 @@ const EvaluationsTable: React.FC = () => {
         </select>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className="table-responsive-container">
+        <table className="table-responsive">
           <thead>
-            <tr style={{ textAlign: "left", color: "var(--muted)" }}>
-              {staff && <th style={{ padding: "12px 8px" }}>Organización</th>}
-              {staff && <th style={{ padding: "12px 8px" }}>ID</th>}
-              <th style={{ padding: "12px 8px" }}>Fecha</th>
-              {!staff && <th style={{ padding: "12px 8px" }}>Evaluador asignado</th>}
-              <th style={{ padding: "12px 8px" }}>{staff ? 'Estado' : 'Etapa'}</th>
-              {!staff && <th style={{ padding: "12px 8px" }}>Avance</th>}
-              <th style={{ padding: "12px 8px" }}>Acción</th>
+            <tr>
+              {staff && <th>Organización</th>}
+              {staff && <th>ID</th>}
+              <th>Fecha</th>
+              {!staff && <th>Evaluador asignado</th>}
+              <th>{staff ? 'Estado' : 'Etapa'}</th>
+              {!staff && <th>Avance</th>}
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody>

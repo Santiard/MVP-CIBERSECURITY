@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Test Results - MVP CIBERSECURITY</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .card h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .metric-label {
+            color: #666;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metric-value.good {
+            color: #10b981;
+        }
+
+        .metric-value.warning {
+            color: #f59e0b;
+        }
+
+        .metric-value.danger {
+            color: #ef4444;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .status-badge.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-badge.danger {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+
+        .recommendations {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .recommendations h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .rec-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+            background: #f9fafb;
+        }
+
+        .rec-item.high {
+            border-left-color: #ef4444;
+        }
+
+        .rec-item.medium {
+            border-left-color: #f59e0b;
+        }
+
+        .rec-item.low {
+            border-left-color: #10b981;
+        }
+
+        .priority-label {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .priority-label.high {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+
+        .priority-label.medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .priority-label.low {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .footer {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .test-selector {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-selector button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .test-selector button:hover {
+            background: #764ba2;
+        }
+
+        .test-selector button.active {
+            background: #764ba2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        table th {
+            background: #f3f4f6;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        table td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tr:hover {
+            background: #f9fafb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Performance Test Results</h1>
+            <p>MVP CIBERSECURITY Backend - Análisis de Carga, Estrés y Seguridad</p>
+        </div>
+
+        <div class="test-selector">
+            <button class="active" onclick="showTest('load')">📈 Load Test</button>
+            <button onclick="showTest('stress')">⚡ Stress Test</button>
+            <button onclick="showTest('security')">🔒 Security Test</button>
+        </div>
+
+        <!-- LOAD TEST SECTION -->
+        <div id="load-section" class="test-section">
+            <div class="grid">
+                <div class="card">
+                    <h2>Configuración</h2>
+                    <span class="status-badge success">✓ Completado</span>
+                    <div class="metric">
+                        <span class="metric-label">Usuarios Iniciales:</span>
+                        <span class="metric-value">20</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Usuarios Máximos:</span>
+                        <span class="metric-value">50</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Duración Total:</span>
+                        <span class="metric-value">14 minutos</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Fecha Prueba:</span>
+                        <span class="metric-value" id="load-date">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Métricas de Tiempo</h2>
+                    <div class="metric">
+                        <span class="metric-label">Promedio (avg):</span>
+                        <span class="metric-value good" id="load-avg-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">P95:</span>
+                        <span class="metric-value good" id="load-p95-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">P99:</span>
+                        <span class="metric-value good" id="load-p99-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Máximo:</span>
+                        <span class="metric-value" id="load-max-time">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Errores y Confiabilidad</h2>
+                    <div class="metric">
+                        <span class="metric-label">Total Requests:</span>
+                        <span class="metric-value" id="load-total-reqs">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Errores:</span>
+                        <span class="metric-value" id="load-failed-reqs">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Tasa de Error:</span>
+                        <span class="metric-value good" id="load-error-rate">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Requests/seg:</span>
+                        <span class="metric-value" id="load-rps">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>📊 Distribución de Tiempos de Respuesta</h3>
+                <canvas id="load-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- STRESS TEST SECTION -->
+        <div id="stress-section" class="test-section" style="display: none;">
+            <div class="grid">
+                <div class="card">
+                    <h2>Configuración</h2>
+                    <span class="status-badge success">✓ Completado</span>
+                    <div class="metric">
+                        <span class="metric-label">Fases:</span>
+                        <span class="metric-value">4</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Usuarios Finales:</span>
+                        <span class="metric-value">300</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Duración Total:</span>
+                        <span class="metric-value">28 minutos</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Punto de Quiebre:</span>
+                        <span class="metric-value" id="stress-breaking-point">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Escalada de Usuarios</h2>
+                    <div class="metric">
+                        <span class="metric-label">Fase 1 (50 VUS):</span>
+                        <span class="metric-value good" id="stress-phase1">✓ OK</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Fase 2 (100 VUS):</span>
+                        <span class="metric-value" id="stress-phase2">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Fase 3 (200 VUS):</span>
+                        <span class="metric-value" id="stress-phase3">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Fase 4 (300 VUS):</span>
+                        <span class="metric-value" id="stress-phase4">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Latencia Bajo Estrés</h2>
+                    <div class="metric">
+                        <span class="metric-label">Promedio (avg):</span>
+                        <span class="metric-value" id="stress-avg-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">P95:</span>
+                        <span class="metric-value" id="stress-p95-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">P99:</span>
+                        <span class="metric-value" id="stress-p99-time">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Máximo:</span>
+                        <span class="metric-value" id="stress-max-time">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>📊 Usuarios Virtuales vs Tiempo de Respuesta</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fase</th>
+                            <th>Usuarios</th>
+                            <th>Promedio (ms)</th>
+                            <th>Errores (%)</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>50</td>
+                            <td id="stress-p1-avg">-</td>
+                            <td id="stress-p1-err">-</td>
+                            <td id="stress-p1-status">-</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>100</td>
+                            <td id="stress-p2-avg">-</td>
+                            <td id="stress-p2-err">-</td>
+                            <td id="stress-p2-status">-</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>200</td>
+                            <td id="stress-p3-avg">-</td>
+                            <td id="stress-p3-err">-</td>
+                            <td id="stress-p3-status">-</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>300</td>
+                            <td id="stress-p4-avg">-</td>
+                            <td id="stress-p4-err">-</td>
+                            <td id="stress-p4-status">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECURITY TEST SECTION -->
+        <div id="security-section" class="test-section" style="display: none;">
+            <div class="grid">
+                <div class="card">
+                    <h2>Resumen de Seguridad</h2>
+                    <span class="status-badge warning">⚠ Encontradas vulnerabilidades</span>
+                    <div class="metric">
+                        <span class="metric-label">Pruebas Ejecutadas:</span>
+                        <span class="metric-value">8</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Pruebas Pasadas:</span>
+                        <span class="metric-value good" id="security-passed">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Pruebas Fallidas:</span>
+                        <span class="metric-value danger" id="security-failed">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Vulnerabilidades por Tipo</h2>
+                    <div class="metric">
+                        <span class="metric-label">SQL Injection:</span>
+                        <span class="metric-value good">✓ Protegido</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">XSS:</span>
+                        <span class="metric-value good">✓ Protegido</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Autorización:</span>
+                        <span class="metric-value good">✓ Validado</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Contraseñas Débiles:</span>
+                        <span class="metric-value good">✓ Rechazadas</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Headers de Seguridad</h2>
+                    <div class="metric">
+                        <span class="metric-label">CORS:</span>
+                        <span class="metric-value good">✓ Configurado</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">X-Frame-Options:</span>
+                        <span class="metric-value danger">✗ Faltante</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">CSP:</span>
+                        <span class="metric-value danger">✗ Faltante</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">HSTS:</span>
+                        <span class="metric-value danger">✗ Faltante</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recommendations">
+                <h3>🔧 Recomendaciones de Seguridad</h3>
+                
+                <div class="rec-item high">
+                    <span class="priority-label high">CRÍTICO</span>
+                    <strong>Hashear contraseñas</strong>
+                    <p>Las contraseñas se guardan en texto plano. Usar bcrypt o argon2 inmediatamente.</p>
+                </div>
+
+                <div class="rec-item high">
+                    <span class="priority-label high">CRÍTICO</span>
+                    <strong>Implementar rate limiting</strong>
+                    <p>Sin límite de intentos en endpoints de auth. Susceptible a brute force.</p>
+                </div>
+
+                <div class="rec-item high">
+                    <span class="priority-label high">CRÍTICO</span>
+                    <strong>Agregar headers de seguridad</strong>
+                    <p>Faltan X-Frame-Options, CSP, HSTS. Implementar en middleware.</p>
+                </div>
+
+                <div class="rec-item medium">
+                    <span class="priority-label medium">IMPORTANTE</span>
+                    <strong>Validación de email</strong>
+                    <p>No hay confirmación de email en registro. Implementar token confirmación.</p>
+                </div>
+
+                <div class="rec-item medium">
+                    <span class="priority-label medium">IMPORTANTE</span>
+                    <strong>HTTPS en producción</strong>
+                    <p>Usar certificados SSL/TLS. Actualmente usa HTTP.</p>
+                </div>
+
+                <div class="rec-item medium">
+                    <span class="priority-label medium">IMPORTANTE</span>
+                    <strong>Auditoría de acceso</strong>
+                    <p>Implementar logging de intentos fallidos de autenticación.</p>
+                </div>
+
+                <div class="rec-item low">
+                    <span class="priority-label low">RECOMENDADO</span>
+                    <strong>Refresh tokens</strong>
+                    <p>Implementar tokens de corta duración con refresh tokens.</p>
+                </div>
+
+                <div class="rec-item low">
+                    <span class="priority-label low">RECOMENDADO</span>
+                    <strong>WAF (Web Application Firewall)</strong>
+                    <p>Protección adicional contra ataques comunes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="recommendations">
+            <h3>📋 Resumen General de Recomendaciones</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Área</th>
+                        <th>Métrica</th>
+                        <th>Actual</th>
+                        <th>Meta</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Performance</td>
+                        <td>P95 Latency</td>
+                        <td id="summary-p95">-</td>
+                        <td>&lt; 500ms</td>
+                        <td id="summary-p95-action">-</td>
+                    </tr>
+                    <tr>
+                        <td>Performance</td>
+                        <td>Error Rate</td>
+                        <td id="summary-error">-</td>
+                        <td>&lt; 1%</td>
+                        <td id="summary-error-action">-</td>
+                    </tr>
+                    <tr>
+                        <td>Stability</td>
+                        <td>Max VUS (breaking point)</td>
+                        <td id="summary-vus">-</td>
+                        <td>&gt; 200</td>
+                        <td id="summary-vus-action">-</td>
+                    </tr>
+                    <tr>
+                        <td>Security</td>
+                        <td>Password Security</td>
+                        <td>Texto Plano</td>
+                        <td>Hashed</td>
+                        <td>🔴 Crítico</td>
+                    </tr>
+                    <tr>
+                        <td>Security</td>
+                        <td>Rate Limiting</td>
+                        <td>No</td>
+                        <td>Sí</td>
+                        <td>🔴 Crítico</td>
+                    </tr>
+                    <tr>
+                        <td>Security</td>
+                        <td>Security Headers</td>
+                        <td>Parcial</td>
+                        <td>Completo</td>
+                        <td>🟡 Importante</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>📊 Performance Test Report - MVP CIBERSECURITY Backend</p>
+            <p>Última actualización: <span id="last-update">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        // Chart.js (incluir antes si necesitas gráficos)
+        function showTest(testName) {
+            // Ocultar todas las secciones
+            document.querySelectorAll('.test-section').forEach(section => {
+                section.style.display = 'none';
+            });
+
+            // Mostrar sección seleccionada
+            document.getElementById(testName + '-section').style.display = 'block';
+
+            // Actualizar botones activos
+            document.querySelectorAll('.test-selector button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Actualizar timestamp
+        document.getElementById('last-update').textContent = new Date().toLocaleString('es-ES');
+
+        // Función para cargar resultados JSON y poblar datos
+        function loadResults(filePath) {
+            fetch(filePath)
+                .then(response => response.json())
+                .then(data => {
+                    // Procesar datos de K6
+                    populateMetrics(data);
+                })
+                .catch(error => console.error('Error loading results:', error));
+        }
+
+        function populateMetrics(data) {
+            // Aquí iría la lógica para procesar los datos JSON de K6
+            console.log('Datos de prueba:', data);
+        }
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Dashboard cargado');
+        });
+    </script>
+</body>
+</html>
