@@ -65,7 +65,7 @@ const UsersTable: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     const currentUser = getStoredAuthUser();
-    if (currentUser && Number(currentUser.id_usuario) === Number(id)) {
+    if (currentUser && Number(currentUser.id) === Number(id)) {
       showAlert({
         type: 'error',
         title: 'No permitido',
@@ -161,6 +161,8 @@ const UsersTable: React.FC = () => {
     }
   };
 
+  const currentUserId = Number(getStoredAuthUser()?.id);
+
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Gestión de Usuarios</h2>
@@ -243,23 +245,43 @@ const UsersTable: React.FC = () => {
             {loading && <tr><td colSpan={5}>Cargando...</td></tr>}
             {!loading && visible.map(r => (
               <tr key={r.id}>
-                <td>{r.name}</td>
-                <td>{r.email}</td>
-                <td>{r.phone}</td>
-                <td>{r.role}</td>
-                <td>
-                  <div className="table-actions">
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                      <Switch
-                        checked={!!r.active}
-                        onChange={async (next) => {
-                          if (next !== !!r.active) {
-                            setPendingToggle({ id: r.id, nextActive: next });
-                          }
-                        }}
-                        ariaLabel={r.active ? 'Desactivar usuario' : 'Activar usuario'}
-                      />
-                      <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
+                <td style={{ textAlign: 'center' }}>{r.name}</td>
+                <td style={{ textAlign: 'center' }}>{r.email}</td>
+                <td style={{ textAlign: 'center' }}>{r.phone}</td>
+                <td style={{ textAlign: 'center' }}>{r.role}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <div className="table-actions" style={{ justifyContent: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      {currentUserId === Number(r.id) ? (
+                        <span
+                          title="No puedes desactivar tu propia cuenta"
+                          style={{
+                            padding: '3px 10px',
+                            borderRadius: 999,
+                            background: 'rgba(34,197,94,0.12)',
+                            color: 'var(--success)',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'default',
+                            border: '1px solid rgba(34,197,94,0.25)'
+                          }}
+                        >
+                          Activo (tú)
+                        </span>
+                      ) : (
+                        <>
+                          <Switch
+                            checked={!!r.active}
+                            onChange={async (next) => {
+                              if (next !== !!r.active) {
+                                setPendingToggle({ id: r.id, nextActive: next });
+                              }
+                            }}
+                            ariaLabel={r.active ? 'Desactivar usuario' : 'Activar usuario'}
+                          />
+                          <span style={{ color: r.active ? 'var(--green-600)' : 'var(--muted)', fontSize: 13 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
+                        </>
+                      )}
                     </div>
                     <button className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
                       <img src={editIcon} alt="Editar" width={18} height={18} />
@@ -268,12 +290,12 @@ const UsersTable: React.FC = () => {
                     <button
                       className="btn btn-icon"
                       style={{
-                        opacity: getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id) ? 0.5 : 1,
-                        cursor: getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id) ? 'not-allowed' : 'pointer'
+                        opacity: currentUserId === Number(r.id) ? 0.5 : 1,
+                        cursor: currentUserId === Number(r.id) ? 'not-allowed' : 'pointer'
                       }}
                       onClick={() => handleDelete(r.id)}
-                      disabled={getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id)}
-                      title={getStoredAuthUser() && Number(getStoredAuthUser()!.id_usuario) === Number(r.id) ? "No puedes eliminar tu propia cuenta" : "Eliminar"}
+                      disabled={currentUserId === Number(r.id)}
+                      title={currentUserId === Number(r.id) ? "No puedes eliminar tu propia cuenta" : "Eliminar"}
                     >
                       <img src={deleteIcon} alt="Eliminar" width={18} height={18} />
                     </button>

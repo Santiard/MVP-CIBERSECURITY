@@ -2,12 +2,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import dataService from '../services/dataService';
 import QuestionnaireForm from './QuestionnaireForm';
 import QuestionsTable from './QuestionsTable';
+import QuestionnairePreviewModal from './QuestionnairePreviewModal';
 import editIcon from '../images/edit.svg';
 import Switch from './Switch';
 
 type Q = { id: string; name: string; dimensions: number; active: boolean };
 
-const QuestionnairesTable: React.FC = () => {
+type Props = { mode?: 'admin' | 'evaluator' };
+
+const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
   const [rows, setRows] = useState<Q[]>([]);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -18,6 +21,7 @@ const QuestionnairesTable: React.FC = () => {
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Q | null>(null);
   const [questionsForId, setQuestionsForId] = useState<string | null>(null);
+  const [previewQ, setPreviewQ] = useState<Q | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -74,8 +78,11 @@ const QuestionnairesTable: React.FC = () => {
 
   return (
     <div className="card">
-      <h2 style={{ marginTop: 0 }}>Formularios</h2>
-      <QuestionnaireForm open={openForm} initial={editing || undefined} onClose={() => { setOpenForm(false); setEditing(null); }} onSaved={handleSaved} saveFn={handleSave} />
+      <h2 style={{ marginTop: 0 }}>{mode === 'evaluator' ? 'Mis Formularios' : 'Formularios'}</h2>
+      {mode === 'admin' && (
+        <QuestionnaireForm open={openForm} initial={editing || undefined} onClose={() => { setOpenForm(false); setEditing(null); }} onSaved={handleSaved} saveFn={handleSave} />
+      )}
+      <QuestionnairePreviewModal open={!!previewQ} onClose={() => setPreviewQ(null)} questionnaire={previewQ} />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <input placeholder="Buscar por nombre..." value={query} onChange={e => setQuery(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', flex: '1 1 200px' }} />
@@ -88,9 +95,11 @@ const QuestionnairesTable: React.FC = () => {
           <option value="">Todas las dimensiones</option>
           {dims.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
-        <div style={{ marginLeft: 'auto' }}>
-          <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo formulario</button>
-        </div>
+        {mode === 'admin' && (
+          <div style={{ marginLeft: 'auto' }}>
+            <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo formulario</button>
+          </div>
+        )}
       </div>
 
       <div className="table-responsive-container">
@@ -114,25 +123,38 @@ const QuestionnairesTable: React.FC = () => {
                     <span style={{ padding: '6px 10px', borderRadius: 9999, background: r.active ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.08)', color: r.active ? 'var(--success)' : 'var(--danger)', fontWeight:700 }}>{r.active ? 'Activo' : 'Inactivo'}</span>
                   </td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
-                    <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={() => setQuestionsForId(r.id)}>
-                      Preguntas
-                    </button>
-                    <button type="button" className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
-                      <img src={editIcon} alt="Editar" width={18} height={18} />
-                    </button>
-                    <Switch
-                      checked={!!r.active}
-                      confirmOnDisable={true}
-                      confirmTitle="Desactivar formulario"
-                      confirmMessage="¿Confirmas que deseas desactivar este formulario?"
-                      confirmText="Desactivar"
-                      onChange={async (next) => {
-                        if (next !== !!r.active) {
-                          await handleToggle(r.id);
-                        }
-                      }}
-                      ariaLabel={r.active ? 'Desactivar formulario' : 'Activar formulario'}
-                    />
+                    {mode === 'evaluator' ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => setPreviewQ(r)}
+                        title="Vista previa del formulario"
+                      >
+                        👁 Vista previa
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={() => setQuestionsForId(r.id)}>
+                          Preguntas
+                        </button>
+                        <button type="button" className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
+                          <img src={editIcon} alt="Editar" width={18} height={18} />
+                        </button>
+                        <Switch
+                          checked={!!r.active}
+                          confirmOnDisable={true}
+                          confirmTitle="Desactivar formulario"
+                          confirmMessage="¿Confirmas que deseas desactivar este formulario?"
+                          confirmText="Desactivar"
+                          onChange={async (next) => {
+                            if (next !== !!r.active) {
+                              await handleToggle(r.id);
+                            }
+                          }}
+                          ariaLabel={r.active ? 'Desactivar formulario' : 'Activar formulario'}
+                        />
+                      </>
+                    )}
                   </td>
                 </tr>
               </React.Fragment>

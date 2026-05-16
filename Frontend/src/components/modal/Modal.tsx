@@ -15,7 +15,6 @@ const Modal: React.FC<Props> = ({ open, title, onClose, children }) => {
       <div style={{ width: 720, maxWidth: '95%', background: 'var(--surface)', color: 'var(--text-primary)', borderRadius: 12, boxShadow: 'var(--shadow-md)', padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <div style={{ fontWeight: 700 }}>{title}</div>
-          <button aria-label="Cerrar" onClick={onClose} className="btn">✕</button>
         </div>
         <div>{children}</div>
       </div>
