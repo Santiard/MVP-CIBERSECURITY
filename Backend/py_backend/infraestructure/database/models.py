@@ -94,6 +94,14 @@ class EvaluacionORM(SQLModel, table=True):
     )
 
 
+class PreguntaControlORM(SQLModel, table=True):
+    """Tabla intermedia many-to-many: una Pregunta del banco puede estar en varios Controles."""
+    __tablename__ = "pregunta_control"
+
+    id_pregunta: int = Field(foreign_key="preguntas.id_pregunta", primary_key=True)
+    id_control: int = Field(foreign_key="controles.id_control", primary_key=True)
+
+
 class ControlORM(SQLModel, table=True):
     __tablename__ = "controles"
 
@@ -106,7 +114,10 @@ class ControlORM(SQLModel, table=True):
     integridad: bool = Field()
     disponibilidad: bool = Field()
 
-    preguntas: list["PreguntaORM"] = Relationship(back_populates="control")
+    preguntas: list["PreguntaORM"] = Relationship(
+        back_populates="controles",
+        link_model=PreguntaControlORM,
+    )
     indicadores: list["IndicadorORM"] = Relationship(back_populates="control")
     resultados: list["ResultadoORM"] = Relationship(back_populates="control")
     evaluaciones: list["EvaluacionORM"] = Relationship(
@@ -121,10 +132,13 @@ class PreguntaORM(SQLModel, table=True):
 
     id_pregunta: Optional[int] = Field(default=None, primary_key=True)
     texto: str = Field()
-    peso: float = Field()
-    id_control: int = Field(foreign_key="controles.id_control")
+    peso: float = Field(default=1.0)
+    dimension: Optional[str] = Field(default=None)  # categoría temática: ej. "Confidencialidad"
 
-    control: Optional["ControlORM"] = Relationship(back_populates="preguntas")
+    controles: list["ControlORM"] = Relationship(
+        back_populates="preguntas",
+        link_model=PreguntaControlORM,
+    )
     respuestas: list["RespuestaORM"] = Relationship(back_populates="pregunta")
 
 

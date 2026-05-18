@@ -13,6 +13,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/users', label: 'Usuarios' },
   { to: '/organizations', label: 'Organizaciones' },
+  { to: '/question-bank', label: 'Banco de Preguntas' },
   { to: '/questionnaires', label: 'Formularios' },
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/evaluations', label: 'Evaluaciones' },

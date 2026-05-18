@@ -80,22 +80,22 @@ const AdminDashboardPage: React.FC = () => {
             {/* KPI Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
               {isAdmin && (
-                <div className="card" style={{ padding: 20, borderTop: '4px solid var(--blue-500)' }}>
+                <div className="card" style={{ padding: 20, borderTop: '4px solid var(--blue-900)' }}>
                   <div style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 600 }}>Total Usuarios</div>
-                  <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--blue-700)', marginTop: 8 }}>{totalUsers}</div>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--blue-900)', marginTop: 8 }}>{totalUsers}</div>
                 </div>
               )}
-              <div className="card" style={{ padding: 20, borderTop: '4px solid var(--purple-500)' }}>
+              <div className="card" style={{ padding: 20, borderTop: '4px solid var(--blue-700)' }}>
                 <div style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 600 }}>Organizaciones Registradas</div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--purple-700)', marginTop: 8 }}>{totalOrgs}</div>
+                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--blue-700)', marginTop: 8 }}>{totalOrgs}</div>
               </div>
-              <div className="card" style={{ padding: 20, borderTop: '4px solid var(--orange-500)' }}>
+              <div className="card" style={{ padding: 20, borderTop: '4px solid var(--blue-500)' }}>
                 <div style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 600 }}>Evaluaciones Activas</div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--orange-700)', marginTop: 8 }}>{totalEvals}</div>
+                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--blue-500)', marginTop: 8 }}>{totalEvals}</div>
               </div>
-              <div className="card" style={{ padding: 20, borderTop: '4px solid var(--green-500)' }}>
+              <div className="card" style={{ padding: 20, borderTop: '4px solid var(--blue-400)' }}>
                 <div style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 600 }}>Formularios Catálogo</div>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--green-700)', marginTop: 8 }}>{totalForms}</div>
+                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--blue-400)', marginTop: 8 }}>{totalForms}</div>
               </div>
             </div>
 
@@ -108,7 +108,7 @@ const AdminDashboardPage: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ width: 100, fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Pendiente</div>
                     <div style={{ flex: 1, background: 'var(--background)', height: 24, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                      <div style={{ width: `${totalEvals ? (pendingEvals/totalEvals)*100 : 0}%`, background: 'var(--orange-400)', height: '100%', minWidth: pendingEvals > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
+                      <div style={{ width: `${totalEvals ? (pendingEvals/totalEvals)*100 : 0}%`, background: 'var(--blue-400)', height: '100%', minWidth: pendingEvals > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
                     </div>
                     <div style={{ width: 40, textAlign: 'right', fontWeight: 700 }}>{pendingEvals}</div>
                   </div>
@@ -122,7 +122,7 @@ const AdminDashboardPage: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ width: 100, fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Finalizado</div>
                     <div style={{ flex: 1, background: 'var(--background)', height: 24, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                      <div style={{ width: `${totalEvals ? (finishedEvals/totalEvals)*100 : 0}%`, background: 'var(--green-500)', height: '100%', minWidth: finishedEvals > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
+                      <div style={{ width: `${totalEvals ? (finishedEvals/totalEvals)*100 : 0}%`, background: 'var(--blue-700)', height: '100%', minWidth: finishedEvals > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
                     </div>
                     <div style={{ width: 40, textAlign: 'right', fontWeight: 700 }}>{finishedEvals}</div>
                   </div>
@@ -136,21 +136,21 @@ const AdminDashboardPage: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={{ width: 120, fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Administradores</div>
                       <div style={{ flex: 1, background: 'var(--background)', height: 24, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <div style={{ width: `${totalUsers ? (adminUsers/totalUsers)*100 : 0}%`, background: 'var(--red-500)', height: '100%', minWidth: adminUsers > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
+                        <div style={{ width: `${totalUsers ? (adminUsers/totalUsers)*100 : 0}%`, background: 'var(--blue-900)', height: '100%', minWidth: adminUsers > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
                       </div>
                       <div style={{ width: 40, textAlign: 'right', fontWeight: 700 }}>{adminUsers}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={{ width: 120, fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Evaluadores</div>
                       <div style={{ flex: 1, background: 'var(--background)', height: 24, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <div style={{ width: `${totalUsers ? (evaluatorUsers/totalUsers)*100 : 0}%`, background: 'var(--purple-500)', height: '100%', minWidth: evaluatorUsers > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
+                        <div style={{ width: `${totalUsers ? (evaluatorUsers/totalUsers)*100 : 0}%`, background: 'var(--blue-500)', height: '100%', minWidth: evaluatorUsers > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
                       </div>
                       <div style={{ width: 40, textAlign: 'right', fontWeight: 700 }}>{evaluatorUsers}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <div style={{ width: 120, fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>Usuarios (Org)</div>
                       <div style={{ flex: 1, background: 'var(--background)', height: 24, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <div style={{ width: `${totalUsers ? (regularUsers/totalUsers)*100 : 0}%`, background: 'var(--blue-400)', height: '100%', minWidth: regularUsers > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
+                        <div style={{ width: `${totalUsers ? (regularUsers/totalUsers)*100 : 0}%`, background: 'var(--blue-500)', height: '100%', minWidth: regularUsers > 0 ? 12 : 0, transition: 'width 1s ease-out' }} />
                       </div>
                       <div style={{ width: 40, textAlign: 'right', fontWeight: 700 }}>{regularUsers}</div>
                     </div>
@@ -163,11 +163,11 @@ const AdminDashboardPage: React.FC = () => {
             <div className="card" style={{ padding: 24 }}>
               <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, color: 'var(--blue-700)' }}>Accesos Rápidos</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {isAdmin && <a href="/users" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Gestión de Usuarios</a>}
-                <a href="/organizations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Organizaciones</a>
-                <a href="/questionnaires" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Catálogo de Formularios</a>
-                <a href="/evaluations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Evaluaciones</a>
-                <a href="/reports" className="btn" style={{ textDecoration: 'none', background: 'var(--background)' }}>Reportes Ejecutivos</a>
+                {isAdmin && <a href="/users" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Gestión de Usuarios</a>}
+                <a href="/organizations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Organizaciones</a>
+                <a href="/questionnaires" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Catálogo de Formularios</a>
+                <a href="/evaluations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Evaluaciones</a>
+                <a href="/reports" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Reportes Ejecutivos</a>
               </div>
             </div>
           </div>

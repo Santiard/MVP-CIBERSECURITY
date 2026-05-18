@@ -103,7 +103,7 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
           {tamanos.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginLeft: 'auto' }}>
-          <Link to="/asignaciones" className="btn" style={{ textDecoration: 'none' }}>Asignaciones empresa ↔ evaluación</Link>
+          <Link to="/asignaciones" className="btn" style={{ textDecoration: 'none' }}>Página de Asignaciones</Link>
           <a href="/organizations/new" className="btn btn-primary" style={{ textDecoration: 'none' }}>Nueva organización</a>
         </div>
       </div>

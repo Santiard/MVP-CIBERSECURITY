@@ -80,10 +80,7 @@ const OrganizationDetailsModal: React.FC<Props> = ({ open, onClose, org }) => {
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Nombre</div>
                 <div style={{ fontWeight: 500 }}>{org.nombre}</div>
               </div>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>ID Empresa</div>
-                <div style={{ fontWeight: 500 }}>{org.id_empresa}</div>
-              </div>
+
               <div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Sector</div>
                 <div style={{ fontWeight: 500 }}>{org.sector || 'N/A'}</div>

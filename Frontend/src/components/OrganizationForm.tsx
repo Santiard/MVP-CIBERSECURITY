@@ -14,7 +14,7 @@ type Props = {
   onSaved?: () => void;
 };
 
-const SIZE_OPTIONS = ['Pequeña', 'Mediana', 'Grande'] as const;
+const SIZE_OPTIONS = ['Microempresa', 'Pequeña', 'Mediana', 'Grande'] as const;
 
 const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) => {
   const [nombre, setNombre] = useState(initial?.nombre || '');

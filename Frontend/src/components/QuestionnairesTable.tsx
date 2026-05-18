@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import dataService from '../services/dataService';
 import QuestionnaireForm from './QuestionnaireForm';
-import QuestionsTable from './QuestionsTable';
 import QuestionnairePreviewModal from './QuestionnairePreviewModal';
 import editIcon from '../images/edit.svg';
 import Switch from './Switch';
 
-type Q = { id: string; name: string; dimensions: number; active: boolean };
+type Q = { id: string; name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean };
 
 type Props = { mode?: 'admin' | 'evaluator' };
 
@@ -20,7 +19,6 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
   const [loading, setLoading] = useState(false);
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Q | null>(null);
-  const [questionsForId, setQuestionsForId] = useState<string | null>(null);
   const [previewQ, setPreviewQ] = useState<Q | null>(null);
 
   const load = async () => {
@@ -60,7 +58,7 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
   };
 
 
-  const handleSave = async (payload: { name: string; description: string; dimensions: number; active: boolean }) => {
+  const handleSave = async (payload: { name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean }) => {
     if (editing?.id) {
       return await dataService.updateQuestionnaire(editing.id, payload as any);
     } else {
@@ -68,12 +66,8 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
     }
   };
 
-  const handleSaved = async (result?: Q) => {
+  const handleSaved = async () => {
     await load();
-    if (result && !editing?.id) {
-      setSelectedQuestionnaireForModal(result);
-      setQuestionsModalOpen(true);
-    }
   };
 
   return (
@@ -130,13 +124,10 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
                         onClick={() => setPreviewQ(r)}
                         title="Vista previa del formulario"
                       >
-                        👁 Vista previa
+                        Vista previa
                       </button>
                     ) : (
                       <>
-                        <button type="button" className="btn btn-primary" style={{ marginRight: 8 }} onClick={() => setQuestionsForId(r.id)}>
-                          Preguntas
-                        </button>
                         <button type="button" className="btn btn-icon" onClick={() => { setEditing(r); setOpenForm(true); }} title="Editar">
                           <img src={editIcon} alt="Editar" width={18} height={18} />
                         </button>
@@ -179,19 +170,6 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
             <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
             <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
             <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
-          </div>
-        </div>
-      )}
-      {questionsForId && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2,6,23,0.4)' }}>
-          <div style={{ width: '80%', maxWidth: 900, maxHeight: '90vh', overflowY: 'auto', background: 'var(--surface-light, #FFFFFF)', padding: 20, borderRadius: 12, position: 'relative' }}>
-            <button onClick={() => setQuestionsForId(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--muted)' }}>&times;</button>
-            <h3 style={{ marginTop: 0, marginBottom: 24 }}>Gestión de Preguntas</h3>
-            {(() => {
-              const r = rows.find(x => x.id === questionsForId);
-              if (!r) return null;
-              return <QuestionsTable controlId={Number(r.id)} questionnaireName={r.name} />;
-            })()}
           </div>
         </div>
       )}

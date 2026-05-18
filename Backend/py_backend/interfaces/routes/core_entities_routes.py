@@ -147,9 +147,20 @@ _register_single_pk_crud(
 
 @router.get("/questions/by-control/{control_id}", name="list_questions_by_control")
 def list_questions_by_control(control_id: int, session: Session = Depends(_get_session)):
-    """Preguntas de un control (cuestionario); el listado global `GET /questions` no filtra por control."""
-    rows = session.exec(select(PreguntaORM).where(PreguntaORM.id_control == control_id)).all()
-    return [_serialize(row) for row in rows]
+    """Preguntas de un control (formulario) via tabla intermedia pregunta_control."""
+    from infraestructure.database.models import PreguntaControlORM
+    links = session.exec(
+        select(PreguntaControlORM).where(PreguntaControlORM.id_control == control_id)
+    ).all()
+    result = []
+    for lnk in links:
+        pregunta = session.get(PreguntaORM, lnk.id_pregunta)
+        if pregunta:
+            row = pregunta.model_dump()
+            row["id_control"] = control_id  # compatibilidad con frontend existente
+            result.append(row)
+    return result
+
 
 
 _register_single_pk_crud("questions", PreguntaORM, "id_pregunta", write_roles=("admin",))

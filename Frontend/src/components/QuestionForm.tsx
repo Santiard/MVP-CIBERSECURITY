@@ -2,16 +2,19 @@ import React, { useEffect, useState } from "react";
 import dataService, { type Question } from "../services/dataService";
 import { useAlert } from "./alerts/AlertProvider";
 
+import questionBankApi from "../services/questionBankApi";
+
 type Props = {
   open: boolean;
   initial?: Question | null;
   onClose: () => void;
-  onSaved: () => void;
-  controlId: number;
+  onSaved: (createdId?: string) => void;
+  controlId?: number;
 };
 
 const QuestionForm: React.FC<Props> = ({ open, initial, onClose, onSaved, controlId }) => {
   const [texto, setTexto] = useState(initial?.text ?? "");
+  const [dimension, setDimension] = useState(initial?.dimension ?? "");
   const [peso, setPeso] = useState(initial?.peso ?? 1);
   const [saving, setSaving] = useState(false);
   const { showAlert } = useAlert();
@@ -19,6 +22,7 @@ const QuestionForm: React.FC<Props> = ({ open, initial, onClose, onSaved, contro
   useEffect(() => {
     if (open) {
       setTexto(initial?.text ?? "");
+      setDimension(initial?.dimension ?? "");
       setPeso(initial?.peso ?? 1);
     }
   }, [open, initial]);
@@ -30,6 +34,7 @@ const QuestionForm: React.FC<Props> = ({ open, initial, onClose, onSaved, contro
     const missingFields: string[] = [];
     const textoTrim = texto.trim();
     if (!textoTrim) missingFields.push("Texto");
+    if (!dimension.trim()) missingFields.push("Dimensión");
     if (!Number.isFinite(peso) || peso < 0.1) missingFields.push("Peso");
     if (missingFields.length > 0) {
       showAlert({
@@ -42,28 +47,31 @@ const QuestionForm: React.FC<Props> = ({ open, initial, onClose, onSaved, contro
 
     setSaving(true);
     try {
+      let returnedId: string | undefined;
       if (initial?.id) {
-        await dataService.updateQuestion(initial.id, {
+        await questionBankApi.update(initial.id, {
           text: textoTrim,
+          dimension: dimension.trim(),
           peso,
-          controlId: String(controlId),
         });
+        returnedId = initial.id;
       } else {
-        await dataService.createQuestion({
+        const created = await questionBankApi.create({
           text: textoTrim,
-          controlId: String(controlId),
-          dimension: "",
-          order: 0,
-          active: true,
+          dimension: dimension.trim(),
           peso,
         });
+        if (controlId) {
+          await questionBankApi.linkToControl(created.id, controlId);
+        }
+        returnedId = created.id;
       }
       showAlert({
         type: "success",
-        title: "Exito",
-        message: initial?.id ? "Pregunta actualizada correctamente." : "Pregunta creada correctamente.",
+        title: "Éxito",
+        message: initial?.id ? "Pregunta actualizada correctamente." : "Pregunta agregada correctamente.",
       });
-      onSaved();
+      onSaved(returnedId);
       onClose();
     } catch {
       showAlert({
@@ -99,6 +107,20 @@ const QuestionForm: React.FC<Props> = ({ open, initial, onClose, onSaved, contro
         <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
+          required
+          style={{
+            width: "100%",
+            padding: 10,
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            boxSizing: "border-box",
+          }}
+        />
+        <label style={{ display: "block", marginTop: 8, fontSize: 13, color: "var(--muted)" }}>Dimensión *</label>
+        <input
+          value={dimension}
+          onChange={(e) => setDimension(e.target.value)}
+          placeholder="Ej: Confidencialidad, Integridad, Disponibilidad..."
           required
           style={{
             width: "100%",

@@ -16,6 +16,7 @@ import ReportViewPage from './pages/ReportViewPage';
 import VulnerabilitiesPage from './pages/VulnerabilitiesPage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
 import QuestionnairesPage from './pages/QuestionnairesPage';
+import QuestionBankPage from './pages/QuestionBankPage';
 import RegisterUserPage from './pages/RegisterUserPage';
 import RegisterOrganizationPage from './pages/RegisterOrganizationPage';
 import PublicRegisterPage from '../pages/PublicRegisterPage';
@@ -149,6 +150,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <QuestionnairesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/question-bank"
+          element={
+            <ProtectedRoute>
+              <QuestionBankPage />
             </ProtectedRoute>
           }
         />

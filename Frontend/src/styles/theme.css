@@ -47,7 +47,7 @@
   --success: #16A34A;
   --warning: #F59E0B;
   --danger: #EF4444;
-  --info: var(--cyan-300);
+  --info: var(--blue-500);
 
   /* Switch colors */
   --switch-on-bg: var(--btn-primary-bg);
@@ -70,7 +70,7 @@
   --on-success-light: #042913;
   --on-warning-light: #3B2B00;
   --on-danger-light: #3A0B0B;
-  --on-info-light: #001A1F;
+  --on-info-light: #E0F2FE;
 
   --on-success-dark: #E6FFF1;
   --on-warning-dark: #FFF6E0;

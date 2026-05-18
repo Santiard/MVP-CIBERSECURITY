@@ -143,11 +143,12 @@ def _seed_questionnaires(session: Session) -> None:
 
 def _seed_preguntas(session: Session) -> None:
     """Al menos una pregunta por control para poder probar el flujo de cuestionario en el front."""
+    from infraestructure.database.models import PreguntaControlORM
     for control in session.exec(select(ControlORM)).all():
         if control.id_control is None:
             continue
         exists = session.exec(
-            select(PreguntaORM).where(PreguntaORM.id_control == control.id_control).limit(1)
+            select(PreguntaControlORM).where(PreguntaControlORM.id_control == control.id_control).limit(1)
         ).first()
         if exists is not None:
             continue
@@ -155,7 +156,10 @@ def _seed_preguntas(session: Session) -> None:
             (f"Indique el nivel de madurez observado en: {control.nombre[:40]} (1-5)", 1.0),
             ("Comentarios o evidencias relevantes (opcional en respuesta)", 0.5),
         ):
-            session.add(PreguntaORM(texto=texto, peso=peso, id_control=control.id_control))
+            p = PreguntaORM(texto=texto, peso=peso, dimension="General")
+            session.add(p)
+            session.flush()
+            session.add(PreguntaControlORM(id_pregunta=p.id_pregunta, id_control=control.id_control))
 
 
 def _seed_vulnerabilities(session: Session) -> None:

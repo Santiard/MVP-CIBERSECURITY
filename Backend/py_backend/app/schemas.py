@@ -109,3 +109,30 @@ class RiskRead(BaseModel):
     probabilidad: int
     id_activo: int
     id_control: Optional[int] = None
+
+
+# ── Banco de Preguntas ────────────────────────────────────────────────────────
+
+class BankQuestionCreate(BaseModel):
+    """Payload para crear una pregunta en el banco global."""
+    texto: str
+    dimension: Optional[str] = None
+    peso: float = 1.0
+
+
+class BankQuestionUpdate(BaseModel):
+    """Campos editables de una pregunta del banco."""
+    texto: Optional[str] = None
+    dimension: Optional[str] = None
+    peso: Optional[float] = None
+
+
+class BankQuestionRead(BaseModel):
+    """Representación de una pregunta del banco con sus formularios vinculados."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id_pregunta: int
+    texto: str
+    dimension: Optional[str] = None
+    peso: float
+    controles: list[int] = []   # IDs de los formularios (controles) que la incluyen

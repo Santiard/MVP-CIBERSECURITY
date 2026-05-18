@@ -5,6 +5,7 @@ import UserForm from './UserForm';
 import Modal from './modal/Modal';
 import ConfirmModal from './modal/ConfirmModal';
 import Switch from './Switch';
+import PasswordToggle from './PasswordToggle';
 import { getPasswordPolicyIssues, isStrongPassword, PASSWORD_POLICY_MESSAGE } from '../utils/passwordPolicy';
 import { useAlert } from './alerts/AlertProvider';
 import ResetPasswordModal from './modal/ResetPasswordModal';
@@ -92,6 +93,8 @@ const UsersTable: React.FC = () => {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
   const [resetSubmitted, setResetSubmitted] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   const resetIssues = getPasswordPolicyIssues(newPassword);
   const showResetIssues = resetSubmitted || newPassword.length > 0;
@@ -209,9 +212,15 @@ const UsersTable: React.FC = () => {
         <div style={{ display: 'grid', gap: 8 }}>
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
           <label style={{ fontSize: 12 }}>Nueva contraseña *</label>
-          <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+          <div style={{ position: 'relative' }}>
+            <input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={{ padding: 8, paddingRight: 40, borderRadius: 8, border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }} />
+            <PasswordToggle visible={showNewPassword} onToggle={() => setShowNewPassword(v => !v)} />
+          </div>
           <label style={{ fontSize: 12 }}>Confirmar contraseña *</label>
-          <input type="password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
+          <div style={{ position: 'relative' }}>
+            <input type={showConfirmNewPassword ? 'text' : 'password'} value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} required style={{ padding: 8, paddingRight: 40, borderRadius: 8, border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }} />
+            <PasswordToggle visible={showConfirmNewPassword} onToggle={() => setShowConfirmNewPassword(v => !v)} />
+          </div>
           {showResetIssues && resetIssues.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: -4 }}>
               <div style={{ marginBottom: 4 }}>{PASSWORD_POLICY_MESSAGE}</div>
@@ -224,7 +233,7 @@ const UsersTable: React.FC = () => {
           )}
           {resetError && <div style={{ fontSize: 12, color: 'var(--danger)' }}>{resetError}</div>}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); setConfirmNewPassword(''); setResetError(''); setResetSubmitted(false); }} disabled={resetLoading}>Cancelar</button>
+            <button className="btn" onClick={() => { setResetting(null); setNewPassword(''); setConfirmNewPassword(''); setResetError(''); setResetSubmitted(false); setShowNewPassword(false); setShowConfirmNewPassword(false); }} disabled={resetLoading}>Cancelar</button>
             <button className="btn btn-primary" onClick={confirmReset} disabled={resetLoading || !newPassword || !confirmNewPassword || resetIssues.length > 0}>{resetLoading ? 'Guardando...' : 'Guardar'}</button>
           </div>
         </div>

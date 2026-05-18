@@ -76,19 +76,7 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
         uid = int(input_data.user_id) if input_data.user_id is not None else self_uid
     fecha_eval = input_data.fecha or date.today()
 
-    with Session(engine) as session:
-        exists = session.exec(
-            select(EvaluacionORM).where(
-                (EvaluacionORM.id_empresa == id_empresa)
-                & (EvaluacionORM.id_usuario == uid)
-                & (EvaluacionORM.fecha == fecha_eval)
-            )
-        ).first()
-        if exists:
-            raise HTTPException(
-                status_code=409,
-                detail="Ya existe una evaluación para este usuario, empresa y fecha",
-            )
+
 
     payload = input_data.model_dump()
     payload["user_id"] = uid

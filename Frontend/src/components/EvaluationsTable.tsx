@@ -108,8 +108,8 @@ const EvaluationsTable: React.FC = () => {
     <div className="card" style={{ minHeight: 240 }}>
       {staff && (
         <p style={{ marginTop: 0, fontSize: 14, color: "var(--muted)" }}>
-          Para <strong>asignar o mover</strong> evaluaciones entre empresas, usa{" "}
-          <Link to="/asignaciones">Asignaciones empresa ↔ evaluación</Link>.
+          Para asignar o mover evaluaciones entre empresas, usa la{" "}
+          <Link to="/asignaciones">página Asignaciones</Link>.
         </p>
       )}
       <h2 style={{ marginTop: 8 }}>Evaluaciones</h2>

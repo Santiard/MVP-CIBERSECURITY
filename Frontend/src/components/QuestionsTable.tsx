@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from "react";
-import dataService, { type Question } from "../services/dataService";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
+import questionBankApi, { type BankQuestion } from "../services/questionBankApi";
 import QuestionForm from "./QuestionForm";
-import ConfirmModal from "./modal/ConfirmModal";
 import { useAlert } from "./alerts/AlertProvider";
+import Switch from "./Switch";
 
 type Props = {
   controlId: number;
@@ -11,172 +11,146 @@ type Props = {
 
 const QuestionsTable: React.FC<Props> = ({ controlId, questionnaireName }) => {
   const { showAlert } = useAlert();
-  const [rows, setRows] = useState<Question[]>([]);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
+  const [questions, setQuestions] = useState<BankQuestion[]>([]);
   const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState<Question | null>(null);
   const [openForm, setOpenForm] = useState(false);
-  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
-  const [deletingLoading, setDeletingLoading] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = await dataService.getQuestionsByControl(String(controlId));
-      setRows(qs);
+      const qs = await questionBankApi.list();
+      setQuestions(qs);
     } finally {
       setLoading(false);
     }
-  }, [controlId]);
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [controlId, pageSize]);
-
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const safePage = Math.min(page, pages);
-  const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
-
-  useEffect(() => {
-    if (page > pages) setPage(pages);
-  }, [page, pages]);
-
-  const handleDelete = async (id: string) => {
-    setDeletingQuestionId(id);
-  };
-
-  const confirmDelete = async () => {
-    if (!deletingQuestionId) return;
+  const handleToggle = async (q: BankQuestion, isLinked: boolean) => {
+    setTogglingId(q.id);
     try {
-      setDeletingLoading(true);
-      await dataService.deleteQuestion(deletingQuestionId);
-      setDeletingQuestionId(null);
-      showAlert({ type: "success", title: "Exito", message: "Pregunta eliminada correctamente." });
+      if (isLinked) {
+        // Was linked, now unlink
+        await questionBankApi.unlinkFromControl(q.id, controlId);
+      } else {
+        // Was unlinked, now link
+        await questionBankApi.linkToControl(q.id, controlId);
+      }
       await load();
-    } catch {
-      showAlert({ type: "error", title: "Error", message: "No se pudo eliminar la pregunta." });
+    } catch (err) {
+      showAlert({ type: "error", title: "Error", message: "No se pudo cambiar el estado de la pregunta." });
     } finally {
-      setDeletingLoading(false);
+      setTogglingId(null);
     }
   };
 
+  // Group questions by dimension
+  const byDimension = useMemo(() => {
+    const groups: Record<string, BankQuestion[]> = {};
+    for (const q of questions) {
+      const dim = q.dimension || "Sin dimensión";
+      if (!groups[dim]) groups[dim] = [];
+      groups[dim].push(q);
+    }
+    return groups;
+  }, [questions]);
+
+  const dimensionKeys = Object.keys(byDimension).sort();
+
   return (
-    <div className="card" style={{ marginTop: 16, border: "1px solid var(--border)" }}>
+    <div style={{ marginTop: 16 }}>
       <h3 style={{ marginTop: 0 }}>
-        Preguntas{questionnaireName ? ` · ${questionnaireName}` : ""}{" "}
+        Catálogo de Preguntas{questionnaireName ? ` · ${questionnaireName}` : ""}{" "}
         <span style={{ fontSize: 13, fontWeight: 400, color: "var(--muted)" }}>(control #{controlId})</span>
       </h3>
-      <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0 }}>
-        Estas preguntas se usan en el flujo de evaluación (paso cuestionario) para este cuestionario.
+      <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 0, marginBottom: 20 }}>
+        Aquí ves todas las preguntas del Banco global, agrupadas por su dimensión. Activa el interruptor para asignar la pregunta a este formulario.
       </p>
+
       <QuestionForm
         open={openForm}
-        initial={editing ?? undefined}
-        onClose={() => {
-          setOpenForm(false);
-          setEditing(null);
-        }}
+        onClose={() => setOpenForm(false)}
         onSaved={() => void load()}
         controlId={controlId}
       />
-      <ConfirmModal
-        open={deletingQuestionId != null}
-        title="Eliminar pregunta"
-        message="¿Confirmas que deseas eliminar esta pregunta?"
-        confirmText="Eliminar"
-        loading={deletingLoading}
-        onCancel={() => setDeletingQuestionId(null)}
-        onConfirm={() => void confirmDelete()}
-      />
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button
           type="button"
           className="btn btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setOpenForm(true);
-          }}
+          onClick={() => setOpenForm(true)}
         >
-          Nueva pregunta
+          + Nueva pregunta
         </button>
       </div>
-      <div className="table-responsive-container">
-        <table className="table-responsive">
-          <thead>
-            <tr>
-              <th>Texto</th>
-              <th>Peso</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={3} style={{ padding: 12 }}>
-                  Cargando...
-                </td>
-              </tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr>
-                <td colSpan={3} style={{ padding: 12, color: "var(--muted)" }}>
-                  No hay preguntas. Cree la primera con el botón de arriba.
-                </td>
-              </tr>
-            )}
-            {!loading &&
-              visibleRows.map((r) => (
-                <tr key={r.id}>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.text}</td>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.peso ?? "—"}</td>
-                  <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() => {
-                        setEditing(r);
-                        setOpenForm(true);
-                      }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-danger"
-                      style={{ marginLeft: 8 }}
-                      onClick={() => void handleDelete(r.id)}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-      {rows.length > 5 && (
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12, alignItems: "center" }}>
-          <div style={{ color: "var(--muted)" }}>Mostrando {visibleRows.length} de {rows.length} preguntas</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <label style={{ fontSize: 12, color: "var(--muted)" }}>Filas</label>
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              style={{ padding: 6, borderRadius: 8, border: "1px solid var(--border)" }}
-            >
-              {[5, 10, 20, 50].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-            <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
-            <span style={{ margin: "0 4px", minWidth: 42, textAlign: "center" }}>{safePage}/{pages}</span>
-            <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
-          </div>
+
+      {loading ? (
+        <div style={{ padding: 24, textAlign: "center", color: "var(--muted)" }}>Cargando catálogo...</div>
+      ) : dimensionKeys.length === 0 ? (
+        <div style={{ padding: 24, textAlign: "center", color: "var(--muted)" }}>No hay preguntas en el banco. Crea la primera.</div>
+      ) : (
+        <div style={{ display: "grid", gap: 16 }}>
+          {dimensionKeys.map((dim) => {
+            const qs = byDimension[dim];
+            const linkedCount = qs.filter(q => q.linkedControls.includes(controlId)).length;
+
+            return (
+              <div key={dim} style={{ borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
+                {/* Dimension Header */}
+                <div style={{
+                  background: "var(--surface-muted, rgba(25,118,210,0.06))",
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderBottom: "1px solid var(--border)",
+                }}>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{dim}</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)", background: "var(--surface)", padding: "4px 10px", borderRadius: 999 }}>
+                    Asignadas: <strong style={{ color: linkedCount > 0 ? "var(--primary)" : "inherit" }}>{linkedCount}</strong> de {qs.length}
+                  </div>
+                </div>
+
+                {/* Questions List */}
+                <div style={{ display: "grid", gap: 0 }}>
+                  {qs.map((q, idx) => {
+                    const isLinked = q.linkedControls.includes(controlId);
+                    const isToggling = togglingId === q.id;
+
+                    return (
+                      <div key={q.id} style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 16,
+                        padding: "12px 16px",
+                        borderTop: idx > 0 ? "1px solid var(--border)" : "none",
+                        background: isLinked ? "rgba(34,197,94,0.03)" : "transparent",
+                        transition: "background 0.2s"
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, color: "var(--text-primary)", fontWeight: isLinked ? 600 : 400 }}>{q.text}</div>
+                          <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted)" }}>
+                            Peso: <strong>{q.peso}</strong>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", opacity: isToggling ? 0.5 : 1 }}>
+                          <Switch
+                            checked={isLinked}
+                            onChange={() => void handleToggle(q, isLinked)}
+                            ariaLabel={`Asignar pregunta: ${q.text}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

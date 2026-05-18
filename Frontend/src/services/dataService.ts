@@ -166,10 +166,11 @@ const dataService = {
 
   // --- Questions (Preguntas) ---
   getQuestionsByControl: async (controlId: string): Promise<Question[]> => {
+    // Backend now uses pregunta_control junction table; returns dimension directly from PreguntaORM
     const rows = await readJson<QuestionApi[]>(`/questions/by-control/${encodeURIComponent(controlId)}`);
     return rows.map((q) => ({
       id: String(q.id_pregunta),
-      controlId: String(q.id_control),
+      controlId: String(controlId), // use the requested controlId for UI consistency
       text: q.texto,
       dimension: q.dimension ?? '',
       order: q.orden ?? 0,
@@ -177,6 +178,7 @@ const dataService = {
       active: q.activo ?? true,
     }));
   },
+
 
   createQuestion: async (q: Omit<Question, 'id'>): Promise<Question> => {
     const created = await writeJson<QuestionApi>('/questions', 'POST', {

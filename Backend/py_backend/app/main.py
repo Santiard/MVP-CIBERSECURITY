@@ -13,6 +13,7 @@ from interfaces.routes.core_entities_routes import router as core_entities_route
 from interfaces.routes.evaluation_routes import router as evaluation_router
 from interfaces.routes.password_reset_routes import router as password_reset_router
 from interfaces.routes.organization_routes import router as organization_router
+from interfaces.routes.question_bank_routes import router as question_bank_router
 
 app = FastAPI(title="MVP CIBERSECURITY - FastAPI Backend")
 
@@ -120,3 +121,4 @@ app.include_router(password_reset_router)
 app.include_router(evaluation_router)
 app.include_router(organization_router)
 app.include_router(core_entities_router)
+app.include_router(question_bank_router)
