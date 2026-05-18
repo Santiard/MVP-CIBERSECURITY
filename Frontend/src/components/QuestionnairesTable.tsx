@@ -5,7 +5,7 @@ import QuestionnairePreviewModal from './QuestionnairePreviewModal';
 import editIcon from '../images/edit.svg';
 import Switch from './Switch';
 
-type Q = { id: string; name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean };
+type Q = { id: string; name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean; rec_alta: string; rec_media: string; rec_baja: string };
 
 type Props = { mode?: 'admin' | 'evaluator' };
 
@@ -58,7 +58,7 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
   };
 
 
-  const handleSave = async (payload: { name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean }) => {
+  const handleSave = async (payload: { name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean; rec_alta: string; rec_media: string; rec_baja: string }) => {
     if (editing?.id) {
       return await dataService.updateQuestionnaire(editing.id, payload as any);
     } else {

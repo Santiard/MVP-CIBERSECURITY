@@ -90,6 +90,9 @@ class ControlLinkedRead(BaseModel):
     confidencialidad: bool
     integridad: bool
     disponibilidad: bool
+    rec_alta: str
+    rec_media: str
+    rec_baja: str
 
 
 class EvaluationLinkControlsBody(BaseModel):

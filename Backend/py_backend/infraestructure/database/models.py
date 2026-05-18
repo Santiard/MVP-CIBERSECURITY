@@ -113,6 +113,9 @@ class ControlORM(SQLModel, table=True):
     confidencialidad: bool = Field()
     integridad: bool = Field()
     disponibilidad: bool = Field()
+    rec_alta: str = Field(default="")
+    rec_media: str = Field(default="")
+    rec_baja: str = Field(default="")
 
     preguntas: list["PreguntaORM"] = Relationship(
         back_populates="controles",

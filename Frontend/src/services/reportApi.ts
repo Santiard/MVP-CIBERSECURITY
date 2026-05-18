@@ -26,8 +26,10 @@ export type ReportCategory = {
   /** Número de preguntas respondidas / total */
   answered: number;
   total: number;
-  /** Dimensiones CIA afectadas */
   dimensions: { confidencialidad: boolean; integridad: boolean; disponibilidad: boolean };
+  rec_alta: string;
+  rec_media: string;
+  rec_baja: string;
 };
 
 export type ReportDetail = {
@@ -213,6 +215,9 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
           integridad: control.integridad ?? false,
           disponibilidad: control.disponibilidad ?? false,
         },
+        rec_alta: (control as any).rec_alta || `Riesgo crítico en ${control.nombre}. Priorizar implementación de controles básicos.`,
+        rec_media: (control as any).rec_media || `Riesgo moderado en ${control.nombre}. Fortalecer controles y realizar seguimiento.`,
+        rec_baja: (control as any).rec_baja || `Riesgo bajo en ${control.nombre}. Mantener programa continuo y revisiones periódicas.`,
       };
     })
   );
@@ -228,11 +233,17 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
   const recommendations: ReportRecommendation[] = categories
     .filter((c) => c.total > 0)
     .sort((a, b) => a.value - b.value)
-    .map((c) => ({
-      priority: priorityFromScore(c.value),
-      control: c.name,
-      text: recommendationText(c.name, c.value),
-    }));
+    .map((c) => {
+      let text = c.rec_baja;
+      if (c.value < 40) text = c.rec_alta;
+      else if (c.value < 70) text = c.rec_media;
+      
+      return {
+        priority: priorityFromScore(c.value),
+        control: c.name,
+        text,
+      };
+    });
 
   const { label: level, color: levelColor } = levelFromScore(globalScore);
 

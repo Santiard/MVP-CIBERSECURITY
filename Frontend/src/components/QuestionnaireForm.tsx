@@ -5,10 +5,10 @@ import QuestionForm from './QuestionForm';
 
 type Props = {
   open: boolean;
-  initial?: { id?: string; name?: string; description?: string; dimensions?: number; active?: boolean; confidencialidad?: boolean; integridad?: boolean; disponibilidad?: boolean };
+  initial?: { id?: string; name?: string; description?: string; dimensions?: number; active?: boolean; confidencialidad?: boolean; integridad?: boolean; disponibilidad?: boolean; rec_alta?: string; rec_media?: string; rec_baja?: string };
   onClose: () => void;
   onSaved: (result?: any) => void;
-  saveFn: (payload: { name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean }) => Promise<any>;
+  saveFn: (payload: { name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean; rec_alta: string; rec_media: string; rec_baja: string }) => Promise<any>;
 };
 
 const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, saveFn }) => {
@@ -19,6 +19,10 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   const [conf, setConf] = useState(false);
   const [integ, setInteg] = useState(false);
   const [disp, setDisp] = useState(false);
+
+  const [recAlta, setRecAlta] = useState('');
+  const [recMedia, setRecMedia] = useState('');
+  const [recBaja, setRecBaja] = useState('');
   
   // Transfer list states
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
@@ -70,6 +74,9 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
       setConf(initial?.confidencialidad ?? false);
       setInteg(initial?.integridad ?? false);
       setDisp(initial?.disponibilidad ?? false);
+      setRecAlta(initial?.rec_alta ?? '');
+      setRecMedia(initial?.rec_media ?? '');
+      setRecBaja(initial?.rec_baja ?? '');
       
       setSelectedIds(new Set());
       void loadBank(initial?.id);
@@ -109,7 +116,8 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     try {
       const result = await saveFn({ 
         name: name.trim(), description: description.trim(), dimensions, active, 
-        confidencialidad: conf, integridad: integ, disponibilidad: disp 
+        confidencialidad: conf, integridad: integ, disponibilidad: disp,
+        rec_alta: recAlta.trim(), rec_media: recMedia.trim(), rec_baja: recBaja.trim()
       });
       
       const controlIdNum = Number(result.id || initial?.id);
@@ -275,6 +283,24 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
                     Disponibilidad (D)
                   </label>
                 </div>
+              </div>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12, padding: '16px', background: 'var(--background)', borderRadius: 8, border: '1px solid var(--border)' }}>
+              <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)' }}>Recomendaciones para el Plan de Mejora</h3>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Define qué sugerirá el sistema según el puntaje obtenido por la organización en este formulario.</p>
+              
+              <div style={{ display: 'grid', gap: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>Riesgo Crítico (Puntaje &lt; 40%)</label>
+                <textarea className="input" rows={2} value={recAlta} onChange={e => setRecAlta(e.target.value)} placeholder="Ej: Establecer políticas formales. Riesgo de operación sin lineamientos..." style={{ resize: 'vertical' }} />
+              </div>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>Riesgo Moderado (Puntaje &lt; 70%)</label>
+                <textarea className="input" rows={2} value={recMedia} onChange={e => setRecMedia(e.target.value)} placeholder="Ej: Revisar y actualizar las políticas existentes..." style={{ resize: 'vertical' }} />
+              </div>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)' }}>Riesgo Bajo / Mantenimiento (Puntaje &ge; 70%)</label>
+                <textarea className="input" rows={2} value={recBaja} onChange={e => setRecBaja(e.target.value)} placeholder="Ej: Mantener revisiones periódicas y auditorías..." style={{ resize: 'vertical' }} />
               </div>
             </div>
           </div>

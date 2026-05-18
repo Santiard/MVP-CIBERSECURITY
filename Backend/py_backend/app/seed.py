@@ -120,6 +120,9 @@ def _seed_questionnaires(session: Session) -> None:
             "confidencialidad": True,
             "integridad": True,
             "disponibilidad": True,
+            "rec_alta": "Establecer políticas formales de seguridad de la información. Sin un marco de gobierno definido, la organización opera sin lineamientos claros.",
+            "rec_media": "Revisar y actualizar las políticas existentes. Asegurar que estén difundidas y sean comprendidas por todo el personal.",
+            "rec_baja": "Mantener revisiones periódicas y auditorías del programa de gobierno.",
         },
         {
             "nombre": "Proteccion de Endpoint",
@@ -129,6 +132,9 @@ def _seed_questionnaires(session: Session) -> None:
             "confidencialidad": True,
             "integridad": True,
             "disponibilidad": False,
+            "rec_alta": "Implementar soluciones de protección en los dispositivos de usuario final. Los equipos sin protección son la principal puerta de entrada de amenazas.",
+            "rec_media": "Fortalecer la gestión de parches y la configuración segura de endpoints.",
+            "rec_baja": "Considerar soluciones EDR avanzadas y revisión continua.",
         },
     ]
 
