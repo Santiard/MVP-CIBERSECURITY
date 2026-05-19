@@ -17,14 +17,25 @@ from interfaces.routes.question_bank_routes import router as question_bank_route
 
 app = FastAPI(title="MVP CIBERSECURITY - FastAPI Backend")
 
+import os
+
+# Determinar los orígenes permitidos por CORS
+# En producción, se pueden inyectar múltiples dominios separados por coma en la variable CORS_ORIGINS
+cors_origins_env = os.environ.get("CORS_ORIGINS", "")
+allowed_origins = [
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+if cors_origins_env:
+    # Agrega a la lista base los dominios de producción (ej: "https://midominio.vercel.app,https://www.midominio.com")
+    allowed_origins.extend([origin.strip() for origin in cors_origins_env.split(",") if origin.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
