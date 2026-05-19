@@ -95,7 +95,7 @@ function RequestResetForm() {
       }}
     >
       <h3 style={{ marginTop: 0, marginBottom: 6 }}>Recuperar contraseña</h3>
-      <p style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 0, marginBottom: 10 }}>* Campos obligatorios</p>
+
       <p style={{ marginTop: 0, marginBottom: 18, color: 'var(--gray-600)', fontSize: 13 }}>
         Indica el correo de tu cuenta. Te enviaremos un enlace para definir una nueva contraseña.
       </p>
@@ -243,7 +243,7 @@ function ConfirmResetForm({ token }: PropsToken) {
       }}
     >
       <h3 style={{ marginTop: 0, marginBottom: 6 }}>Nueva contraseña</h3>
-      <p style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 0, marginBottom: 10 }}>* Campos obligatorios</p>
+
       <p style={{ marginTop: 0, marginBottom: 18, color: 'var(--gray-600)', fontSize: 13 }}>
         Has abierto un enlace válido. Define tu nueva contraseña.
       </p>

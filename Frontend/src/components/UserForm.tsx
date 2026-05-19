@@ -130,7 +130,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   };
   const form = (
     <form noValidate onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-      <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
+
       <label style={{ fontSize: 12 }}>Nombre *</label>
       <input value={name} onChange={e => setName(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }} />
 

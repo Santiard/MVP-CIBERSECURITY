@@ -8,7 +8,7 @@ from app.auth_schemas import LoginRequest, LoginResponse, RegisterRequest
 from app.db import engine, init_db
 from app.seed import seed_data_if_enabled
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
-from infraestructure.database import RolORM, UsuarioORM
+from infraestructure.database import RolORM, UsuarioORM, UsuarioOrganizacionORM
 from interfaces.routes.core_entities_routes import router as core_entities_router
 from interfaces.routes.evaluation_routes import router as evaluation_router
 from interfaces.routes.password_reset_routes import router as password_reset_router
@@ -62,6 +62,14 @@ def login(payload: LoginRequest) -> LoginResponse:
         role = session.get(RolORM, user.id_rol)
         if role is not None and role.nombre:
             role_name = role.nombre
+
+        if role_name == "user":
+            user_org = session.exec(select(UsuarioOrganizacionORM).where(UsuarioOrganizacionORM.id_usuario == user.id_usuario)).first()
+            if not user_org:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Tu usuario aún no tiene ninguna empresa asignada. Contacta al administrador para que te asigne una.",
+                )
 
         token = create_access_token(subject=str(user.id_usuario))
         return LoginResponse(

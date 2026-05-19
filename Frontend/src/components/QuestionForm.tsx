@@ -102,7 +102,7 @@ const QuestionForm: React.FC<Props> = ({ open, initial, onClose, onSaved, contro
         style={{ width: 420, background: "var(--surface)", padding: 20, borderRadius: 12 }}
       >
         <h3 style={{ marginTop: 0 }}>{initial?.id ? "Editar pregunta" : "Nueva pregunta"}</h3>
-        <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 8 }}>* Campos obligatorios</p>
+
         <label style={{ display: "block", marginTop: 8, fontSize: 13, color: "var(--muted)" }}>Texto *</label>
         <input
           value={texto}

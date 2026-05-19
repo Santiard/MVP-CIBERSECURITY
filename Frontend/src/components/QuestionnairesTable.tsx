@@ -108,6 +108,13 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
           </thead>
           <tbody>
             {loading && <tr><td colSpan={4}>Cargando...</td></tr>}
+            {!loading && visibleRows.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--muted)' }}>
+                  No hay registros todavía para mostrar.
+                </td>
+              </tr>
+            )}
             {!loading && visibleRows.map(r => (
               <React.Fragment key={r.id}>
                 <tr>

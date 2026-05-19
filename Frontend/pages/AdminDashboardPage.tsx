@@ -160,14 +160,14 @@ const AdminDashboardPage: React.FC = () => {
             </div>
 
             {/* Quick Access Links */}
-            <div className="card" style={{ padding: 24 }}>
-              <h3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, color: 'var(--blue-700)' }}>Accesos Rápidos</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                {isAdmin && <a href="/users" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Gestión de Usuarios</a>}
-                <a href="/organizations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Organizaciones</a>
-                <a href="/questionnaires" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Catálogo de Formularios</a>
-                <a href="/evaluations" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Evaluaciones</a>
-                <a href="/reports" className="btn" style={{ textDecoration: 'none', background: 'var(--background)', color: 'var(--blue-700)' }}>Reportes Ejecutivos</a>
+            <div className="card" style={{ padding: 24, textAlign: 'center' }}>
+              <h3 style={{ marginTop: 0, marginBottom: 20, fontSize: 16, color: 'var(--blue-700)' }}>Accesos Rápidos</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+                {isAdmin && <a href="/users" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Gestión de Usuarios</a>}
+                <a href="/organizations" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Organizaciones</a>
+                <a href="/questionnaires" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Catálogo de Formularios</a>
+                <a href="/evaluations" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Evaluaciones</a>
+                <a href="/reports" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Reportes Ejecutivos</a>
               </div>
             </div>
           </div>

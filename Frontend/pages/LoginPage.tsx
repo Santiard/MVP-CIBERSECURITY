@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import '../src/styles/theme.css';
 import logo from '../src/images/logoRAY.svg';
+import bgImage from '../src/images/background.webp';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   getPasswordPolicyIssues,
@@ -140,7 +141,8 @@ const LoginPage: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'var(--bg-light)'
+      background: `url(${bgImage}) no-repeat center center`,
+      backgroundSize: 'cover'
     }}>
       <form
         noValidate
@@ -154,7 +156,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         <h3 style={{marginTop:8, marginBottom:6}}>Iniciar sesión</h3>
-        <p style={{ fontSize: 12, color: 'var(--gray-600)', marginTop: 0, marginBottom: 14 }}>* Campos obligatorios</p>
+
 
         {error ? (
           <div

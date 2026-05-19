@@ -21,9 +21,9 @@ type SectionConfig = {
 };
 
 const SECTIONS: SectionConfig[] = [
-  { key: "pendiente",  label: "Evaluaciones Pendientes",   accentColor: "var(--orange-500)", badgeBg: "rgba(251,146,60,0.12)" },
-  { key: "en progreso", label: "Evaluaciones En Proceso", accentColor: "var(--blue-500)",   badgeBg: "rgba(59,130,246,0.12)" },
-  { key: "completada", label: "Evaluaciones Completadas",  accentColor: "var(--green-500)",  badgeBg: "rgba(34,197,94,0.12)"  },
+  { key: "pendiente",  label: "Evaluaciones Pendientes",   accentColor: "var(--gray-500)", badgeBg: "rgba(107, 114, 128, 0.12)" },
+  { key: "en progreso", label: "Evaluaciones En Proceso", accentColor: "var(--blue-500)",   badgeBg: "rgba(59, 130, 246, 0.12)" },
+  { key: "completada", label: "Evaluaciones Completadas",  accentColor: "var(--blue-800)",  badgeBg: "rgba(30, 64, 175, 0.12)"  },
 ];
 
 type EvalTableProps = {

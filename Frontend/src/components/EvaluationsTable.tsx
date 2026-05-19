@@ -106,12 +106,7 @@ const EvaluationsTable: React.FC = () => {
 
   return (
     <div className="card" style={{ minHeight: 240 }}>
-      {staff && (
-        <p style={{ marginTop: 0, fontSize: 14, color: "var(--muted)" }}>
-          Para asignar o mover evaluaciones entre empresas, usa la{" "}
-          <Link to="/asignaciones">página Asignaciones</Link>.
-        </p>
-      )}
+
       <h2 style={{ marginTop: 8 }}>Evaluaciones</h2>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div style={{ flex: "1 1 200px" }}>
@@ -192,7 +187,6 @@ const EvaluationsTable: React.FC = () => {
                     background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.2)",
                     borderRadius: 10, padding: "20px 24px",
                   }}>
-                    <span style={{ fontSize: 22 }}>⚠️</span>
                     <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: 14 }}>{error}</span>
                   </div>
                 </td>
@@ -203,15 +197,9 @@ const EvaluationsTable: React.FC = () => {
                 <td colSpan={staff ? 5 : 4} style={{ padding: "40px 16px", borderTop: "1px solid var(--border)" }}>
                   <div style={{
                     display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-                    color: "var(--muted)",
+                    color: "var(--muted)", padding: "24px 8px"
                   }}>
-                    <span style={{ fontSize: 36 }}>📋</span>
-                    <span style={{ fontWeight: 600, fontSize: 15 }}>Aún no hay evaluaciones registradas</span>
-                    <span style={{ fontSize: 13 }}>
-                      {staff
-                        ? "Crea una nueva evaluación desde el módulo de Asignaciones."
-                        : "Cuando el administrador te asigne una evaluación, aparecerá aquí."}
-                    </span>
+                    <span>No hay registros todavía para mostrar.</span>
                   </div>
                 </td>
               </tr>

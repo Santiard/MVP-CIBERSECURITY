@@ -129,6 +129,13 @@ const ReportsPage: React.FC = () => {
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }} colSpan={5}>Cargando...</td>
                 </tr>
               )}
+              {!loading && visibleRows.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--muted)' }}>
+                    No hay registros todavía para mostrar.
+                  </td>
+                </tr>
+              )}
               {visibleRows.map(r => (
                 <tr key={r.id}>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.title}</td>

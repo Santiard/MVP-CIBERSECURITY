@@ -10,6 +10,7 @@ type NavItem = {
  * Dashboard → usuarios → organizaciones → formularios → evaluaciones → asignaciones → informes → vulnerabilidades.
  */
 const ADMIN_NAV: NavItem[] = [
+  { to: '/HomePage', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/users', label: 'Usuarios' },
   { to: '/organizations', label: 'Organizaciones' },
@@ -18,7 +19,6 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/reports', label: 'Reportes' },
-  { to: '/vulnerabilities', label: 'Vulnerabilidades' },
 ];
 
 /**
@@ -36,6 +36,7 @@ const EVALUATOR_NAV: NavItem[] = [
 
 /** Usuario de empresa: trabajo primero (evaluaciones), luego informes. */
 const USER_NAV: NavItem[] = [
+  { to: '/HomePage', label: 'Home' },
   { to: '/evaluations', label: 'Evaluaciones' },
   { to: '/reports', label: 'Reportes' },
 ];

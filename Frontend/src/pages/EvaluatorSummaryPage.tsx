@@ -49,20 +49,20 @@ const EvaluatorSummaryPage: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gap: 24 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--blue-500)' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--blue-700)' }}>{assignedOrgs.length}</div>
+            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--gray-400)' }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--gray-800)' }}>{assignedOrgs.length}</div>
               <div style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 600 }}>Organizaciones asignadas</div>
             </div>
-            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--orange-500)' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--orange-700)' }}>{pendingCount}</div>
+            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--gray-500)' }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--gray-700)' }}>{pendingCount}</div>
               <div style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 600 }}>Evaluaciones pendientes</div>
             </div>
-            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--blue-400)' }}>
+            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--blue-500)' }}>
               <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--blue-600)' }}>{inProgressCount}</div>
               <div style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 600 }}>En progreso</div>
             </div>
-            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--green-500)' }}>
-              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--green-700)' }}>{finishedCount}</div>
+            <div className="card" style={{ padding: 24, textAlign: 'center', borderTop: '4px solid var(--blue-800)' }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--blue-900)' }}>{finishedCount}</div>
               <div style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 600 }}>Finalizadas</div>
             </div>
           </div>

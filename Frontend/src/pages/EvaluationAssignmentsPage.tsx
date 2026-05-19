@@ -204,10 +204,10 @@ const EvaluationAssignmentsPage: React.FC = () => {
           <button type="button" className="btn btn-icon" onClick={() => load()} disabled={loading} title="Actualizar">
             <img src={refreshIcon} alt="Actualizar" width={18} height={18} />
           </button>
-          <Link to="/organizations" className="btn" style={{ textDecoration: "none" }}>
+          <Link to="/organizations" className="btn btn-secondary" style={{ textDecoration: "none" }}>
             Ir a organizaciones
           </Link>
-          <Link to="/evaluations" className="btn" style={{ textDecoration: "none" }}>
+          <Link to="/evaluations" className="btn btn-secondary" style={{ textDecoration: "none" }}>
             Ir a evaluaciones
           </Link>
           <button

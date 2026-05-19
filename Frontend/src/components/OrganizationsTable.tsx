@@ -120,6 +120,13 @@ const OrganizationsTable: React.FC<{ mode?: 'admin' | 'evaluator' }> = ({ mode =
           </thead>
           <tbody>
             {loading && <tr><td colSpan={4}>Cargando...</td></tr>}
+            {!loading && visible.length === 0 && (
+              <tr>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--muted)' }}>
+                  No hay registros todavía para mostrar.
+                </td>
+              </tr>
+            )}
             {!loading && visible.map(r => (
               <tr key={r.id_empresa}>
                 <td>{r.nombre}</td>

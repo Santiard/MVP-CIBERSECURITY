@@ -216,11 +216,11 @@ const QuestionBankPage: React.FC = () => {
               style={{ width: 480, background: 'var(--surface)', borderRadius: 12, padding: 28, boxShadow: 'var(--shadow-md)' }}>
               <h3 style={{ marginTop: 0, marginBottom: 4 }}>{editing ? 'Editar pregunta' : 'Nueva pregunta del banco'}</h3>
               {editing && (
-                <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--warning, #f59e0b)', background: 'rgba(245,158,11,0.08)', borderRadius: 8, padding: '8px 12px' }}>
-                  ⚠️ Editar esta pregunta actualizará automáticamente todos los formularios que la usan.
+                <p style={{ fontSize: 13, color: 'var(--warning)', background: 'rgba(245,158,11,0.1)', padding: '8px 12px', borderRadius: 8, margin: '0 0 16px 0' }}>
+                  Editar esta pregunta actualizará automáticamente todos los formularios que la usan.
                 </p>
               )}
-              <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 0, marginBottom: 12 }}>* Campos obligatorios</p>
+
 
               <label style={{ display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>Texto de la pregunta *</label>
               <textarea value={formText} onChange={e => setFormText(e.target.value)} rows={3} required

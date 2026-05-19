@@ -210,7 +210,7 @@ const UsersTable: React.FC = () => {
 
       <Modal open={!!resetting} onClose={() => { setResetting(null); setNewPassword(''); setConfirmNewPassword(''); setResetError(''); setResetSubmitted(false); }} title="Cambiar contraseña">
         <div style={{ display: 'grid', gap: 8 }}>
-          <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
+
           <label style={{ fontSize: 12 }}>Nueva contraseña *</label>
           <div style={{ position: 'relative' }}>
             <input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} required style={{ padding: 8, paddingRight: 40, borderRadius: 8, border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }} />
@@ -252,6 +252,13 @@ const UsersTable: React.FC = () => {
           </thead>
           <tbody>
             {loading && <tr><td colSpan={5}>Cargando...</td></tr>}
+            {!loading && visible.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ textAlign: 'center', padding: '24px 8px', color: 'var(--muted)' }}>
+                  No hay registros todavía para mostrar.
+                </td>
+              </tr>
+            )}
             {!loading && visible.map(r => (
               <tr key={r.id}>
                 <td style={{ textAlign: 'center' }}>{r.name}</td>

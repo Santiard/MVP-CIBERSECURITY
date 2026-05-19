@@ -138,7 +138,7 @@ const OrganizationForm: React.FC<Props> = ({ open, onClose, initial, onSaved }) 
       title={initial?.id_empresa ? 'Editar organización' : 'Nueva organización'}
     >
       <form noValidate onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-        <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>* Campos obligatorios</p>
+  
         <label style={{ fontSize: 12 }}>Nombre de la empresa *</label>
         <input
           value={nombre}
