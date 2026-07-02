@@ -1,3 +1,37 @@
+# MVP Ciberseguridad
+
+## 🚀 Cómo ejecutar el proyecto (Docker)
+
+**Requisitos previos:**
+* Tener instalado [Git](https://git-scm.com/downloads).
+* Tener instalado [Docker Desktop](https://www.docker.com/products/docker-desktop/) (y asegurarse de que se está ejecutando).
+
+**Paso 1: Clonar el repositorio**
+```bash
+git clone https://github.com/Santiard/MVP-CIBERSECURITY.git
+cd MVP-CIBERSECURITY
+```
+
+**Paso 2: Levantar los contenedores**
+```bash
+docker-compose up --build
+```
+*(Nota: La primera vez puede tardar un par de minutos mientras descarga las imágenes).*
+
+**Paso 3: Acceder a la aplicación**
+Una vez que en la consola veas que los servicios están corriendo:
+* **Aplicación web (Frontend):** [http://localhost:3001](http://localhost:3001)
+* **Documentación de la API (Backend - Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
+
+**Paso 4: Detener la aplicación**
+Presiona `Ctrl + C` en la terminal o ejecuta:
+```bash
+docker-compose down
+```
+
+---
+
+## 🏗 Arquitectura
 El proyecto implementa Arquitectura Limpia para garantizar separación de responsabilidades, independencia tecnológica y mantenibilidad.
 El dominio encapsula la lógica de negocio (motor de madurez), la capa de aplicación orquesta casos de uso, infraestructura implementa persistencia y autenticación, y la capa de interfaces expone la API REST.
 
