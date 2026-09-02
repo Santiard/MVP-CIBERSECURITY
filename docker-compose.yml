@@ -1,35 +1,37 @@
 services:
   db:
+    container_name: mvp-db
     image: postgres:15-alpine
     environment:
       POSTGRES_DB: mvp_db
       POSTGRES_USER: mvp_user
       POSTGRES_PASSWORD: mvp_pass
-    ports:
-      - "5432:5432"
+    # No mapeamos el puerto 5432 al host para evitar conflictos con otras BDs en el VPS
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - mvp_db_data:/var/lib/postgresql/data
 
   backend:
+    container_name: mvp-backend
     build:
       context: ./Backend
     environment:
       DATABASE_URL: postgresql+psycopg2://mvp_user:mvp_pass@db:5432/mvp_db
       SEED_ON_STARTUP: "true"
-      PASSWORD_RESET_FRONTEND_BASE: "http://localhost:3001"
-      RESEND_API_KEY: "re_d3uxmzH4_PKQjBovPYojygsjMT8SyrEut"
+      PASSWORD_RESET_FRONTEND_BASE: "https://tu-dominio-mvp.com" # Ajustar en el VPS
+      RESEND_API_KEY: "${RESEND_API_KEY:-ingresa_tu_key_aqui}"
     ports:
-      - "8000:8000"
+      - "8001:8000" # Host 8001 -> Contenedor 8000 (Evita conflictos)
     depends_on:
       - db
 
   frontend:
+    container_name: mvp-frontend
     build:
       context: ./Frontend
     ports:
-      - "3001:80"
+      - "3003:80" # Host 3003 -> Contenedor 80 (Casa Glass usa 3001)
     depends_on:
       - backend
 
 volumes:
-  db_data:
+  mvp_db_data:
