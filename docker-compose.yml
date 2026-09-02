@@ -17,8 +17,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://mvp_user:mvp_pass@db:5432/mvp_db
       SEED_ON_STARTUP: "true"
-      PASSWORD_RESET_FRONTEND_BASE: "https://tu-dominio-mvp.com" # Ajustar en el VPS
+      PASSWORD_RESET_FRONTEND_BASE: "${PASSWORD_RESET_FRONTEND_BASE:-http://localhost:3001}"
       RESEND_API_KEY: "${RESEND_API_KEY:-ingresa_tu_key_aqui}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3001}"
     ports:
       - "8001:8000" # Host 8001 -> Contenedor 8000 (Evita conflictos)
     depends_on:
