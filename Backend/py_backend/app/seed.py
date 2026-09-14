@@ -151,39 +151,100 @@ def _seed_controls(session: Session) -> None:
 
 
 def _seed_preguntas(session: Session) -> None:
-    from infraestructure.database.models import PreguntaControlORM
-    for control in session.exec(select(ControlORM)).all():
-        if control.id_control is None:
-            continue
-        exists = session.exec(
-            select(PreguntaControlORM).where(PreguntaControlORM.id_control == control.id_control).limit(1)
-        ).first()
-        if exists is not None:
-            continue
-        for texto, peso, dim in (
-            (f"Nivel de madurez de {control.nombre[:40]} (1-5)", 1.0, "General"),
-            (f"¿Existe documentación para {control.nombre[:30]}?", 0.5, "Documentación"),
-        ):
-            p = PreguntaORM(texto=texto, peso=peso, dimension=dim)
+    """Inserta y actualiza el banco masivo ISO 27001:2022 vinculándolo a los 3 niveles de formularios."""
+    try:
+        from app.questions_bank_seed import preguntas_banco
+    except ImportError:
+        preguntas_banco = []
+
+    formulario_general = (
+        session.exec(select(FormularioORM).where(FormularioORM.nombre.like("%General%"))).first()
+        or session.exec(select(FormularioORM).where(FormularioORM.nombre.like("%Completo%"))).first()
+    )
+    formulario_tecnico = session.exec(
+        select(FormularioORM).where(FormularioORM.nombre.like("%Técnico%") | FormularioORM.nombre.like("%Tecnico%"))
+    ).first()
+    formulario_estrategico = session.exec(
+        select(FormularioORM).where(FormularioORM.nombre.like("%Estratégico%") | FormularioORM.nombre.like("%Estrategico%"))
+    ).first()
+
+    existing_questions = {p.texto: p for p in session.exec(select(PreguntaORM)).all()}
+    existing_links = {(lp.id_formulario, lp.id_pregunta) for lp in session.exec(select(FormularioPreguntaORM)).all()}
+
+    for item in preguntas_banco:
+        texto = item["texto"]
+        if texto in existing_questions:
+            p = existing_questions[texto]
+            p.peso = item["peso"]
+            p.dimension = item["dimension"]
             session.add(p)
             session.flush()
-            session.add(PreguntaControlORM(id_pregunta=p.id_pregunta, id_control=control.id_control))
+        else:
+            p = PreguntaORM(
+                texto=texto,
+                peso=item["peso"],
+                dimension=item["dimension"],
+            )
+            session.add(p)
+            session.flush()
+            existing_questions[texto] = p
+
+        tipo = item.get("formulario_tipo", "general")
+        target_forms = []
+        if tipo in ("general", "completo"):
+            if formulario_general:
+                target_forms.append(formulario_general)
+        elif tipo == "tecnico":
+            if formulario_tecnico:
+                target_forms.append(formulario_tecnico)
+        elif tipo == "estrategico":
+            if formulario_estrategico:
+                target_forms.append(formulario_estrategico)
+        elif tipo == "tec_est":
+            if formulario_tecnico:
+                target_forms.append(formulario_tecnico)
+            if formulario_estrategico:
+                target_forms.append(formulario_estrategico)
+        elif tipo == "todos":
+            for f in (formulario_general, formulario_tecnico, formulario_estrategico):
+                if f:
+                    target_forms.append(f)
+
+        for form in target_forms:
+            link_key = (form.id_formulario, p.id_pregunta)
+            if link_key not in existing_links:
+                session.add(
+                    FormularioPreguntaORM(
+                        id_formulario=form.id_formulario,
+                        id_pregunta=p.id_pregunta,
+                    )
+                )
+                existing_links.add(link_key)
+
     session.flush()
 
 
 def _seed_formularios(session: Session) -> None:
     forms_seed = [
         {
-            "nombre": "Formulario Completo de Seguridad (Todos los Niveles)",
-            "descripcion": "Cuestionario base que evalúa los controles principales.",
+            "nombre": "Formulario General de Seguridad (Todos los Colaboradores)",
+            "descripcion": "Cuestionario base en lenguaje neutro y accesible sobre hábitos de seguridad en el puesto de trabajo, descansos, contraseñas y prevención de riesgos para todo el personal.",
             "activo": True,
             "aplica_nivel_bajo": True,
             "aplica_nivel_medio": True,
             "aplica_nivel_alto": True,
         },
         {
-            "nombre": "Formulario Estratégico (Sólo Directivos)",
-            "descripcion": "Cuestionario para alta gerencia.",
+            "nombre": "Formulario Técnico de Ciberseguridad (Sistemas y TI)",
+            "descripcion": "Cuestionario técnico y operativo orientado al equipo de TI y soporte de sistemas: gestión de accesos, parches, redes, respaldos, hardening y monitoreo.",
+            "activo": True,
+            "aplica_nivel_bajo": False,
+            "aplica_nivel_medio": True,
+            "aplica_nivel_alto": True,
+        },
+        {
+            "nombre": "Formulario Estratégico (Directivos y Gerencia)",
+            "descripcion": "Cuestionario de nivel directivo y gerencial enfocado en gobierno de la seguridad, gestión de riesgos, presupuesto, continuidad del negocio y cumplimiento normativo.",
             "activo": True,
             "aplica_nivel_bajo": False,
             "aplica_nivel_medio": False,
@@ -191,22 +252,38 @@ def _seed_formularios(session: Session) -> None:
         }
     ]
 
-    existing_names = {
-        item.nombre for item in session.exec(select(FormularioORM)).all()
-    }
+    existing_forms = {f.nombre: f for f in session.exec(select(FormularioORM)).all()}
     
+    # Si existía el nombre antiguo "Formulario Completo de Seguridad (Todos los Niveles)", renombrarlo
+    old_completo = existing_forms.get("Formulario Completo de Seguridad (Todos los Niveles)")
+    if old_completo and "Formulario General de Seguridad (Todos los Colaboradores)" not in existing_forms:
+        old_completo.nombre = "Formulario General de Seguridad (Todos los Colaboradores)"
+        old_completo.descripcion = forms_seed[0]["descripcion"]
+        old_completo.aplica_nivel_bajo = True
+        old_completo.aplica_nivel_medio = True
+        old_completo.aplica_nivel_alto = True
+        session.add(old_completo)
+        existing_forms[old_completo.nombre] = old_completo
+
+    # Si existía "Formulario Estratégico (Sólo Directivos)", actualizar nombre
+    old_estrategico = existing_forms.get("Formulario Estratégico (Sólo Directivos)")
+    if old_estrategico and "Formulario Estratégico (Directivos y Gerencia)" not in existing_forms:
+        old_estrategico.nombre = "Formulario Estratégico (Directivos y Gerencia)"
+        old_estrategico.descripcion = forms_seed[2]["descripcion"]
+        old_estrategico.aplica_nivel_bajo = False
+        old_estrategico.aplica_nivel_medio = False
+        old_estrategico.aplica_nivel_alto = True
+        session.add(old_estrategico)
+        existing_forms[old_estrategico.nombre] = old_estrategico
+
     for item in forms_seed:
-        if item["nombre"] in existing_names:
+        if item["nombre"] in existing_forms:
             continue
         form = FormularioORM(**item)
         session.add(form)
         session.flush()
-        
-        # Link all questions to this form for demo purposes
-        preguntas = session.exec(select(PreguntaORM)).all()
-        for p in preguntas:
-            session.add(FormularioPreguntaORM(id_formulario=form.id_formulario, id_pregunta=p.id_pregunta))
-    
+        existing_forms[item["nombre"]] = form
+
     session.flush()
 
 
@@ -286,8 +363,9 @@ def seed_data_if_enabled() -> None:
         _seed_empresas(session)
         _seed_roles_and_users(session)
         _seed_controls(session)
-        _seed_preguntas(session)
+        # Los formularios deben existir ANTES que las preguntas para poder vincularlas
         _seed_formularios(session)
+        _seed_preguntas(session)
         _seed_vulnerabilities(session)
         _seed_evaluaciones(session)
         session.commit()
