@@ -1,6 +1,6 @@
 export const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
-  "http://localhost:8000";
+  "http://localhost:8001";
 
 /** Rutas públicas (login, registro, recuperación): sin Bearer. */
 export async function publicApiFetch(path: string, init?: RequestInit): Promise<Response> {

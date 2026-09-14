@@ -7,7 +7,7 @@ import PasswordToggle from '../src/components/PasswordToggle';
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
-  'http://localhost:8000';
+  'http://localhost:8001';
 
 /** Paso 1: solicitar correo → el API envía enlace (o lo registra en log si no hay SMTP). */
 function RequestResetForm() {

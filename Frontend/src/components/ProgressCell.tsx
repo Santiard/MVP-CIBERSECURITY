@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getEvaluationById, listEvaluationControls } from "../services/evaluationApi";
+import { getEvaluationById } from "../services/evaluationApi";
 import dataService from "../services/dataService";
 
 const ProgressCell: React.FC<{ evaluationId: number }> = ({ evaluationId }) => {
@@ -10,12 +10,8 @@ const ProgressCell: React.FC<{ evaluationId: number }> = ({ evaluationId }) => {
     const fetchProgress = async () => {
       try {
         const ev = await getEvaluationById(evaluationId);
-        const linked = await listEvaluationControls(evaluationId);
-        let total = 0;
-        for (const c of linked) {
-          const qs = await dataService.getQuestionsByControl(String(c.id_control));
-          total += qs.length;
-        }
+        const qs = await dataService.getQuestionsByControl(String(ev.id_formulario));
+        let total = qs.length;
         const answered = Object.keys(ev.answers || {}).length;
         if (mounted) {
           setPercent(total === 0 ? 0 : Math.round((answered / total) * 100));

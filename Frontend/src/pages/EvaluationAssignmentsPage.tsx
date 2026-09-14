@@ -33,6 +33,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
 
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [evaluators, setEvaluators] = useState<User[]>([]);
+  const [formularios, setFormularios] = useState<{ id: string; name: string; active: boolean }[]>([]);
   const [rows, setRows] = useState<EvaluationApiRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +41,12 @@ const EvaluationAssignmentsPage: React.FC = () => {
   
   const [busyId, setBusyId] = useState<number | null>(null);
   const [newEvalOrgId, setNewEvalOrgId] = useState<string>("");
+  const [newEvalFormularioId, setNewEvalFormularioId] = useState<string>("");
   const [newEvalEvaluatorId, setNewEvalEvaluatorId] = useState<string>("");
   const [deleteFor, setDeleteFor] = useState<EvaluationApiRow | null>(null);
   const [editEval, setEditEval] = useState<EvaluationApiRow | null>(null);
   const [editOrgId, setEditOrgId] = useState<string>("");
+  const [editFormularioId, setEditFormularioId] = useState<string>("");
   const [editEvaluatorId, setEditEvaluatorId] = useState<string>("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -64,14 +67,16 @@ const EvaluationAssignmentsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [o, ev, users] = await Promise.all([
+      const [o, ev, users, forms] = await Promise.all([
         dataService.getOrgs() as Promise<Org[]>, 
         listEvaluations(),
-        dataService.getUsers()
+        dataService.getUsers(),
+        dataService.getQuestionnaires()
       ]);
       setOrgs(o);
       setRows(ev);
       setEvaluators(users.filter(u => u.role === "evaluator"));
+      setFormularios(forms);
     } catch {
       setError("No se pudieron cargar datos. ¿Sesión activa y API disponible?");
     } finally {
@@ -134,10 +139,10 @@ const EvaluationAssignmentsPage: React.FC = () => {
     }
   };
 
-  const handleCreateForOrg = async (id_empresa: number, id_evaluador?: number) => {
+  const handleCreateForOrg = async (id_empresa: number, id_formulario: number, id_evaluador?: number) => {
     try {
       setBusyId(-1);
-      const created = await createEvaluation({ id_empresa, id_evaluador });
+      const created = await createEvaluation({ id_empresa, id_formulario, id_evaluador });
       await load();
       navigate(`/evaluations/${created.id_evaluacion}/workflow`);
     } catch (e) {
@@ -157,6 +162,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
       setBusyId(editEval.id_evaluacion);
       await patchEvaluation(editEval.id_evaluacion, {
         id_empresa: Number(editOrgId),
+        id_formulario: Number(editFormularioId),
         id_evaluador: editEvaluatorId ? Number(editEvaluatorId) : undefined,
       });
       showAlert({ type: "success", title: "Éxito", message: "Asignación actualizada correctamente" });
@@ -273,6 +279,7 @@ const EvaluationAssignmentsPage: React.FC = () => {
                             onClick={() => {
                               setEditEval(r);
                               setEditOrgId(String(r.id_empresa));
+                              setEditFormularioId(r.id_formulario ? String(r.id_formulario) : "");
                               setEditEvaluatorId(r.id_evaluador ? String(r.id_evaluador) : "");
                               setTimeout(() => {
                                 const dialog = document.getElementById("edit-evaluation-dialog") as HTMLDialogElement | null;
@@ -354,44 +361,51 @@ const EvaluationAssignmentsPage: React.FC = () => {
             <h3 style={{ marginTop: 0, marginBottom: 4, fontWeight: 600 }}>Nueva evaluación ligada a una empresa</h3>
             <p style={{ margin: 0, fontSize: 13, opacity: 0.9 }}>Crea una evaluación asociada a la empresa y abre el flujo (alcance + cuestionario).</p>
           </div>
-          <div style={{ padding: "24px" }}>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 0, marginBottom: 10 }}>* Campo obligatorio</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8, fontWeight: 500 }}>Empresa *</label>
-                <select
-                  value={newEvalOrgId}
-                  onChange={(e) => setNewEvalOrgId(e.target.value)}
-                  required
-                  aria-required="true"
-                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 }}
-                >
-                  <option value="">Seleccione…</option>
-                  {orgs.map((o) => (
-                    <option key={o.id_empresa} value={String(o.id_empresa)}>
-                      {o.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: 13, marginBottom: 8, fontWeight: 500 }}>Evaluador *</label>
-                <select
-                  value={newEvalEvaluatorId}
-                  onChange={(e) => setNewEvalEvaluatorId(e.target.value)}
-                  required
-                  aria-required="true"
-                  style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--border)", fontSize: 13 }}
-                >
-                  <option value="">Seleccione el evaluador asignado…</option>
-                  {evaluators.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.name} ({e.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div style={{ padding: "20px 24px" }}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 13, color: "var(--muted)" }}>Empresa a Evaluar</label>
+              <select
+                className="input"
+                value={newEvalOrgId}
+                onChange={(e) => setNewEvalOrgId(e.target.value)}
+              >
+                <option value="">Seleccione una empresa...</option>
+                {orgs.map((o) => (
+                  <option key={o.id_empresa} value={o.id_empresa}>
+                    {o.nombre} ({o.sector} - {o.tamano})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 13, color: "var(--muted)" }}>Formulario (Plantilla)</label>
+              <select
+                className="input"
+                value={newEvalFormularioId}
+                onChange={(e) => setNewEvalFormularioId(e.target.value)}
+              >
+                <option value="">Seleccione un formulario...</option>
+                {formularios.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} {f.active ? '' : '(Inactivo)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 8, fontSize: 13, color: "var(--muted)" }}>Evaluador Asignado (Opcional)</label>
+              <select
+                className="input"
+                value={newEvalEvaluatorId}
+                onChange={(e) => setNewEvalEvaluatorId(e.target.value)}
+              >
+                <option value="">Sin evaluador asignado (Autoevaluación)</option>
+                {evaluators.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div style={{
@@ -418,16 +432,17 @@ const EvaluationAssignmentsPage: React.FC = () => {
               disabled={busyId === -1}
               onClick={() => {
                 const v = Number(newEvalOrgId);
-                const evId = Number(newEvalEvaluatorId);
-                if (!v || !evId) {
+                const evId = newEvalEvaluatorId ? Number(newEvalEvaluatorId) : undefined;
+                const formId = Number(newEvalFormularioId);
+                if (!v || !formId) {
                   showAlert({
                     type: "warning",
                     title: "Advertencia",
-                    message: "Seleccione una empresa y un evaluador.",
+                    message: "Seleccione una empresa y un formulario.",
                   });
                   return;
                 }
-                void handleCreateForOrg(v, evId);
+                void handleCreateForOrg(v, formId, evId);
                 const dialog = document.getElementById("new-evaluation-dialog") as HTMLDialogElement | null;
                 dialog?.close();
               }}
@@ -463,6 +478,21 @@ const EvaluationAssignmentsPage: React.FC = () => {
                   {orgs.map((o) => (
                     <option key={o.id_empresa} value={String(o.id_empresa)}>
                       {o.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>Formulario (Plantilla)</label>
+                <select
+                  value={editFormularioId}
+                  onChange={(e) => setEditFormularioId(e.target.value)}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid var(--border)" }}
+                >
+                  <option value="">-- Seleccione un formulario --</option>
+                  {formularios.map((f) => (
+                    <option key={f.id} value={String(f.id)}>
+                      {f.name} {f.active ? '' : '(Inactivo)'}
                     </option>
                   ))}
                 </select>

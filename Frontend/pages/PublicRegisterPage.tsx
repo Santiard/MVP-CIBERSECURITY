@@ -12,7 +12,7 @@ import PasswordToggle from '../src/components/PasswordToggle';
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
-  'http://localhost:8000';
+  'http://localhost:8001';
 
 // ── Password policy checklist ─────────────────────────────────────────────────
 const POLICY_CHECKS: { label: string; test: (p: string) => boolean }[] = [

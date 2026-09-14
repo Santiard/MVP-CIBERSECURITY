@@ -6,31 +6,35 @@ from typing import Optional
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
-from infraestructure.database.models import PreguntaControlORM, PreguntaORM
+from infraestructure.database.models import PreguntaControlORM, FormularioPreguntaORM, PreguntaORM
 
 
 def _to_read(pregunta: PreguntaORM, session: Session) -> dict:
-    """Convierte un ORM de pregunta a dict serializable con IDs de controles vinculados."""
-    links = session.exec(
+    """Convierte un ORM de pregunta a dict serializable con IDs vinculados."""
+    links_iso = session.exec(
         select(PreguntaControlORM).where(PreguntaControlORM.id_pregunta == pregunta.id_pregunta)
+    ).all()
+    links_form = session.exec(
+        select(FormularioPreguntaORM).where(FormularioPreguntaORM.id_pregunta == pregunta.id_pregunta)
     ).all()
     return {
         "id_pregunta": pregunta.id_pregunta,
         "texto": pregunta.texto,
         "dimension": pregunta.dimension,
         "peso": pregunta.peso,
-        "controles": [lnk.id_control for lnk in links],
+        "controles_iso": [lnk.id_control for lnk in links_iso],
+        "formularios": [lnk.id_formulario for lnk in links_form],
     }
 
 
 def list_bank_questions(session: Session) -> list[dict]:
-    """Devuelve todas las preguntas del banco con sus controles vinculados."""
+    """Devuelve todas las preguntas del banco con sus vínculos."""
     preguntas = session.exec(select(PreguntaORM).order_by(PreguntaORM.id_pregunta)).all()
     return [_to_read(p, session) for p in preguntas]
 
 
 def get_bank_question(session: Session, id_pregunta: int) -> dict:
-    """Devuelve una pregunta específica con sus controles vinculados."""
+    """Devuelve una pregunta específica con sus vínculos."""
     pregunta = session.get(PreguntaORM, id_pregunta)
     if not pregunta:
         raise HTTPException(status_code=404, detail="Pregunta no encontrada")
@@ -38,7 +42,7 @@ def get_bank_question(session: Session, id_pregunta: int) -> dict:
 
 
 def create_bank_question(session: Session, texto: str, dimension: Optional[str], peso: float) -> dict:
-    """Crea una nueva pregunta en el banco global (sin vínculo a ningún formulario)."""
+    """Crea una nueva pregunta en el banco global."""
     pregunta = PreguntaORM(texto=texto.strip(), dimension=dimension, peso=peso)
     session.add(pregunta)
     session.commit()
@@ -53,7 +57,7 @@ def update_bank_question(
     dimension: Optional[str],
     peso: Optional[float],
 ) -> dict:
-    """Actualiza campos de una pregunta del banco. Refleja automáticamente en todos los formularios que la usan."""
+    """Actualiza campos de una pregunta del banco."""
     pregunta = session.get(PreguntaORM, id_pregunta)
     if not pregunta:
         raise HTTPException(status_code=404, detail="Pregunta no encontrada")
@@ -70,16 +74,22 @@ def update_bank_question(
 
 
 def delete_bank_question(session: Session, id_pregunta: int) -> dict:
-    """Elimina una pregunta del banco y todos sus vínculos con formularios."""
+    """Elimina una pregunta del banco y todos sus vínculos."""
     pregunta = session.get(PreguntaORM, id_pregunta)
     if not pregunta:
         raise HTTPException(status_code=404, detail="Pregunta no encontrada")
 
-    # Eliminar vínculos en pregunta_control
-    links = session.exec(
+    # Eliminar vínculos
+    links_iso = session.exec(
         select(PreguntaControlORM).where(PreguntaControlORM.id_pregunta == id_pregunta)
     ).all()
-    for lnk in links:
+    for lnk in links_iso:
+        session.delete(lnk)
+        
+    links_form = session.exec(
+        select(FormularioPreguntaORM).where(FormularioPreguntaORM.id_pregunta == id_pregunta)
+    ).all()
+    for lnk in links_form:
         session.delete(lnk)
 
     session.delete(pregunta)
@@ -88,12 +98,10 @@ def delete_bank_question(session: Session, id_pregunta: int) -> dict:
 
 
 def link_question_to_control(session: Session, id_pregunta: int, id_control: int) -> dict:
-    """Vincula una pregunta del banco a un formulario (control)."""
-    # Verificar que existen
+    """Vincula una pregunta del banco a un Control ISO."""
     if not session.get(PreguntaORM, id_pregunta):
         raise HTTPException(status_code=404, detail="Pregunta no encontrada")
 
-    # Verificar si el vínculo ya existe
     existing = session.exec(
         select(PreguntaControlORM).where(
             PreguntaControlORM.id_pregunta == id_pregunta,
@@ -101,7 +109,7 @@ def link_question_to_control(session: Session, id_pregunta: int, id_control: int
         )
     ).first()
     if existing:
-        raise HTTPException(status_code=409, detail="La pregunta ya está vinculada a este formulario")
+        raise HTTPException(status_code=409, detail="La pregunta ya está vinculada a este Control ISO")
 
     link = PreguntaControlORM(id_pregunta=id_pregunta, id_control=id_control)
     session.add(link)
@@ -111,7 +119,7 @@ def link_question_to_control(session: Session, id_pregunta: int, id_control: int
 
 
 def unlink_question_from_control(session: Session, id_pregunta: int, id_control: int) -> dict:
-    """Desvincula una pregunta de un formulario (sin eliminar la pregunta del banco)."""
+    """Desvincula una pregunta de un Control ISO."""
     link = session.exec(
         select(PreguntaControlORM).where(
             PreguntaControlORM.id_pregunta == id_pregunta,
@@ -119,7 +127,44 @@ def unlink_question_from_control(session: Session, id_pregunta: int, id_control:
         )
     ).first()
     if not link:
-        raise HTTPException(status_code=404, detail="El vínculo entre pregunta y formulario no existe")
+        raise HTTPException(status_code=404, detail="El vínculo no existe")
+    session.delete(link)
+    session.commit()
+    pregunta = session.get(PreguntaORM, id_pregunta)
+    return _to_read(pregunta, session)  # type: ignore[arg-type]
+
+
+def link_question_to_formulario(session: Session, id_pregunta: int, id_formulario: int) -> dict:
+    """Vincula una pregunta del banco a un Formulario."""
+    if not session.get(PreguntaORM, id_pregunta):
+        raise HTTPException(status_code=404, detail="Pregunta no encontrada")
+
+    existing = session.exec(
+        select(FormularioPreguntaORM).where(
+            FormularioPreguntaORM.id_pregunta == id_pregunta,
+            FormularioPreguntaORM.id_formulario == id_formulario,
+        )
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="La pregunta ya está vinculada a este Formulario")
+
+    link = FormularioPreguntaORM(id_pregunta=id_pregunta, id_formulario=id_formulario)
+    session.add(link)
+    session.commit()
+    pregunta = session.get(PreguntaORM, id_pregunta)
+    return _to_read(pregunta, session)  # type: ignore[arg-type]
+
+
+def unlink_question_from_formulario(session: Session, id_pregunta: int, id_formulario: int) -> dict:
+    """Desvincula una pregunta de un Formulario."""
+    link = session.exec(
+        select(FormularioPreguntaORM).where(
+            FormularioPreguntaORM.id_pregunta == id_pregunta,
+            FormularioPreguntaORM.id_formulario == id_formulario,
+        )
+    ).first()
+    if not link:
+        raise HTTPException(status_code=404, detail="El vínculo no existe")
     session.delete(link)
     session.commit()
     pregunta = session.get(PreguntaORM, id_pregunta)
@@ -127,9 +172,22 @@ def unlink_question_from_control(session: Session, id_pregunta: int, id_control:
 
 
 def list_questions_by_control(session: Session, id_control: int) -> list[dict]:
-    """Devuelve todas las preguntas vinculadas a un formulario (control) específico."""
+    """Devuelve todas las preguntas vinculadas a un Control ISO específico."""
     links = session.exec(
         select(PreguntaControlORM).where(PreguntaControlORM.id_control == id_control)
+    ).all()
+    result = []
+    for lnk in links:
+        pregunta = session.get(PreguntaORM, lnk.id_pregunta)
+        if pregunta:
+            result.append(_to_read(pregunta, session))
+    return result
+
+
+def list_questions_by_formulario(session: Session, id_formulario: int) -> list[dict]:
+    """Devuelve todas las preguntas vinculadas a un Formulario específico."""
+    links = session.exec(
+        select(FormularioPreguntaORM).where(FormularioPreguntaORM.id_formulario == id_formulario)
     ).all()
     result = []
     for lnk in links:

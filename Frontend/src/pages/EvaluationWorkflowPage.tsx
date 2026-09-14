@@ -4,10 +4,7 @@ import Layout from "../components/Layout";
 import BackButton from "../components/BackButton";
 import dataService, { type Question } from "../services/dataService";
 import {
-  detachEvaluationControl,
   getEvaluationById,
-  linkEvaluationControlsBulk,
-  listEvaluationControls,
   patchEvaluation,
   type AnswerValue,
   type EvaluationDetail,
@@ -46,8 +43,8 @@ const EvaluationWorkflowPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<"saved" | "finalized" | null>(null);
 
   const [evaluation, setEvaluation] = useState<EvaluationDetail | null>(null);
-  const [questionnaires, setQuestionnaires] = useState<QuestionnaireRow[]>([]);
-  const [selectedControlIds, setSelectedControlIds] = useState<Set<number>>(new Set());
+  
+  
 
   const [questionsFlat, setQuestionsFlat] = useState<{ controlName: string; question: Question }[]>([]);
   const [answersForm, setAnswersForm] = useState<Record<string, { valor: string; comentario: string }>>({});
@@ -78,43 +75,22 @@ const EvaluationWorkflowPage: React.FC = () => {
     evaluation != null && authUser != null && Number(authUser.id) === evaluation.id_usuario;
   /** El usuario empresa titular Y el evaluador asignado (en modo responder) pueden completar el cuestionario. */
   const isEvaluatorResponding = authRole === "evaluator" && respondMode;
-  const canRespondToQuestionnaire = (authRole === "user" && isAssignee) || isEvaluatorResponding;
+  const canRespondToQuestionnaire = (authRole?.startsWith('user') && isAssignee) || isEvaluatorResponding;
   /** Staff assignor = admin o evaluador gestionando el alcance (NO cuando está respondiendo). */
   const isStaffAssignor = authRole === "admin" || (authRole === "evaluator" && !respondMode);
 
-  const loadBase = useCallback(async () => {
+    const loadBase = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
     setLoading(true);
     setError(null);
     try {
-      const [ev, linked, qsRaw] = await Promise.all([
-        getEvaluationById(idNum),
-        listEvaluationControls(idNum),
-        dataService.getQuestionnaires(),
-      ]);
-
-      const qsWithQuestions = await Promise.all(
-        qsRaw.map(async (q) => {
-          const questions = await dataService.getQuestionsByControl(q.id);
-          return questions.length > 0 ? q : null;
-        })
-      );
-      const qs = qsWithQuestions.filter((q): q is QuestionnaireRow => q !== null);
-
+      const ev = await getEvaluationById(idNum);
       setEvaluation(ev);
-      setQuestionnaires(qs);
-      setSelectedControlIds(new Set(linked.map((c) => c.id_control)));
 
-      if (authRole === "user" || (authRole === "evaluator" && respondMode)) {
-        const pairs: { controlName: string; question: Question }[] = [];
-        for (const c of linked) {
-          const qs2 = await dataService.getQuestionsByControl(String(c.id_control));
-          for (const q of qs2) {
-            pairs.push({ controlName: c.nombre, question: q });
-          }
-        }
+      if (authRole?.startsWith('user') || (authRole === "evaluator" && respondMode)) {
+        const qs2 = await dataService.getQuestionsByControl(String(ev.id_formulario));
+        const pairs = qs2.map(q => ({ controlName: "Formulario", question: q }));
         setQuestionsFlat(pairs);
-        setStep(2);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar la evaluación");
@@ -127,70 +103,9 @@ const EvaluationWorkflowPage: React.FC = () => {
     void loadBase();
   }, [loadBase]);
 
-  const toggleControl = (controlId: number) => {
-    setSelectedControlIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(controlId)) next.delete(controlId);
-      else next.add(controlId);
-      return next;
-    });
-  };
-
-  const handleSaveScopeAndContinue = async () => {
-    if (!Number.isFinite(idNum)) return;
-    if (authRole === "user" && evaluation && !isAssignee) {
-      showAlert({
-        type: "warning",
-        title: "Sin permiso",
-        message: "No eres el usuario titular de esta evaluación; no puedes modificar el alcance.",
-      });
-      return;
-    }
-    if (selectedControlIds.size === 0) {
-      showAlert({
-        type: "warning",
-        title: "Advertencia",
-        message: "Seleccione al menos un control (cuestionario) en el alcance.",
-      });
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await syncEvaluationControls(idNum, selectedControlIds);
-      await loadBase();
-
-      if (isStaffAssignor) {
-        showAlert({
-          type: "success",
-          title: "Alcance guardado",
-          message:
-            "Los formularios quedaron asignados a esta evaluación. Quien debe responder el cuestionario es el usuario titular de la empresa (rol usuario), iniciando sesión con su cuenta.",
-        });
-        navigate("/asignaciones");
-        return;
-      }
-
-      const linked = await listEvaluationControls(idNum);
-      const pairs: { controlName: string; question: Question }[] = [];
-      for (const c of linked) {
-        const qs = await dataService.getQuestionsByControl(String(c.id_control));
-        for (const q of qs) {
-          pairs.push({ controlName: c.nombre, question: q });
-        }
-      }
-      setQuestionsFlat(pairs);
-      setStep(2);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar el alcance");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  useEffect(() => {
+    useEffect(() => {
     if (!canRespondToQuestionnaire) return;
-    if (step !== 2 || questionsFlat.length === 0 || !evaluation) return;
+    if (false || questionsFlat.length === 0 || !evaluation) return;
     setAnswersForm((prev) => {
       const next = { ...prev };
       for (const { question: q } of questionsFlat) {
@@ -296,7 +211,7 @@ const EvaluationWorkflowPage: React.FC = () => {
 
   useEffect(() => {
     // Set up interval autosave every 5 seconds if there are unsaved changes
-    if (!canRespondToQuestionnaire || step !== 2 || isResolved) {
+    if (!canRespondToQuestionnaire || false || isResolved) {
       if (autoSaveTimer.current) {
         window.clearInterval(autoSaveTimer.current);
         autoSaveTimer.current = null;
@@ -463,7 +378,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: 24 }}>
-        {step === 2 && totalQuestions > 0 && (
+        {true && totalQuestions > 0 && (
           <>
             <style>{`@keyframes moveGradient { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }`}</style>
             <div style={{ position: "sticky", top: 0, zIndex: 40, background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))", padding: "10px 0", marginTop: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.04)" }}>
@@ -514,7 +429,7 @@ const EvaluationWorkflowPage: React.FC = () => {
             </strong>
           </p>
         )}
-        {evaluation && authRole === "user" && !isAssignee && (
+        {evaluation && authRole?.startsWith('user') && !isAssignee && (
           <div
             role="alert"
             style={{
@@ -531,34 +446,7 @@ const EvaluationWorkflowPage: React.FC = () => {
           </div>
         )}
 
-        <div className="card" style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <span
-            style={{
-              fontWeight: 600,
-              color: step === 1 ? "var(--blue-600, #2563eb)" : "var(--muted)",
-            }}
-          >
-            1 · Alcance
-          </span>
-          {!isStaffAssignor && (
-            <>
-              <span style={{ color: "var(--muted)" }}>→</span>
-              <span
-                style={{
-                  fontWeight: 600,
-                  color: step === 2 ? "var(--blue-600, #2563eb)" : "var(--muted)",
-                }}
-              >
-                2 · Formulario
-              </span>
-            </>
-          )}
-          {isStaffAssignor && (
-            <span style={{ fontSize: 13, color: "var(--muted)", marginLeft: 8 }}>
-              (El formulario lo completa solo el usuario empresa titular.)
-            </span>
-          )}
-        </div>
+        
 
         {loading && <p style={{ marginTop: 16 }}>Cargando…</p>}
         {error && (
@@ -567,78 +455,9 @@ const EvaluationWorkflowPage: React.FC = () => {
           </p>
         )}
 
-        {!loading && evaluation && step === 1 && (
-          <div className="card" style={{ marginTop: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Seleccionar formularios en alcance</h3>
-            <p style={{ fontSize: 14, color: "var(--muted)" }}>
-              Marque uno o más formularios (controles) que formarán parte de esta evaluación. Al guardar se
-              sincronizarán con el servidor (enlaces en <code>evaluacion_control</code>).
-              {isStaffAssignor && (
-                <>
-                  {" "}
-                  Como administrador o evaluador solo defines el alcance; el usuario empresa titular completará las
-                  preguntas del formulario en esta misma pantalla al iniciar sesión con su cuenta.
-                </>
-              )}
-            </p>
-            <ul style={{ listStyle: "none", padding: 0, margin: "16px 0" }}>
-              {questionnaires.map((q) => {
-                const cid = Number(q.id);
-                return (
-                  <li
-                    key={q.id}
-                    style={{
-                      padding: "12px 0",
-                      borderBottom: "1px solid var(--border)",
-                      display: "flex",
-                      gap: 12,
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedControlIds.has(cid)}
-                      disabled={
-                        saving ||
-                        isResolved ||
-                        (authRole === "user" && evaluation != null && !isAssignee)
-                      }
-                      onChange={() => toggleControl(cid)}
-                      id={`ctrl-${q.id}`}
-                    />
-                    <label htmlFor={`ctrl-${q.id}`} style={{ cursor: "pointer", flex: 1 }}>
-                      <strong>{q.name}</strong>
-                      <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>{q.description}</div>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={
-                saving ||
-                isResolved ||
-                (authRole === "user" && evaluation != null && !isAssignee)
-              }
-              onClick={() => void handleSaveScopeAndContinue()}
-            >
-              {saving
-                ? "Guardando…"
-                : isStaffAssignor
-                  ? "Guardar alcance"
-                  : "Guardar alcance y continuar al cuestionario"}
-            </button>
-            {isResolved && (
-              <p style={{ marginTop: 10, color: "var(--success)", fontSize: 13 }}>
-                Esta evaluacion ya fue finalizada. El alcance esta bloqueado.
-              </p>
-            )}
-          </div>
-        )}
+        
 
-        {!loading && evaluation && step === 2 && canRespondToQuestionnaire && (
+        {!loading && evaluation && true && canRespondToQuestionnaire && (
           <div className="card" style={{ marginTop: 20 }}>
             <h3 style={{ marginTop: 0 }}>Responder preguntas</h3>
             <p style={{ fontSize: 14, color: "var(--muted)" }}>
@@ -742,9 +561,7 @@ const EvaluationWorkflowPage: React.FC = () => {
               </div>
             )}
             <div style={{ marginTop: 20, display: "flex", flexWrap: "wrap", gap: 8 }}>
-              <button type="button" className="btn" disabled={saving} onClick={() => setStep(1)}>
-                Volver al alcance
-              </button>
+              
               <button
                 type="button"
                 className="btn btn-primary"

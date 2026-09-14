@@ -19,17 +19,9 @@ const OrganizationDetailPage: React.FC = () => {
     })();
   }, [id]);
 
-  const startEvaluation = async () => {
+  const startEvaluation = () => {
     if (!org?.id_empresa) return;
-    try {
-      setCreatingEvaluation(true);
-      const created = await createEvaluation({
-        id_empresa: org.id_empresa,
-      });
-      navigate(`/evaluations/${created.id_evaluacion}/workflow`);
-    } finally {
-      setCreatingEvaluation(false);
-    }
+    navigate(`/evaluation-assignments?empresa=${org.id_empresa}`);
   };
 
   return (

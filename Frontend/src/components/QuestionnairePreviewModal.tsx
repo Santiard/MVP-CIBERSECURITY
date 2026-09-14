@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Modal from './modal/Modal';
 import dataService, { type Question } from '../services/dataService';
 
-type Questionnaire = { id: string; name: string; dimensions: number; active: boolean };
+type Questionnaire = { id: string; name: string; active: boolean; aplica_nivel_bajo?: boolean; aplica_nivel_medio?: boolean; aplica_nivel_alto?: boolean };
 
 type Props = {
   open: boolean;
@@ -65,8 +65,14 @@ const QuestionnairePreviewModal: React.FC<Props> = ({ open, onClose, questionnai
             </div>
             <div style={{ width: 1, background: 'var(--border)' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Dimensiones</span>
-              <span style={{ fontWeight: 700, fontSize: 20 }}>{questionnaire.dimensions}</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Aplica a Niveles</span>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>
+                {[
+                  questionnaire.aplica_nivel_bajo && 'Bajo',
+                  questionnaire.aplica_nivel_medio && 'Medio',
+                  questionnaire.aplica_nivel_alto && 'Alto'
+                ].filter(Boolean).join(', ') || 'Ninguno'}
+              </span>
             </div>
             <div style={{ width: 1, background: 'var(--border)' }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

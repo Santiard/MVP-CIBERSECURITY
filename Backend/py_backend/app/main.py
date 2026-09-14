@@ -8,7 +8,7 @@ from app.auth_schemas import LoginRequest, LoginResponse, RegisterRequest
 from app.db import engine, init_db
 from app.seed import seed_data_if_enabled
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
-from infraestructure.database import RolORM, UsuarioORM, UsuarioOrganizacionORM
+from infraestructure.database import RolORM, UsuarioORM
 from interfaces.routes.core_entities_routes import router as core_entities_router
 from interfaces.routes.evaluation_routes import router as evaluation_router
 from interfaces.routes.password_reset_routes import router as password_reset_router
@@ -69,14 +69,13 @@ def login(payload: LoginRequest) -> LoginResponse:
                 detail="Credenciales inválidas. Revisa tu correo y contraseña.",
             )
 
-        role_name = "user"
+        role_name = "user_nivel_bajo"
         role = session.get(RolORM, user.id_rol)
         if role is not None and role.nombre:
             role_name = role.nombre
 
-        if role_name == "user":
-            user_org = session.exec(select(UsuarioOrganizacionORM).where(UsuarioOrganizacionORM.id_usuario == user.id_usuario)).first()
-            if not user_org:
+        if role_name.startswith("user_nivel_"):
+            if not user.id_empresa:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Tu usuario aún no tiene ninguna empresa asignada. Contacta al administrador para que te asigne una.",
@@ -94,11 +93,16 @@ def login(payload: LoginRequest) -> LoginResponse:
 
 @app.post("/auth/register")
 def register(payload: RegisterRequest) -> LoginResponse:
-    """Alta pública: crea usuario con rol `user` e inicia sesión (misma respuesta que login)."""
+    """Alta pública: crea usuario con el rol especificado e inicia sesión."""
     email = payload.email.strip().lower()
     name = payload.name.strip()
     password = payload.password
     phone = (payload.phone or "").strip() or None
+    target_role = payload.role.strip()
+    
+    valid_roles = ["user_nivel_bajo", "user_nivel_medio", "user_nivel_alto"]
+    if target_role not in valid_roles:
+        raise HTTPException(status_code=422, detail="Rol inválido para registro.")
 
     if not name:
         raise HTTPException(status_code=422, detail="El nombre es obligatorio")
@@ -110,7 +114,7 @@ def register(payload: RegisterRequest) -> LoginResponse:
         if existing is not None:
             raise HTTPException(status_code=409, detail="Ya existe una cuenta con ese correo")
 
-        user_role = session.exec(select(RolORM).where(RolORM.nombre == "user")).first()
+        user_role = session.exec(select(RolORM).where(RolORM.nombre == target_role)).first()
         if user_role is None or user_role.id_rol is None:
             raise HTTPException(status_code=500, detail="Rol de usuario no configurado en el sistema")
 
@@ -121,6 +125,7 @@ def register(payload: RegisterRequest) -> LoginResponse:
             activo=True,
             password=password,
             id_rol=user_role.id_rol,
+            id_empresa=payload.id_empresa,
         )
         session.add(user)
         session.commit()
@@ -132,7 +137,7 @@ def register(payload: RegisterRequest) -> LoginResponse:
             token_type="bearer",
             user_id=user.id_usuario,
             name=user.nombre,
-            role="user",
+            role=target_role,
         )
 
 

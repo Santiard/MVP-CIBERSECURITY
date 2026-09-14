@@ -3,7 +3,7 @@ from typing import Any, Optional
 
 from sqlmodel import Session, select
 
-from infraestructure.database.models import EmpresaORM, EvaluacionControlORM, EvaluacionORM
+from infraestructure.database.models import EmpresaORM, EvaluacionORM
 
 
 def _get_engine():
@@ -74,10 +74,7 @@ class SQLEvaluationRepository:
             item = session.get(EvaluacionORM, id)
             if item is None:
                 return False
-            for row in session.exec(
-                select(EvaluacionControlORM).where(EvaluacionControlORM.id_evaluacion == id)
-            ).all():
-                session.delete(row)
+
             session.delete(item)
             session.commit()
             return True

@@ -11,6 +11,7 @@ class Usuario:
     password: str
     id_rol: int
     rol: Rol
+    id_empresa: int | None = None
 
     def __post_init__(self) -> None:
         self.correo = self.correo.strip().lower()
@@ -30,6 +31,7 @@ class Usuario:
         correo: str,
         password: str,
         rol: Rol,
+        id_empresa: int | None = None,
     ) -> "Usuario":
         if not nombre.strip():
             raise ValueError("nombre es requerido")
@@ -43,6 +45,7 @@ class Usuario:
             password=password,
             id_rol=rol.id_rol,
             rol=rol,
+            id_empresa=id_empresa,
         )
 
     def login(self, correo: str, password: str) -> bool:

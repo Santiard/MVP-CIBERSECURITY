@@ -5,24 +5,19 @@ import QuestionForm from './QuestionForm';
 
 type Props = {
   open: boolean;
-  initial?: { id?: string; name?: string; description?: string; dimensions?: number; active?: boolean; confidencialidad?: boolean; integridad?: boolean; disponibilidad?: boolean; rec_alta?: string; rec_media?: string; rec_baja?: string };
+  initial?: { id?: string; name?: string; description?: string; active?: boolean; aplica_nivel_bajo?: boolean; aplica_nivel_medio?: boolean; aplica_nivel_alto?: boolean };
   onClose: () => void;
   onSaved: (result?: any) => void;
-  saveFn: (payload: { name: string; description: string; dimensions: number; active: boolean; confidencialidad: boolean; integridad: boolean; disponibilidad: boolean; rec_alta: string; rec_media: string; rec_baja: string }) => Promise<any>;
+  saveFn: (payload: { name: string; description: string; active: boolean; aplica_nivel_bajo: boolean; aplica_nivel_medio: boolean; aplica_nivel_alto: boolean }) => Promise<any>;
 };
 
 const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, saveFn }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [dimensions, setDimensions] = useState(3);
   const [active, setActive] = useState(true);
-  const [conf, setConf] = useState(false);
-  const [integ, setInteg] = useState(false);
-  const [disp, setDisp] = useState(false);
-
-  const [recAlta, setRecAlta] = useState('');
-  const [recMedia, setRecMedia] = useState('');
-  const [recBaja, setRecBaja] = useState('');
+  const [aplicaNivelBajo, setAplicaNivelBajo] = useState(false);
+  const [aplicaNivelMedio, setAplicaNivelMedio] = useState(false);
+  const [aplicaNivelAlto, setAplicaNivelAlto] = useState(false);
   
   // Transfer list states
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
@@ -53,10 +48,6 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
           }
         }
         setSelectedIds(sel);
-      } else {
-        // If creating a new form, keep whatever the user has manually selected
-        // However, if we just created a new question (via QuestionForm), we might want to automatically select it.
-        // That will be handled by onSavedQuestion.
       }
     } catch (err) {
       showAlert({ type: 'error', title: 'Error', message: 'No se pudo cargar el banco de preguntas.' });
@@ -69,14 +60,10 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     if (open) {
       setName(initial?.name ?? '');
       setDescription(initial?.description ?? '');
-      setDimensions(initial?.dimensions ?? 3);
       setActive(initial?.active ?? true);
-      setConf(initial?.confidencialidad ?? false);
-      setInteg(initial?.integridad ?? false);
-      setDisp(initial?.disponibilidad ?? false);
-      setRecAlta(initial?.rec_alta ?? '');
-      setRecMedia(initial?.rec_media ?? '');
-      setRecBaja(initial?.rec_baja ?? '');
+      setAplicaNivelBajo(initial?.aplica_nivel_bajo ?? false);
+      setAplicaNivelMedio(initial?.aplica_nivel_medio ?? false);
+      setAplicaNivelAlto(initial?.aplica_nivel_alto ?? false);
       
       setSelectedIds(new Set());
       void loadBank(initial?.id);
@@ -87,7 +74,7 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   }, [open, initial]);
 
   const handleSavedQuestion = async (createdId?: string) => {
-    await loadBank(initial?.id); // Refresh bank to get the new question
+    await loadBank(initial?.id); 
     if (createdId) {
       setSelectedIds(prev => {
         const next = new Set(prev);
@@ -102,7 +89,6 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     const missingFields: string[] = [];
     if (!name.trim()) missingFields.push('Nombre');
     if (!description.trim()) missingFields.push('Descripción');
-    if (!Number.isFinite(dimensions) || dimensions < 1) missingFields.push('Dimensiones');
     if (missingFields.length > 0) {
       showAlert({
         type: 'warning',
@@ -115,9 +101,12 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     setSaving(true);
     try {
       const result = await saveFn({ 
-        name: name.trim(), description: description.trim(), dimensions, active, 
-        confidencialidad: conf, integridad: integ, disponibilidad: disp,
-        rec_alta: recAlta.trim(), rec_media: recMedia.trim(), rec_baja: recBaja.trim()
+        name: name.trim(), 
+        description: description.trim(), 
+        active, 
+        aplica_nivel_bajo: aplicaNivelBajo,
+        aplica_nivel_medio: aplicaNivelMedio,
+        aplica_nivel_alto: aplicaNivelAlto
       });
       
       const controlIdNum = Number(result.id || initial?.id);
@@ -251,57 +240,36 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
               <label style={{ display: 'block', marginBottom: 4, fontSize: 13, color: 'var(--muted)' }}>Nombre *</label>
               <input value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }} />
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: 4, fontSize: 13, color: 'var(--muted)' }}>Dimensiones *</label>
-              <input type="number" value={dimensions} onChange={e => setDimensions(Number(e.target.value))} min={1} max={20} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }} />
-            </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'block', marginBottom: 4, fontSize: 13, color: 'var(--muted)' }}>Descripción *</label>
               <textarea value={description} onChange={e => setDescription(e.target.value)} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box', minHeight: 60, fontFamily: 'inherit', resize: 'vertical' }} />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
-                Formulario Activo
-              </label>
-            </div>
             
             <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 24, padding: '12px 16px', background: 'var(--surface-light)', borderRadius: 8, border: '1px solid var(--border)' }}>
               <div>
-                <strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>Dimensiones Afectadas (CIA)</strong>
+                <strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>Niveles de Usuario que responden este formulario</strong>
                 <div style={{ display: 'flex', gap: 24 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                    <input type="checkbox" checked={conf} onChange={e => setConf(e.target.checked)} />
-                    Confidencialidad (C)
+                    <input type="checkbox" checked={aplicaNivelBajo} onChange={e => setAplicaNivelBajo(e.target.checked)} />
+                    Nivel Bajo
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                    <input type="checkbox" checked={integ} onChange={e => setInteg(e.target.checked)} />
-                    Integridad (I)
+                    <input type="checkbox" checked={aplicaNivelMedio} onChange={e => setAplicaNivelMedio(e.target.checked)} />
+                    Nivel Medio
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                    <input type="checkbox" checked={disp} onChange={e => setDisp(e.target.checked)} />
-                    Disponibilidad (D)
+                    <input type="checkbox" checked={aplicaNivelAlto} onChange={e => setAplicaNivelAlto(e.target.checked)} />
+                    Nivel Alto
                   </label>
                 </div>
               </div>
             </div>
 
-            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12, padding: '16px', background: 'var(--background)', borderRadius: 8, border: '1px solid var(--border)' }}>
-              <h3 style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)' }}>Recomendaciones para el Plan de Mejora</h3>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Define qué sugerirá el sistema según el puntaje obtenido por la organización en este formulario.</p>
-              
-              <div style={{ display: 'grid', gap: 4 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--danger)' }}>Riesgo Crítico (Puntaje &lt; 40%)</label>
-                <textarea className="input" rows={2} value={recAlta} onChange={e => setRecAlta(e.target.value)} placeholder="Ej: Establecer políticas formales. Riesgo de operación sin lineamientos..." style={{ resize: 'vertical' }} />
-              </div>
-              <div style={{ display: 'grid', gap: 4 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>Riesgo Moderado (Puntaje &lt; 70%)</label>
-                <textarea className="input" rows={2} value={recMedia} onChange={e => setRecMedia(e.target.value)} placeholder="Ej: Revisar y actualizar las políticas existentes..." style={{ resize: 'vertical' }} />
-              </div>
-              <div style={{ display: 'grid', gap: 4 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--success)' }}>Riesgo Bajo / Mantenimiento (Puntaje &ge; 70%)</label>
-                <textarea className="input" rows={2} value={recBaja} onChange={e => setRecBaja(e.target.value)} placeholder="Ej: Mantener revisiones periódicas y auditorías..." style={{ resize: 'vertical' }} />
-              </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+                <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+                Formulario Activo
+              </label>
             </div>
           </div>
 

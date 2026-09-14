@@ -45,10 +45,14 @@ export function isStaffRole(role: AppRole | null): boolean {
   return role === 'admin' || role === 'evaluator';
 }
 
+export function isUserRole(role: AppRole | null): boolean {
+  return role === 'user_nivel_bajo' || role === 'user_nivel_medio' || role === 'user_nivel_alto';
+}
+
 export function getNavItemsByRole(role: AppRole | null): NavItem[] {
   if (role === 'admin') return ADMIN_NAV;
   if (role === 'evaluator') return EVALUATOR_NAV;
-  if (role === 'user') return USER_NAV;
+  if (isUserRole(role)) return USER_NAV;
   return [];
 }
 
@@ -68,7 +72,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
     return false;
   }
 
-  if (role === 'user') {
+  if (isUserRole(role)) {
     if (path === '/RecoverPage' || path === '/recover-password') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
     if (path === '/reports' || /^\/reports\/[^/]+$/.test(path) || /^\/reports\/[^/]+\/report$/.test(path)) return true;

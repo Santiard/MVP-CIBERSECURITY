@@ -5,6 +5,7 @@ export type AnswerValue = { valor?: number; comentario?: string };
 export type EvaluationApiRow = {
   id_evaluacion: number;
   id_empresa: number;
+  id_formulario: number;
   id_usuario: number;
   fecha: string;
   estado: string;
@@ -19,17 +20,6 @@ export type EvaluationApiRow = {
 
 export type EvaluationDetail = EvaluationApiRow & {
   answers: Record<string, AnswerValue>;
-};
-
-export type ControlLinkedRow = {
-  id_control: number;
-  nombre: string;
-  descripcion: string;
-  dimensiones: number;
-  activo: boolean;
-  confidencialidad: boolean;
-  integridad: boolean;
-  disponibilidad: boolean;
 };
 
 async function readErrorMessage(res: Response): Promise<string> {
@@ -55,6 +45,7 @@ async function readErrorMessage(res: Response): Promise<string> {
 function normalizeEvaluation(raw: Record<string, unknown>): EvaluationApiRow {
   const id_evaluacion = Number(raw.id_evaluacion ?? raw.id ?? 0);
   const id_empresa = Number(raw.id_empresa ?? raw.organization_id ?? 0);
+  const id_formulario = Number(raw.id_formulario ?? 0);
   const id_usuario = Number(raw.id_usuario ?? raw.user_id ?? 0);
   let fecha = "";
   if (raw.fecha != null && raw.fecha !== "") {
@@ -71,6 +62,7 @@ function normalizeEvaluation(raw: Record<string, unknown>): EvaluationApiRow {
   return {
     id_evaluacion,
     id_empresa,
+    id_formulario,
     id_usuario,
     fecha,
     estado,
@@ -137,6 +129,7 @@ export async function getEvaluationById(id: string | number): Promise<Evaluation
 
 export async function createEvaluation(payload: {
   id_empresa: number;
+  id_formulario: number;
   id_usuario?: number;
   id_evaluador?: number;
   fecha?: string;
@@ -146,6 +139,7 @@ export async function createEvaluation(payload: {
     method: "POST",
     body: JSON.stringify({
       id_empresa: payload.id_empresa,
+      id_formulario: payload.id_formulario,
       id_usuario: payload.id_usuario,
       evaluator_id: payload.id_evaluador,
       fecha: payload.fecha,
@@ -153,7 +147,7 @@ export async function createEvaluation(payload: {
     }),
   });
   if (!response.ok) {
-    throw new Error("No se pudo crear la evaluación");
+    throw new Error(await readErrorMessage(response));
   }
   const raw = (await response.json()) as Record<string, unknown>;
   return normalizeEvaluationDetail(raw);
@@ -161,10 +155,11 @@ export async function createEvaluation(payload: {
 
 export async function patchEvaluation(
   id: string | number,
-  patch: { id_empresa?: number; id_evaluador?: number; estado?: string; fecha?: string; answers?: Record<string, AnswerValue> },
+  patch: { id_empresa?: number; id_formulario?: number; id_evaluador?: number; estado?: string; fecha?: string; answers?: Record<string, AnswerValue> },
 ): Promise<EvaluationDetail> {
   const body: Record<string, unknown> = {};
   if (patch.id_empresa != null) body.id_empresa = patch.id_empresa;
+  if (patch.id_formulario != null) body.id_formulario = patch.id_formulario;
   if (patch.id_evaluador !== undefined) body.evaluator_id = patch.id_evaluador;
   if (patch.estado != null) body.estado = patch.estado;
   if (patch.fecha != null) body.fecha = patch.fecha;
@@ -174,7 +169,7 @@ export async function patchEvaluation(
     body: JSON.stringify(body),
   });
   if (!response.ok) {
-    throw new Error("No se pudo actualizar la evaluación");
+    throw new Error(await readErrorMessage(response));
   }
   const raw = (await response.json()) as Record<string, unknown>;
   return normalizeEvaluationDetail(raw);
@@ -182,35 +177,6 @@ export async function patchEvaluation(
 
 export async function deleteEvaluation(id: string | number): Promise<void> {
   const response = await apiFetch(`/evaluations/${id}`, { method: "DELETE" });
-  if (!response.ok) {
-    throw new Error("No se pudo eliminar la evaluación");
-  }
-}
-
-export async function listEvaluationControls(evaluationId: number): Promise<ControlLinkedRow[]> {
-  const response = await apiFetch(`/evaluations/${evaluationId}/controles`, { method: "GET" });
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
-  }
-  const data = (await response.json()) as unknown;
-  if (!Array.isArray(data)) return [];
-  return data as ControlLinkedRow[];
-}
-
-export async function linkEvaluationControlsBulk(evaluationId: number, control_ids: number[]): Promise<void> {
-  const response = await apiFetch(`/evaluations/${evaluationId}/controles`, {
-    method: "POST",
-    body: JSON.stringify({ control_ids }),
-  });
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
-  }
-}
-
-export async function detachEvaluationControl(evaluationId: number, controlId: number): Promise<void> {
-  const response = await apiFetch(`/evaluations/${evaluationId}/controles/${controlId}`, {
-    method: "DELETE",
-  });
   if (!response.ok) {
     throw new Error(await readErrorMessage(response));
   }

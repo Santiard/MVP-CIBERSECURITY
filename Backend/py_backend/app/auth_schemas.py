@@ -34,3 +34,5 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     phone: str | None = None
+    id_empresa: int | None = None
+    role: str = "user_nivel_bajo"

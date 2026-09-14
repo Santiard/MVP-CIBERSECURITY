@@ -36,6 +36,7 @@ class EvaluationCreate(BaseModel):
         default=None,
         validation_alias=AliasChoices("organization_id", "id_empresa"),
     )
+    id_formulario: int
     answers: Optional[Dict[str, Any]] = None
     user_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("user_id", "id_usuario"))
     evaluator_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("evaluator_id", "id_evaluador"))
@@ -51,6 +52,7 @@ class EvaluationCreate(BaseModel):
 
 class EvaluationUpdate(BaseModel):
     organization_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("organization_id", "id_empresa"))
+    id_formulario: Optional[int] = None
     answers: Optional[Dict[str, Any]] = None
     user_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("user_id", "id_usuario"))
     evaluator_id: Optional[int] = Field(default=None, validation_alias=AliasChoices("evaluator_id", "id_evaluador"))
@@ -65,6 +67,7 @@ class EvaluationRead(BaseModel):
 
     id: int
     organization_id: int
+    id_formulario: int
     answers: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
     user_id: Optional[int] = None
@@ -77,8 +80,22 @@ class EvaluationRead(BaseModel):
     estado: Optional[str] = None
 
 
-class ControlLinkedRead(BaseModel):
-    """Control (cuestionario) vinculado a una evaluación."""
+class FormularioRead(BaseModel):
+    """Esquema de lectura para Formularios (Plantillas)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id_formulario: int
+    nombre: str
+    descripcion: str
+    activo: bool
+    aplica_nivel_bajo: bool
+    aplica_nivel_medio: bool
+    aplica_nivel_alto: bool
+
+
+class ControlRead(BaseModel):
+    """Esquema de lectura para Controles ISO."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -95,10 +112,14 @@ class ControlLinkedRead(BaseModel):
     rec_baja: str
 
 
-class EvaluationLinkControlsBody(BaseModel):
-    """Enlazar varios controles al alcance de una evaluación (idempotente: ignora duplicados)."""
-
-    control_ids: list[int] = Field(min_length=1)
+class FormularioRandomCreate(BaseModel):
+    """Payload para autogenerar un Formulario."""
+    nombre: str
+    descripcion: str
+    aplica_nivel_bajo: bool = False
+    aplica_nivel_medio: bool = False
+    aplica_nivel_alto: bool = False
+    total_preguntas: int = 20
 
 
 class RiskRead(BaseModel):
@@ -131,11 +152,12 @@ class BankQuestionUpdate(BaseModel):
 
 
 class BankQuestionRead(BaseModel):
-    """Representación de una pregunta del banco con sus formularios vinculados."""
+    """Representación de una pregunta del banco."""
     model_config = ConfigDict(from_attributes=True)
 
     id_pregunta: int
     texto: str
     dimension: Optional[str] = None
     peso: float
-    controles: list[int] = []   # IDs de los formularios (controles) que la incluyen
+    controles_iso: list[int] = []   # IDs de los Controles ISO vinculados
+    formularios: list[int] = []     # IDs de los Formularios que la incluyen

@@ -3,7 +3,8 @@ from .models import (
 	AmenazaORM,
 	ControlORM,
 	EmpresaORM,
-	EvaluacionControlORM,
+	FormularioORM,
+	FormularioPreguntaORM,
 	EvaluacionORM,
 	IndicadorORM,
 	NivelMadurezORM,
@@ -17,7 +18,6 @@ from .models import (
 	RolORM,
 	ScoreORM,
 	UsuarioORM,
-	UsuarioOrganizacionORM,
 	VulnerabilidadORM,
 )
 
@@ -26,7 +26,8 @@ __all__ = [
 	"AmenazaORM",
 	"ControlORM",
 	"EmpresaORM",
-	"EvaluacionControlORM",
+	"FormularioORM",
+	"FormularioPreguntaORM",
 	"EvaluacionORM",
 	"IndicadorORM",
 	"NivelMadurezORM",
@@ -40,6 +41,5 @@ __all__ = [
 	"RolORM",
 	"ScoreORM",
 	"UsuarioORM",
-	"UsuarioOrganizacionORM",
 	"VulnerabilidadORM",
 ]

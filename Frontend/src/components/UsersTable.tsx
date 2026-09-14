@@ -177,7 +177,9 @@ const UsersTable: React.FC = () => {
           <option value="">Todos los roles</option>
           <option value="admin">Administrador</option>
           <option value="evaluator">Evaluador</option>
-          <option value="user">Usuario</option>
+          <option value="user_nivel_bajo">Usuario (Nivel Bajo)</option>
+          <option value="user_nivel_medio">Usuario (Nivel Medio)</option>
+          <option value="user_nivel_alto">Usuario (Nivel Alto)</option>
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}>
           <option value="">Todos los estados</option>

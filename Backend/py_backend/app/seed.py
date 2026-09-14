@@ -8,14 +8,14 @@ from infraestructure.database import (
     ActivoORM,
     ControlORM,
     EmpresaORM,
-    EvaluacionControlORM,
+    FormularioORM,
+    FormularioPreguntaORM,
     EvaluacionORM,
     PreguntaORM,
     RiesgoORM,
     RiesgoVulnerabilidadORM,
     RolORM,
     UsuarioORM,
-    UsuarioOrganizacionORM,
     VulnerabilidadORM,
 )
 
@@ -25,8 +25,22 @@ def _is_enabled(name: str, default: str = "true") -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _seed_empresas(session: Session) -> None:
+    empresas_seed = [
+        {"nombre": "ACME Ciberseguridad", "sector": "Servicios", "tamano": "Mediana"},
+        {"nombre": "Finanzas Orion", "sector": "Financiero", "tamano": "Grande"},
+    ]
+    existing_names = {item.nombre for item in session.exec(select(EmpresaORM)).all()}
+    for item in empresas_seed:
+        if item["nombre"] in existing_names:
+            continue
+        session.add(EmpresaORM(**item))
+    
+    session.flush()
+
+
 def _seed_roles_and_users(session: Session) -> None:
-    expected_roles = ["admin", "evaluator", "user"]
+    expected_roles = ["admin", "evaluator", "user_nivel_bajo", "user_nivel_medio", "user_nivel_alto"]
     existing_roles = {
         role.nombre: role
         for role in session.exec(select(RolORM)).all()
@@ -39,6 +53,9 @@ def _seed_roles_and_users(session: Session) -> None:
             existing_roles[role_name] = role
 
     session.flush()
+    
+    empresa_acme = session.exec(select(EmpresaORM).where(EmpresaORM.nombre == "ACME Ciberseguridad")).first()
+    empresa_id = empresa_acme.id_empresa if empresa_acme else None
 
     users_seed = [
         {
@@ -47,6 +64,7 @@ def _seed_roles_and_users(session: Session) -> None:
             "telefono": "+57 3000000001",
             "password": "Admin2026!Secure*",
             "rol": "admin",
+            "id_empresa": None,
         },
         {
             "nombre": "Evaluador Demo",
@@ -54,20 +72,37 @@ def _seed_roles_and_users(session: Session) -> None:
             "telefono": "+57 3000000002",
             "password": "ChangeMe123!",
             "rol": "evaluator",
+            "id_empresa": None,
         },
         {
-            "nombre": "Usuario Organizacion",
-            "correo": "usuario.org@mvp.local",
+            "nombre": "Usuario Nivel Bajo",
+            "correo": "usuario1@mvp.local",
             "telefono": "+57 3000000003",
             "password": "OrgUser123!",
-            "rol": "user",
+            "rol": "user_nivel_bajo",
+            "id_empresa": empresa_id,
+        },
+        {
+            "nombre": "Usuario Nivel Medio",
+            "correo": "usuario2@mvp.local",
+            "telefono": "+57 3000000004",
+            "password": "OrgUser123!",
+            "rol": "user_nivel_medio",
+            "id_empresa": empresa_id,
+        },
+        {
+            "nombre": "Usuario Nivel Alto",
+            "correo": "usuario3@mvp.local",
+            "telefono": "+57 3000000005",
+            "password": "OrgUser123!",
+            "rol": "user_nivel_alto",
+            "id_empresa": empresa_id,
         },
     ]
 
     existing_users = session.exec(select(UsuarioORM)).all()
     existing_emails = {user.correo for user in existing_users}
 
-    # Keep a single canonical admin account with the expected default credentials.
     admin_role_id = existing_roles["admin"].id_rol
     admin_user = next((u for u in existing_users if u.id_rol == admin_role_id), None)
     if admin_user is not None:
@@ -92,51 +127,18 @@ def _seed_roles_and_users(session: Session) -> None:
                 activo=True,
                 password=user["password"],
                 id_rol=existing_roles[user["rol"]].id_rol,
+                id_empresa=user["id_empresa"],
             )
         )
 
     session.flush()
 
 
-def _seed_empresas(session: Session) -> None:
-    empresas_seed = [
-        {"nombre": "ACME Ciberseguridad", "sector": "Servicios", "tamano": "Mediana"},
-        {"nombre": "Finanzas Orion", "sector": "Financiero", "tamano": "Grande"},
-    ]
-    existing_names = {item.nombre for item in session.exec(select(EmpresaORM)).all()}
-    for item in empresas_seed:
-        if item["nombre"] in existing_names:
-            continue
-        session.add(EmpresaORM(**item))
-
-
-def _seed_questionnaires(session: Session) -> None:
-    controls_seed = [
-        {
-            "nombre": "Gobierno y Politicas",
-            "descripcion": "Control base de gobierno y politicas de seguridad",
-            "dimensiones": 3,
-            "activo": True,
-            "confidencialidad": True,
-            "integridad": True,
-            "disponibilidad": True,
-            "rec_alta": "Establecer políticas formales de seguridad de la información. Sin un marco de gobierno definido, la organización opera sin lineamientos claros.",
-            "rec_media": "Revisar y actualizar las políticas existentes. Asegurar que estén difundidas y sean comprendidas por todo el personal.",
-            "rec_baja": "Mantener revisiones periódicas y auditorías del programa de gobierno.",
-        },
-        {
-            "nombre": "Proteccion de Endpoint",
-            "descripcion": "Control de proteccion para equipos de usuario",
-            "dimensiones": 2,
-            "activo": True,
-            "confidencialidad": True,
-            "integridad": True,
-            "disponibilidad": False,
-            "rec_alta": "Implementar soluciones de protección en los dispositivos de usuario final. Los equipos sin protección son la principal puerta de entrada de amenazas.",
-            "rec_media": "Fortalecer la gestión de parches y la configuración segura de endpoints.",
-            "rec_baja": "Considerar soluciones EDR avanzadas y revisión continua.",
-        },
-    ]
+def _seed_controls(session: Session) -> None:
+    try:
+        from app.iso_seed import controls_seed
+    except ImportError:
+        controls_seed = []
 
     existing_names = {
         item.nombre for item in session.exec(select(ControlORM)).all()
@@ -145,10 +147,10 @@ def _seed_questionnaires(session: Session) -> None:
         if item["nombre"] in existing_names:
             continue
         session.add(ControlORM(**item))
+    session.flush()
 
 
 def _seed_preguntas(session: Session) -> None:
-    """Al menos una pregunta por control para poder probar el flujo de cuestionario en el front."""
     from infraestructure.database.models import PreguntaControlORM
     for control in session.exec(select(ControlORM)).all():
         if control.id_control is None:
@@ -158,22 +160,60 @@ def _seed_preguntas(session: Session) -> None:
         ).first()
         if exists is not None:
             continue
-        for texto, peso in (
-            (f"Indique el nivel de madurez observado en: {control.nombre[:40]} (1-5)", 1.0),
-            ("Comentarios o evidencias relevantes (opcional en respuesta)", 0.5),
+        for texto, peso, dim in (
+            (f"Nivel de madurez de {control.nombre[:40]} (1-5)", 1.0, "General"),
+            (f"¿Existe documentación para {control.nombre[:30]}?", 0.5, "Documentación"),
         ):
-            p = PreguntaORM(texto=texto, peso=peso, dimension="General")
+            p = PreguntaORM(texto=texto, peso=peso, dimension=dim)
             session.add(p)
             session.flush()
             session.add(PreguntaControlORM(id_pregunta=p.id_pregunta, id_control=control.id_control))
+    session.flush()
+
+
+def _seed_formularios(session: Session) -> None:
+    forms_seed = [
+        {
+            "nombre": "Formulario Completo de Seguridad (Todos los Niveles)",
+            "descripcion": "Cuestionario base que evalúa los controles principales.",
+            "activo": True,
+            "aplica_nivel_bajo": True,
+            "aplica_nivel_medio": True,
+            "aplica_nivel_alto": True,
+        },
+        {
+            "nombre": "Formulario Estratégico (Sólo Directivos)",
+            "descripcion": "Cuestionario para alta gerencia.",
+            "activo": True,
+            "aplica_nivel_bajo": False,
+            "aplica_nivel_medio": False,
+            "aplica_nivel_alto": True,
+        }
+    ]
+
+    existing_names = {
+        item.nombre for item in session.exec(select(FormularioORM)).all()
+    }
+    
+    for item in forms_seed:
+        if item["nombre"] in existing_names:
+            continue
+        form = FormularioORM(**item)
+        session.add(form)
+        session.flush()
+        
+        # Link all questions to this form for demo purposes
+        preguntas = session.exec(select(PreguntaORM)).all()
+        for p in preguntas:
+            session.add(FormularioPreguntaORM(id_formulario=form.id_formulario, id_pregunta=p.id_pregunta))
+    
+    session.flush()
 
 
 def _seed_vulnerabilities(session: Session) -> None:
     empresa = session.exec(select(EmpresaORM).where(EmpresaORM.nombre == "ACME Ciberseguridad")).first()
     if empresa is None:
-        empresa = EmpresaORM(nombre="ACME Ciberseguridad", sector="Servicios", tamano="Mediana")
-        session.add(empresa)
-        session.flush()
+        return
 
     activo = session.exec(select(ActivoORM).where(ActivoORM.nombre == "Servidor Principal")).first()
     if activo is None:
@@ -222,8 +262,9 @@ def _seed_evaluaciones(session: Session) -> None:
         return
 
     empresa = session.exec(select(EmpresaORM)).first()
-    usuario = session.exec(select(UsuarioORM)).first()
-    if empresa is None or usuario is None:
+    usuario = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario3@mvp.local")).first()
+    formulario = session.exec(select(FormularioORM)).first()
+    if empresa is None or usuario is None or formulario is None:
         return
 
     ev = EvaluacionORM(
@@ -231,37 +272,10 @@ def _seed_evaluaciones(session: Session) -> None:
         estado="pendiente",
         id_usuario=usuario.id_usuario,
         id_empresa=empresa.id_empresa,
+        id_formulario=formulario.id_formulario,
     )
     session.add(ev)
     session.flush()
-    if ev.id_evaluacion is not None:
-        for control in session.exec(select(ControlORM)).all():
-            if control.id_control is None:
-                continue
-            session.add(
-                EvaluacionControlORM(id_evaluacion=ev.id_evaluacion, id_control=control.id_control)
-            )
-
-
-def _seed_user_organization_assignments(session: Session) -> None:
-    org = session.exec(select(EmpresaORM).where(EmpresaORM.nombre == "ACME Ciberseguridad")).first()
-    user = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario.org@mvp.local")).first()
-    if org is None or user is None or org.id_empresa is None or user.id_usuario is None:
-        return
-
-    existing = session.exec(
-        select(UsuarioOrganizacionORM).where(
-            UsuarioOrganizacionORM.id_usuario == user.id_usuario,
-            UsuarioOrganizacionORM.id_empresa == org.id_empresa,
-        )
-    ).first()
-    if existing is None:
-        session.add(
-            UsuarioOrganizacionORM(
-                id_usuario=user.id_usuario,
-                id_empresa=org.id_empresa,
-            )
-        )
 
 
 def seed_data_if_enabled() -> None:
@@ -269,11 +283,11 @@ def seed_data_if_enabled() -> None:
         return
 
     with Session(engine) as session:
-        _seed_roles_and_users(session)
         _seed_empresas(session)
-        _seed_questionnaires(session)
+        _seed_roles_and_users(session)
+        _seed_controls(session)
         _seed_preguntas(session)
+        _seed_formularios(session)
         _seed_vulnerabilities(session)
         _seed_evaluaciones(session)
-        _seed_user_organization_assignments(session)
         session.commit()

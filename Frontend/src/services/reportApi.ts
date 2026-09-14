@@ -159,10 +159,9 @@ export async function listReports(): Promise<ReportListItem[]> {
 export async function getReportByEvaluationId(id: string): Promise<ReportDetail> {
   const evalId = Number(id);
 
-  // 1. Load evaluation, linked controls, users, orgs in parallel
-  const [evaluation, controls, users, orgs] = await Promise.all([
+  // 1. Load evaluation, users, orgs in parallel
+  const [evaluation, users, orgs] = await Promise.all([
     getEvaluationById(evalId),
-    listEvaluationControls(evalId),
     fetchUsers(),
     fetchOrgs(),
   ]);
@@ -174,24 +173,31 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
   const orgId   = evaluation.organization_id ?? evaluation.id_empresa;
   const orgName = orgById.get(orgId) ?? `Organización #${orgId}`;
 
-  // Correct: use id_evaluador for the person who performed the evaluation
   const evalUserId     = evaluation.id_evaluador ?? evaluation.evaluator_id;
   const evaluatorName  = evalUserId ? (userById.get(evalUserId) ?? "No asignado") : "No asignado";
 
-  // Correct: use fecha (date of evaluation), not created_at
   const evaluationDate = evaluation.fecha
     ? String(evaluation.fecha).slice(0, 10)
     : (evaluation.created_at ? String(evaluation.created_at).slice(0, 10) : new Date().toISOString().slice(0, 10));
 
   const answers = evaluation.answers ?? {};
 
-  // 3. For each linked control, load its questions and compute score
-  const categories: ReportCategory[] = await Promise.all(
-    controls.map(async (control) => {
-      const questions = await dataService.getQuestionsByControl(String(control.id_control));
+  // Fetch questions for this formulario
+  const questions = await dataService.getQuestionsByControl(String(evaluation.id_formulario));
+
+  // Group by dimension
+  const byDimension: Record<string, typeof questions> = {};
+  for (const q of questions) {
+    const dim = q.dimension || "General";
+    if (!byDimension[dim]) byDimension[dim] = [];
+    byDimension[dim].push(q);
+  }
+
+  // 3. Create categories based on dimensions
+  const categories: ReportCategory[] = Object.entries(byDimension).map(([dim, qs], idx) => {
       let totalScore = 0;
       let answered = 0;
-      for (const q of questions) {
+      for (const q of qs) {
         const answer = answers[q.id];
         const rawValor = answer?.valor;
         const score = scoreFromValor(rawValor);
@@ -200,26 +206,26 @@ export async function getReportByEvaluationId(id: string): Promise<ReportDetail>
           answered++;
         }
       }
-      const avgScore = questions.length > 0
-        ? (answered > 0 ? Math.round(totalScore / questions.length) : 0)
+      const avgScore = qs.length > 0
+        ? (answered > 0 ? Math.round(totalScore / qs.length) : 0)
         : 0;
 
       return {
-        id: `ctrl-${control.id_control}`,
-        name: control.nombre,
+        id: `dim-${idx}`,
+        name: dim,
         value: avgScore,
         answered,
-        total: questions.length,
+        total: qs.length,
         dimensions: {
-          confidencialidad: control.confidencialidad ?? false,
-          integridad: control.integridad ?? false,
-          disponibilidad: control.disponibilidad ?? false,
+          confidencialidad: true,
+          integridad: true,
+          disponibilidad: true,
         },
-        rec_alta: (control as any).rec_alta || `Riesgo crítico en ${control.nombre}. Priorizar implementación de controles básicos.`,
-        rec_media: (control as any).rec_media || `Riesgo moderado en ${control.nombre}. Fortalecer controles y realizar seguimiento.`,
-        rec_baja: (control as any).rec_baja || `Riesgo bajo en ${control.nombre}. Mantener programa continuo y revisiones periódicas.`,
+        rec_alta: `Riesgo crítico en ${dim}. Priorizar implementación de controles básicos.`,
+        rec_media: `Riesgo moderado en ${dim}. Fortalecer controles y realizar seguimiento.`,
+        rec_baja: `Riesgo bajo en ${dim}. Mantener programa continuo y revisiones periódicas.`,
       };
-    })
+    }
   );
 
   // 4. Global score = weighted average across all questions

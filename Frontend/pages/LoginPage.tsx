@@ -13,7 +13,7 @@ import PasswordToggle from '../src/components/PasswordToggle';
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL && String(import.meta.env.VITE_API_BASE_URL).trim()) ||
-  'http://localhost:8000';
+  'http://localhost:8001';
 
 /** FastAPI suele devolver `{ detail: string }` o `{ detail: [{ msg: string, ... }] }`. */
 function messageFromFastApiBody(body: unknown): string | null {

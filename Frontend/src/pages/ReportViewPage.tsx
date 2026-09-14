@@ -115,29 +115,26 @@ const ReportViewPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    import('../services/evaluationApi').then(async ({ getEvaluationById, listEvaluationControls }) => {
+    import('../services/evaluationApi').then(async ({ getEvaluationById }) => {
       const dataService = (await import('../services/dataService')).default;
-      const [rep, ev, ctrls] = await Promise.all([
+      const [rep, ev] = await Promise.all([
         getReportByEvaluationId(id),
         getEvaluationById(id),
-        listEvaluationControls(Number(id)),
       ]);
       setReport(rep);
 
       // Build control+question detail with answers
-      const details = await Promise.all(ctrls.map(async (ctrl) => {
-        const qs = await dataService.getQuestionsByControl(String(ctrl.id_control));
-        return {
-          controlId: ctrl.id_control,
-          controlName: ctrl.nombre,
-          questions: qs.map((q) => ({
-            id: q.id,
-            text: q.text,
-            valor: ev.answers?.[q.id]?.valor !== undefined ? Number(ev.answers[q.id].valor) : undefined,
-            comentario: ev.answers?.[q.id]?.comentario,
-          })),
-        };
-      }));
+      const qs = await dataService.getQuestionsByControl(String(ev.id_formulario));
+      const details = [{
+        controlId: ev.id_formulario,
+        controlName: 'Formulario',
+        questions: qs.map((q) => ({
+          id: q.id,
+          text: q.text,
+          valor: ev.answers?.[q.id]?.valor !== undefined ? Number(ev.answers[q.id].valor) : undefined,
+          comentario: ev.answers?.[q.id]?.comentario,
+        })),
+      }];
       setControlDetails(details);
     }).catch(() => setError('No se pudo cargar el reporte.')).finally(() => setLoading(false));
   }, [id]);

@@ -155,7 +155,9 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
       <select value={role} onChange={e => setRole(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }}>
         <option value="admin">Administrador</option>
         <option value="evaluator">Evaluador</option>
-        <option value="user">Usuario</option>
+        <option value="user_nivel_bajo">Usuario (Nivel Bajo)</option>
+        <option value="user_nivel_medio">Usuario (Nivel Medio)</option>
+        <option value="user_nivel_alto">Usuario (Nivel Alto)</option>
       </select>
 
       <label style={{ fontSize: 12 }}>{initial?.id ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</label>

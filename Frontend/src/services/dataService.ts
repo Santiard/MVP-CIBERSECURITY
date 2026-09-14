@@ -16,7 +16,7 @@ type User = {
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'evaluator' | 'user';
+  role: 'admin' | 'evaluator' | 'user_nivel_bajo' | 'user_nivel_medio' | 'user_nivel_alto';
   active?: boolean;
   password?: string;
 };
@@ -35,8 +35,10 @@ type Questionnaire = {
   id: string;
   name: string;
   description: string;
-  dimensions: number;
   active: boolean;
+  aplica_nivel_bajo: boolean;
+  aplica_nivel_medio: boolean;
+  aplica_nivel_alto: boolean;
 };
 
 type RoleApi = { id_rol: number; nombre: string };
@@ -50,16 +52,18 @@ type UserApi = {
   password?: string;
 };
 type QuestionnaireApi = {
-  id_control: number;
+  id_formulario: number;
   nombre: string;
   descripcion: string;
-  dimensiones?: number;
   activo?: boolean;
+  aplica_nivel_bajo?: boolean;
+  aplica_nivel_medio?: boolean;
+  aplica_nivel_alto?: boolean;
 };
 
 type QuestionApi = {
   id_pregunta: number;
-  id_control: number;
+  id_control?: number;
   texto: string;
   dimension?: string;
   orden?: number;
@@ -166,16 +170,15 @@ const dataService = {
 
   // --- Questions (Preguntas) ---
   getQuestionsByControl: async (controlId: string): Promise<Question[]> => {
-    // Backend now uses pregunta_control junction table; returns dimension directly from PreguntaORM
-    const rows = await readJson<QuestionApi[]>(`/questions/by-control/${encodeURIComponent(controlId)}`);
+    const rows = await readJson<any[]>(`/question-bank/by-formulario/${encodeURIComponent(controlId)}`);
     return rows.map((q) => ({
       id: String(q.id_pregunta),
-      controlId: String(controlId), // use the requested controlId for UI consistency
+      controlId: String(controlId), // map to UI field
       text: q.texto,
       dimension: q.dimension ?? '',
       order: q.orden ?? 0,
       peso: q.peso,
-      active: q.activo ?? true,
+      active: true, // Bank questions don't have individual active flags for forms
     }));
   },
 
@@ -333,34 +336,49 @@ const dataService = {
   getQuestionnaires: async (): Promise<Questionnaire[]> => {
     const rows = await readJson<QuestionnaireApi[]>('/questionnaires');
     return rows.map((q) => ({
-      id: String(q.id_control),
+      id: String(q.id_formulario),
       name: q.nombre,
       description: q.descripcion,
-      dimensions: q.dimensiones ?? 0,
       active: q.activo ?? true,
+      aplica_nivel_bajo: q.aplica_nivel_bajo ?? false,
+      aplica_nivel_medio: q.aplica_nivel_medio ?? false,
+      aplica_nivel_alto: q.aplica_nivel_alto ?? false,
     }));
   },
   createQuestionnaire: async (q: Omit<Questionnaire, 'id'>) => {
     const created = await writeJson<QuestionnaireApi>('/questionnaires', 'POST', {
       nombre: q.name,
       descripcion: q.description,
-      dimensiones: q.dimensions,
       activo: q.active,
-      confidencialidad: false,
-      integridad: false,
-      disponibilidad: false,
+      aplica_nivel_bajo: q.aplica_nivel_bajo,
+      aplica_nivel_medio: q.aplica_nivel_medio,
+      aplica_nivel_alto: q.aplica_nivel_alto,
     });
     return {
-      id: String(created.id_control),
+      id: String(created.id_formulario),
       ...q,
+    };
+  },
+  generateRandomQuestionnaire: async (payload: { nombre: string; descripcion: string; total_preguntas: number; aplica_nivel_bajo: boolean; aplica_nivel_medio: boolean; aplica_nivel_alto: boolean }) => {
+    const created = await writeJson<QuestionnaireApi>('/questionnaires/generate-random', 'POST', payload);
+    return {
+      id: String(created.id_formulario),
+      name: created.nombre,
+      description: created.descripcion,
+      active: created.activo ?? true,
+      aplica_nivel_bajo: created.aplica_nivel_bajo ?? false,
+      aplica_nivel_medio: created.aplica_nivel_medio ?? false,
+      aplica_nivel_alto: created.aplica_nivel_alto ?? false,
     };
   },
   updateQuestionnaire: async (id: string, patch: Partial<Questionnaire>) => {
     const payload: Record<string, unknown> = {};
     if (patch.name !== undefined) payload.nombre = patch.name;
     if (patch.description !== undefined) payload.descripcion = patch.description;
-    if (patch.dimensions !== undefined) payload.dimensiones = patch.dimensions;
     if (patch.active !== undefined) payload.activo = patch.active;
+    if (patch.aplica_nivel_bajo !== undefined) payload.aplica_nivel_bajo = patch.aplica_nivel_bajo;
+    if (patch.aplica_nivel_medio !== undefined) payload.aplica_nivel_medio = patch.aplica_nivel_medio;
+    if (patch.aplica_nivel_alto !== undefined) payload.aplica_nivel_alto = patch.aplica_nivel_alto;
 
     await writeJson(`/questionnaires/${id}`, 'PATCH', payload);
     const rows = await dataService.getQuestionnaires();

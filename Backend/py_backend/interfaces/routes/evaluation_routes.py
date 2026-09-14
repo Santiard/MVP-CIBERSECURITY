@@ -6,13 +6,11 @@ from sqlmodel import Session, select
 from app.access_control import get_assigned_organization_ids, is_org_user, is_staff, role_lower
 from app.db import engine
 from app.schemas import (
-    ControlLinkedRead,
     EvaluationCreate,
-    EvaluationLinkControlsBody,
     EvaluationRead,
     EvaluationUpdate,
 )
-from infraestructure.database import ControlORM, EvaluacionControlORM, EvaluacionORM
+from infraestructure.database import FormularioORM, EvaluacionORM, UsuarioORM, RolORM
 from interfaces.controllers.evaluation_controller import EvaluationController
 from interfaces.middlewares.auth_middleware import auth_middleware
 
@@ -42,6 +40,7 @@ def _eval_to_read(e: EvaluacionORM) -> EvaluationRead:
     return EvaluationRead(
         id=eid,
         organization_id=e.id_empresa,
+        id_formulario=e.id_formulario,
         answers=e.datos_respuestas or {},
         created_at=e.creado_en,
         user_id=e.id_usuario,
@@ -74,9 +73,27 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
         uid = self_uid
     else:
         uid = int(input_data.user_id) if input_data.user_id is not None else self_uid
+
+    # Validar que el Formulario aplique al rol del usuario
+    with Session(engine) as session:
+        target_user = session.get(UsuarioORM, uid)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Usuario asignado no encontrado")
+        rol_obj = session.get(RolORM, target_user.id_rol)
+        target_role = rol_obj.nombre if rol_obj else ""
+
+        form = session.get(FormularioORM, input_data.id_formulario)
+        if not form:
+            raise HTTPException(status_code=404, detail="Formulario no encontrado")
+
+        if target_role == "user_nivel_bajo" and not form.aplica_nivel_bajo:
+            raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel bajo.")
+        elif target_role == "user_nivel_medio" and not form.aplica_nivel_medio:
+            raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel medio.")
+        elif target_role == "user_nivel_alto" and not form.aplica_nivel_alto:
+            raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel alto.")
+
     fecha_eval = input_data.fecha or date.today()
-
-
 
     payload = input_data.model_dump()
     payload["user_id"] = uid
@@ -87,6 +104,7 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
     payload["fecha"] = fecha_eval
     if not payload.get("estado"):
         payload["estado"] = "pendiente"
+    
     item = controller.create(payload)
     return _eval_to_read(item)
 
@@ -152,6 +170,21 @@ def update_evaluation(
             )
             if target_org not in allowed:
                 raise HTTPException(status_code=403, detail="No autorizado para modificar esta evaluación")
+        
+        # Validar cambio de formulario
+        if input_data.id_formulario is not None and input_data.id_formulario != item.id_formulario:
+            target_user = session.get(UsuarioORM, item.id_usuario)
+            rol_obj = session.get(RolORM, target_user.id_rol)
+            target_role = rol_obj.nombre if rol_obj else ""
+            form = session.get(FormularioORM, input_data.id_formulario)
+            if not form:
+                raise HTTPException(status_code=404, detail="Formulario no encontrado")
+            if target_role == "user_nivel_bajo" and not form.aplica_nivel_bajo:
+                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel bajo.")
+            elif target_role == "user_nivel_medio" and not form.aplica_nivel_medio:
+                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel medio.")
+            elif target_role == "user_nivel_alto" and not form.aplica_nivel_alto:
+                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel alto.")
 
     patch = input_data.model_dump(exclude_unset=True)
     if "answers" in patch and patch.get("answers") is not None:
@@ -182,6 +215,8 @@ def update_evaluation(
         repo_patch["estado"] = patch["estado"]
     if "fecha" in patch:
         repo_patch["fecha"] = patch["fecha"]
+    if "id_formulario" in patch:
+        repo_patch["id_formulario"] = patch["id_formulario"]
 
     updated = controller.repo.update(evaluation_id, repo_patch)
     if updated is None:
@@ -203,104 +238,3 @@ def delete_evaluation(evaluation_id: int, current_user: dict = Depends(auth_midd
     if not deleted:
         raise HTTPException(status_code=404, detail="Evaluación no encontrada")
     return {"deleted": True, "id": evaluation_id}
-
-
-@router.get("/{evaluation_id}/controles", response_model=list[ControlLinkedRead])
-def list_controls_for_evaluation(
-    evaluation_id: int,
-    current_user: dict = Depends(auth_middleware),
-):
-    """Controles enlazados a la evaluación (tabla evaluacion_control)."""
-    with Session(engine) as session:
-        _evaluacion_con_acceso(session, evaluation_id, current_user)
-        stmt = (
-            select(ControlORM)
-            .join(
-                EvaluacionControlORM,
-                EvaluacionControlORM.id_control == ControlORM.id_control,
-            )
-            .where(EvaluacionControlORM.id_evaluacion == evaluation_id)
-        )
-        rows = session.exec(stmt).all()
-        return [ControlLinkedRead.model_validate(c) for c in rows]
-
-
-@router.delete("/{evaluation_id}/controles/{control_id}")
-def detach_control_from_evaluation(
-    evaluation_id: int,
-    control_id: int,
-    current_user: dict = Depends(auth_middleware),
-):
-    """Quita el vínculo Evaluación–Control (no borra el control)."""
-    with Session(engine) as session:
-        _evaluacion_con_acceso(session, evaluation_id, current_user)
-        link = session.exec(
-            select(EvaluacionControlORM).where(
-                EvaluacionControlORM.id_evaluacion == evaluation_id,
-                EvaluacionControlORM.id_control == control_id,
-            )
-        ).first()
-        if link is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Este control no está vinculado a la evaluación",
-            )
-        session.delete(link)
-        session.commit()
-    return {"deleted": True, "evaluation_id": evaluation_id, "control_id": control_id}
-
-
-@router.post("/{evaluation_id}/controles", status_code=201)
-def attach_controls_bulk(
-    evaluation_id: int,
-    body: EvaluationLinkControlsBody,
-    current_user: dict = Depends(auth_middleware),
-):
-    """Enlaza varios controles a la vez (omitir los ya enlazados)."""
-    with Session(engine) as session:
-        _evaluacion_con_acceso(session, evaluation_id, current_user)
-        created = 0
-        for control_id in body.control_ids:
-            ctrl = session.get(ControlORM, control_id)
-            if ctrl is None:
-                raise HTTPException(status_code=404, detail=f"Control {control_id} no existe")
-            exists = session.exec(
-                select(EvaluacionControlORM).where(
-                    EvaluacionControlORM.id_evaluacion == evaluation_id,
-                    EvaluacionControlORM.id_control == control_id,
-                )
-            ).first()
-            if exists is None:
-                session.add(EvaluacionControlORM(id_evaluacion=evaluation_id, id_control=control_id))
-                created += 1
-        session.commit()
-    return {
-        "evaluation_id": evaluation_id,
-        "control_ids": body.control_ids,
-        "new_links": created,
-    }
-
-
-@router.post("/{evaluation_id}/controles/{control_id}", status_code=201)
-def attach_control_to_evaluation(
-    evaluation_id: int,
-    control_id: int,
-    current_user: dict = Depends(auth_middleware),
-):
-    """UML: asociar un Control al alcance de una Evaluación (tabla evaluacion_control)."""
-    with Session(engine) as session:
-        _evaluacion_con_acceso(session, evaluation_id, current_user)
-        ctrl = session.get(ControlORM, control_id)
-        if ctrl is None:
-            raise HTTPException(status_code=404, detail="Control no encontrado")
-        exists = session.exec(
-            select(EvaluacionControlORM).where(
-                EvaluacionControlORM.id_evaluacion == evaluation_id,
-                EvaluacionControlORM.id_control == control_id,
-            )
-        ).first()
-        if exists:
-            return {"evaluation_id": evaluation_id, "control_id": control_id, "linked": True, "already": True}
-        session.add(EvaluacionControlORM(id_evaluacion=evaluation_id, id_control=control_id))
-        session.commit()
-    return {"evaluation_id": evaluation_id, "control_id": control_id, "linked": True}

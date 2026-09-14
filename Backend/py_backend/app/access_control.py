@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, status
 from sqlmodel import Session, select
 
 from app.auth import get_current_user
-from infraestructure.database import UsuarioOrganizacionORM
+
 
 
 def role_lower(current_user: dict) -> str:
@@ -43,12 +43,13 @@ require_staff = require_roles("admin", "evaluator")
 
 
 def get_assigned_organization_ids(session: Session, user_id: int) -> list[int]:
-    rows = session.exec(
-        select(UsuarioOrganizacionORM).where(UsuarioOrganizacionORM.id_usuario == user_id)
-    ).all()
-    return [row.id_empresa for row in rows]
+    from infraestructure.database.models import UsuarioORM
+    user = session.get(UsuarioORM, user_id)
+    if user and user.id_empresa:
+        return [user.id_empresa]
+    return []
 
 
 def is_org_user(current_user: dict) -> bool:
-    """Rol `user`: usuario de empresa; el alcance se restringe por `usuario_organizacion`."""
-    return role_lower(current_user) == "user"
+    """Roles de nivel: usuario de empresa; el alcance se restringe por id_empresa."""
+    return role_lower(current_user).startswith("user_nivel_")

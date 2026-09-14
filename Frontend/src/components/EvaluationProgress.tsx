@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { getEvaluationById, listEvaluationControls } from "../services/evaluationApi";
+import { getEvaluationById } from "../services/evaluationApi";
 import dataService from "../services/dataService";
 
 const EvaluationProgress: React.FC<{ evaluationId: number }> = ({ evaluationId }) => {
@@ -13,13 +13,8 @@ const EvaluationProgress: React.FC<{ evaluationId: number }> = ({ evaluationId }
       try {
         setLoading(true);
         const ev = await getEvaluationById(evaluationId);
-        const linked = await listEvaluationControls(evaluationId);
-        
-        let total = 0;
-        for (const c of linked) {
-          const qs = await dataService.getQuestionsByControl(String(c.id_control));
-          total += qs.length;
-        }
+        const qs = await dataService.getQuestionsByControl(String(ev.id_formulario));
+        const total = qs.length;
 
         const answered = Object.keys(ev.answers || {}).length;
 

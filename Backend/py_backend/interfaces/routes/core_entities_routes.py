@@ -9,6 +9,8 @@ from app.schemas import RiskRead
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database.models import (
     ControlORM,
+    FormularioORM,
+    FormularioPreguntaORM,
     PreguntaORM,
     RiesgoORM,
     RolORM,
@@ -51,12 +53,11 @@ def _register_single_pk_crud(
     @router.get(f"/{resource}", name=f"list_{resource}", dependencies=read_deps)
     def list_items(session: Session = Depends(_get_session), _model: type[SQLModel] = model, current_user: dict = Depends(auth_middleware)):
         if resource == "questionnaires" and role_lower(current_user) == "evaluator":
-            from infraestructure.database.models import EvaluacionControlORM, EvaluacionORM, ControlORM
+            from infraestructure.database.models import EvaluacionORM, FormularioORM
             uid = int(current_user["user_id"])
             stmt = (
                 select(_model)
-                .join(EvaluacionControlORM, EvaluacionControlORM.id_control == ControlORM.id_control)
-                .join(EvaluacionORM, EvaluacionORM.id_evaluacion == EvaluacionControlORM.id_evaluacion)
+                .join(EvaluacionORM, EvaluacionORM.id_formulario == FormularioORM.id_formulario)
                 .where(EvaluacionORM.id_evaluador == uid)
                 .distinct()
             )
@@ -137,30 +138,99 @@ _register_single_pk_crud(
     read_roles=("admin", "evaluator"),
     write_roles=("admin",),
 )
+
+@router.post("/questionnaires/generate-random", name="generate_random_form", dependencies=[Depends(require_roles("admin"))])
+def generate_random_form(
+    payload: dict,
+    session: Session = Depends(_get_session)
+):
+    """
+    Genera un Formulario aleatorio asegurando al menos 1 pregunta por cada Control ISO.
+    Si total_preguntas > cantidad_controles, se rellenará con preguntas aleatorias del banco.
+    """
+    import random
+    from infraestructure.database.models import PreguntaControlORM
+    
+    total_preguntas = int(payload.get("total_preguntas", 20))
+    nombre = payload.get("nombre", "Formulario Autogenerado")
+    descripcion = payload.get("descripcion", "Autogenerado aleatoriamente.")
+    
+    # 1. Obtener todos los controles
+    controles = session.exec(select(ControlORM)).all()
+    if not controles:
+        raise HTTPException(status_code=400, detail="No hay controles ISO en la base de datos.")
+    
+    # 2. Por cada control, obtener sus preguntas
+    preguntas_seleccionadas = set()
+    todas_preguntas_banco = session.exec(select(PreguntaORM)).all()
+    if not todas_preguntas_banco:
+        raise HTTPException(status_code=400, detail="El banco de preguntas está vacío.")
+        
+    for control in controles:
+        # Preguntas vinculadas a este control
+        links = session.exec(select(PreguntaControlORM).where(PreguntaControlORM.id_control == control.id_control)).all()
+        if links:
+            elegida = random.choice(links)
+            preguntas_seleccionadas.add(elegida.id_pregunta)
+
+    # Si nos pasamos de total_preguntas por asegurar 1 por control, lo acotamos (o lo dejamos, según requerimiento)
+    # Rellenar si faltan
+    if len(preguntas_seleccionadas) < total_preguntas:
+        restantes = [p.id_pregunta for p in todas_preguntas_banco if p.id_pregunta not in preguntas_seleccionadas]
+        random.shuffle(restantes)
+        faltantes = total_preguntas - len(preguntas_seleccionadas)
+        for i in range(min(faltantes, len(restantes))):
+            preguntas_seleccionadas.add(restantes[i])
+            
+    # 3. Crear el Formulario
+    nuevo_form = FormularioORM(
+        nombre=nombre,
+        descripcion=descripcion,
+        aplica_nivel_bajo=bool(payload.get("aplica_nivel_bajo", False)),
+        aplica_nivel_medio=bool(payload.get("aplica_nivel_medio", False)),
+        aplica_nivel_alto=bool(payload.get("aplica_nivel_alto", False)),
+        activo=True
+    )
+    session.add(nuevo_form)
+    session.commit()
+    session.refresh(nuevo_form)
+    
+    # 4. Vincular preguntas al Formulario
+    for id_pregunta in list(preguntas_seleccionadas)[:total_preguntas]:
+        link = FormularioPreguntaORM(id_formulario=nuevo_form.id_formulario, id_pregunta=id_pregunta)
+        session.add(link)
+    
+    session.commit()
+    return _serialize(nuevo_form)
+
 _register_single_pk_crud(
     "questionnaires",
+    FormularioORM,
+    "id_formulario",
+    write_roles=("admin",),
+)
+_register_single_pk_crud(
+    "controls",
     ControlORM,
     "id_control",
     write_roles=("admin",),
 )
 
 
-@router.get("/questions/by-control/{control_id}", name="list_questions_by_control")
-def list_questions_by_control(control_id: int, session: Session = Depends(_get_session)):
-    """Preguntas de un control (formulario) via tabla intermedia pregunta_control."""
-    from infraestructure.database.models import PreguntaControlORM
+@router.get("/questions/by-questionnaire/{formulario_id}", name="list_questions_by_questionnaire")
+def list_questions_by_questionnaire(formulario_id: int, session: Session = Depends(_get_session)):
+    """Preguntas de un formulario via tabla intermedia."""
     links = session.exec(
-        select(PreguntaControlORM).where(PreguntaControlORM.id_control == control_id)
+        select(FormularioPreguntaORM).where(FormularioPreguntaORM.id_formulario == formulario_id)
     ).all()
     result = []
     for lnk in links:
         pregunta = session.get(PreguntaORM, lnk.id_pregunta)
         if pregunta:
             row = pregunta.model_dump()
-            row["id_control"] = control_id  # compatibilidad con frontend existente
+            row["id_formulario"] = formulario_id
             result.append(row)
     return result
-
 
 
 _register_single_pk_crud("questions", PreguntaORM, "id_pregunta", write_roles=("admin",))
@@ -173,7 +243,7 @@ _register_single_pk_crud("vulnerabilities", VulnerabilidadORM, "id_vulnerabilida
     name="list_risks_by_control",
 )
 def list_risks_by_control(control_id: int, session: Session = Depends(_get_session)):
-    """Riesgos asociados a un control (`id_control`); complementa POST/PATCH `/risks` con `id_control` en el cuerpo."""
+    """Riesgos asociados a un control."""
     rows = session.exec(select(RiesgoORM).where(RiesgoORM.id_control == control_id)).all()
     out: list[RiskRead] = []
     for row in rows:

@@ -36,7 +36,8 @@ type RawQuestion = {
   texto: string;
   dimension: string | null;
   peso: number;
-  controles: number[];
+  controles_iso: number[];
+  formularios: number[];
 };
 
 function normalize(raw: RawQuestion): BankQuestion {
@@ -45,7 +46,7 @@ function normalize(raw: RawQuestion): BankQuestion {
     text: raw.texto,
     dimension: raw.dimension ?? '',
     peso: raw.peso,
-    linkedControls: raw.controles ?? [],
+    linkedControls: raw.formularios ?? [],
   };
 }
 
@@ -89,19 +90,19 @@ const questionBankApi = {
 
   /** Vincula una pregunta a un formulario */
   linkToControl: async (id: string, controlId: number): Promise<BankQuestion> => {
-    const raw = await writeJson<RawQuestion>(`/question-bank/${id}/link/${controlId}`, 'POST');
+    const raw = await writeJson<RawQuestion>(`/question-bank/${id}/link-formulario/${controlId}`, 'POST');
     return normalize(raw);
   },
 
   /** Desvincula una pregunta de un formulario (la pregunta permanece en el banco) */
   unlinkFromControl: async (id: string, controlId: number): Promise<BankQuestion> => {
-    const raw = await writeJson<RawQuestion>(`/question-bank/${id}/link/${controlId}`, 'DELETE');
+    const raw = await writeJson<RawQuestion>(`/question-bank/${id}/link-formulario/${controlId}`, 'DELETE');
     return normalize(raw);
   },
 
   /** Lista preguntas vinculadas a un formulario específico */
   listByControl: async (controlId: number): Promise<BankQuestion[]> => {
-    const rows = await readJson<RawQuestion[]>(`/question-bank/by-control/${controlId}`);
+    const rows = await readJson<RawQuestion[]>(`/question-bank/by-formulario/${controlId}`);
     return rows.map(normalize);
   },
 };

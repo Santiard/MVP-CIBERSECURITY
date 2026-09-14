@@ -24,8 +24,10 @@ class UsuarioORM(SQLModel, table=True):
     activo: bool = Field(default=True)
     password: str = Field()
     id_rol: int = Field(foreign_key="roles.id_rol")
+    id_empresa: Optional[int] = Field(default=None, foreign_key="empresas.id_empresa")
 
     rol: Optional["RolORM"] = Relationship(back_populates="usuarios")
+    empresa: Optional["EmpresaORM"] = Relationship(back_populates="usuarios")
     evaluaciones_titular: list["EvaluacionORM"] = Relationship(
         back_populates="usuario",
         sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_usuario"}
@@ -34,7 +36,6 @@ class UsuarioORM(SQLModel, table=True):
         back_populates="evaluador",
         sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_evaluador"}
     )
-    asignaciones_empresa: list["UsuarioOrganizacionORM"] = Relationship(back_populates="usuario")
     password_reset_tokens: list["PasswordResetTokenORM"] = Relationship(back_populates="usuario")
 
 
@@ -52,16 +53,32 @@ class EmpresaORM(SQLModel, table=True):
 
     evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="empresa")
     activos: list["ActivoORM"] = Relationship(back_populates="empresa")
-    asignaciones_usuario: list["UsuarioOrganizacionORM"] = Relationship(back_populates="empresa")
+    usuarios: list["UsuarioORM"] = Relationship(back_populates="empresa")
 
 
-class EvaluacionControlORM(SQLModel, table=True):
-    """UML: una Evaluación evalúa uno o más Controles (alcance de la evaluación)."""
+class FormularioPreguntaORM(SQLModel, table=True):
+    __tablename__ = "formulario_pregunta"
 
-    __tablename__ = "evaluacion_control"
+    id_formulario: int = Field(foreign_key="formularios.id_formulario", primary_key=True)
+    id_pregunta: int = Field(foreign_key="preguntas.id_pregunta", primary_key=True)
 
-    id_evaluacion: int = Field(foreign_key="evaluaciones.id_evaluacion", primary_key=True)
-    id_control: int = Field(foreign_key="controles.id_control", primary_key=True)
+
+class FormularioORM(SQLModel, table=True):
+    __tablename__ = "formularios"
+
+    id_formulario: Optional[int] = Field(default=None, primary_key=True)
+    nombre: str = Field()
+    descripcion: str = Field()
+    activo: bool = Field(default=True)
+    aplica_nivel_bajo: bool = Field(default=False)
+    aplica_nivel_medio: bool = Field(default=False)
+    aplica_nivel_alto: bool = Field(default=False)
+
+    preguntas: list["PreguntaORM"] = Relationship(
+        back_populates="formularios",
+        link_model=FormularioPreguntaORM,
+    )
+    evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="formulario")
 
 
 class EvaluacionORM(SQLModel, table=True):
@@ -73,6 +90,7 @@ class EvaluacionORM(SQLModel, table=True):
     id_usuario: int = Field(foreign_key="usuarios.id_usuario")
     id_empresa: int = Field(foreign_key="empresas.id_empresa")
     id_evaluador: Optional[int] = Field(default=None, foreign_key="usuarios.id_usuario")
+    id_formulario: int = Field(foreign_key="formularios.id_formulario")
     datos_respuestas: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     creado_en: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
@@ -85,13 +103,10 @@ class EvaluacionORM(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "EvaluacionORM.id_evaluador"}
     )
     empresa: Optional["EmpresaORM"] = Relationship(back_populates="evaluaciones")
+    formulario: Optional["FormularioORM"] = Relationship(back_populates="evaluaciones")
     respuestas: list["RespuestaORM"] = Relationship(back_populates="evaluacion")
     resultados: list["ResultadoORM"] = Relationship(back_populates="evaluacion")
     score: Optional["ScoreORM"] = Relationship(back_populates="evaluacion")
-    controles: list["ControlORM"] = Relationship(
-        back_populates="evaluaciones",
-        link_model=EvaluacionControlORM,
-    )
 
 
 class PreguntaControlORM(SQLModel, table=True):
@@ -123,10 +138,6 @@ class ControlORM(SQLModel, table=True):
     )
     indicadores: list["IndicadorORM"] = Relationship(back_populates="control")
     resultados: list["ResultadoORM"] = Relationship(back_populates="control")
-    evaluaciones: list["EvaluacionORM"] = Relationship(
-        back_populates="controles",
-        link_model=EvaluacionControlORM,
-    )
     riesgos: list["RiesgoORM"] = Relationship(back_populates="control")
 
 
@@ -141,6 +152,10 @@ class PreguntaORM(SQLModel, table=True):
     controles: list["ControlORM"] = Relationship(
         back_populates="preguntas",
         link_model=PreguntaControlORM,
+    )
+    formularios: list["FormularioORM"] = Relationship(
+        back_populates="preguntas",
+        link_model=FormularioPreguntaORM,
     )
     respuestas: list["RespuestaORM"] = Relationship(back_populates="pregunta")
 
@@ -286,13 +301,3 @@ class PasswordResetTokenORM(SQLModel, table=True):
     usuario: Optional["UsuarioORM"] = Relationship(back_populates="password_reset_tokens")
 
 
-class UsuarioOrganizacionORM(SQLModel, table=True):
-    """Asignación usuario ↔ empresa (organización), alineado al dominio Empresa del UML."""
-
-    __tablename__ = "usuario_organizacion"
-
-    id_usuario: int = Field(foreign_key="usuarios.id_usuario", primary_key=True)
-    id_empresa: int = Field(foreign_key="empresas.id_empresa", primary_key=True)
-
-    usuario: Optional["UsuarioORM"] = Relationship(back_populates="asignaciones_empresa")
-    empresa: Optional["EmpresaORM"] = Relationship(back_populates="asignaciones_usuario")
