@@ -5,19 +5,18 @@ import QuestionForm from './QuestionForm';
 
 type Props = {
   open: boolean;
-  initial?: { id?: string; name?: string; description?: string; active?: boolean; aplica_nivel_bajo?: boolean; aplica_nivel_medio?: boolean; aplica_nivel_alto?: boolean };
+  initial?: { id?: string; name?: string; description?: string; active?: boolean; roles_ids?: number[] };
   onClose: () => void;
   onSaved: (result?: any) => void;
-  saveFn: (payload: { name: string; description: string; active: boolean; aplica_nivel_bajo: boolean; aplica_nivel_medio: boolean; aplica_nivel_alto: boolean }) => Promise<any>;
+  saveFn: (payload: { name: string; description: string; active: boolean; roles_ids: number[] }) => Promise<any>;
 };
 
 const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, saveFn }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [active, setActive] = useState(true);
-  const [aplicaNivelBajo, setAplicaNivelBajo] = useState(false);
-  const [aplicaNivelMedio, setAplicaNivelMedio] = useState(false);
-  const [aplicaNivelAlto, setAplicaNivelAlto] = useState(false);
+  const [rolesIds, setRolesIds] = useState<number[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<{id_rol: number, nombre: string}[]>([]);
   
   // Transfer list states
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
@@ -61,9 +60,8 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
       setName(initial?.name ?? '');
       setDescription(initial?.description ?? '');
       setActive(initial?.active ?? true);
-      setAplicaNivelBajo(initial?.aplica_nivel_bajo ?? false);
-      setAplicaNivelMedio(initial?.aplica_nivel_medio ?? false);
-      setAplicaNivelAlto(initial?.aplica_nivel_alto ?? false);
+      setRolesIds(initial?.roles_ids ?? []);
+      import('../services/dataService').then(mod => mod.default.getRoles().then(setAvailableRoles).catch(console.error));
       
       setSelectedIds(new Set());
       void loadBank(initial?.id);

@@ -5,6 +5,12 @@ from sqlalchemy import Column, JSON
 from sqlmodel import Field, Relationship, SQLModel
 
 
+class FormularioRolORM(SQLModel, table=True):
+    __tablename__ = "formulario_rol"
+
+    id_formulario: int = Field(foreign_key="formularios.id_formulario", primary_key=True)
+    id_rol: int = Field(foreign_key="roles.id_rol", primary_key=True)
+
 class RolORM(SQLModel, table=True):
     __tablename__ = "roles"
 
@@ -12,6 +18,10 @@ class RolORM(SQLModel, table=True):
     nombre: str = Field()
 
     usuarios: list["UsuarioORM"] = Relationship(back_populates="rol")
+    formularios: list["FormularioORM"] = Relationship(
+        back_populates="roles",
+        link_model=FormularioRolORM
+    )
 
 
 class UsuarioORM(SQLModel, table=True):
@@ -63,6 +73,8 @@ class FormularioPreguntaORM(SQLModel, table=True):
     id_pregunta: int = Field(foreign_key="preguntas.id_pregunta", primary_key=True)
 
 
+
+
 class FormularioORM(SQLModel, table=True):
     __tablename__ = "formularios"
 
@@ -70,13 +82,14 @@ class FormularioORM(SQLModel, table=True):
     nombre: str = Field()
     descripcion: str = Field()
     activo: bool = Field(default=True)
-    aplica_nivel_bajo: bool = Field(default=False)
-    aplica_nivel_medio: bool = Field(default=False)
-    aplica_nivel_alto: bool = Field(default=False)
 
     preguntas: list["PreguntaORM"] = Relationship(
         back_populates="formularios",
         link_model=FormularioPreguntaORM,
+    )
+    roles: list["RolORM"] = Relationship(
+        back_populates="formularios",
+        link_model=FormularioRolORM,
     )
     evaluaciones: list["EvaluacionORM"] = Relationship(back_populates="formulario")
 
@@ -109,6 +122,27 @@ class EvaluacionORM(SQLModel, table=True):
     score: Optional["ScoreORM"] = Relationship(back_populates="evaluacion")
 
 
+class ControlDimensionORM(SQLModel, table=True):
+    __tablename__ = "control_dimension"
+
+    id_control: int = Field(foreign_key="controles.id_control", primary_key=True)
+    id_dimension: int = Field(foreign_key="dimensiones.id_dimension", primary_key=True)
+
+
+class DimensionORM(SQLModel, table=True):
+    __tablename__ = "dimensiones"
+
+    id_dimension: Optional[int] = Field(default=None, primary_key=True)
+    categoria: str = Field()
+    nombre: str = Field()
+    descripcion: Optional[str] = Field(default=None)
+
+    controles: list["ControlORM"] = Relationship(
+        back_populates="dimensiones",
+        link_model=ControlDimensionORM,
+    )
+
+
 class PreguntaControlORM(SQLModel, table=True):
     """Tabla intermedia many-to-many: una Pregunta del banco puede estar en varios Controles."""
     __tablename__ = "pregunta_control"
@@ -123,15 +157,15 @@ class ControlORM(SQLModel, table=True):
     id_control: Optional[int] = Field(default=None, primary_key=True)
     nombre: str = Field()
     descripcion: str = Field()
-    dimensiones: int = Field(default=0)
     activo: bool = Field(default=True)
-    confidencialidad: bool = Field()
-    integridad: bool = Field()
-    disponibilidad: bool = Field()
     rec_alta: str = Field(default="")
     rec_media: str = Field(default="")
     rec_baja: str = Field(default="")
 
+    dimensiones: list["DimensionORM"] = Relationship(
+        back_populates="controles",
+        link_model=ControlDimensionORM,
+    )
     preguntas: list["PreguntaORM"] = Relationship(
         back_populates="controles",
         link_model=PreguntaControlORM,

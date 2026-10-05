@@ -16,7 +16,7 @@ type User = {
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'evaluator' | 'user_nivel_bajo' | 'user_nivel_medio' | 'user_nivel_alto';
+  role: string;
   active?: boolean;
   password?: string;
 };
@@ -334,15 +334,13 @@ const dataService = {
 
   // Questionnaires
   getQuestionnaires: async (): Promise<Questionnaire[]> => {
-    const rows = await readJson<QuestionnaireApi[]>('/questionnaires');
+    const rows = await readJson<any[]>('/questionnaires');
     return rows.map((q) => ({
       id: String(q.id_formulario),
       name: q.nombre,
       description: q.descripcion,
       active: q.activo ?? true,
-      aplica_nivel_bajo: q.aplica_nivel_bajo ?? false,
-      aplica_nivel_medio: q.aplica_nivel_medio ?? false,
-      aplica_nivel_alto: q.aplica_nivel_alto ?? false,
+      roles_ids: q.roles_ids ?? [],
     }));
   },
   createQuestionnaire: async (q: Omit<Questionnaire, 'id'>) => {
@@ -359,7 +357,7 @@ const dataService = {
       ...q,
     };
   },
-  generateRandomQuestionnaire: async (payload: { nombre: string; descripcion: string; total_preguntas: number; aplica_nivel_bajo: boolean; aplica_nivel_medio: boolean; aplica_nivel_alto: boolean }) => {
+  generateRandomQuestionnaire: async (payload: { nombre: string; descripcion: string; total_preguntas: number; roles_ids: number[]; dimensiones_ids: number[]; preguntas_por_dimension: number }) => {
     const created = await writeJson<QuestionnaireApi>('/questionnaires/generate-random', 'POST', payload);
     return {
       id: String(created.id_formulario),
@@ -372,13 +370,11 @@ const dataService = {
     };
   },
   updateQuestionnaire: async (id: string, patch: Partial<Questionnaire>) => {
-    const payload: Record<string, unknown> = {};
+    const payload: any = {};
     if (patch.name !== undefined) payload.nombre = patch.name;
     if (patch.description !== undefined) payload.descripcion = patch.description;
     if (patch.active !== undefined) payload.activo = patch.active;
-    if (patch.aplica_nivel_bajo !== undefined) payload.aplica_nivel_bajo = patch.aplica_nivel_bajo;
-    if (patch.aplica_nivel_medio !== undefined) payload.aplica_nivel_medio = patch.aplica_nivel_medio;
-    if (patch.aplica_nivel_alto !== undefined) payload.aplica_nivel_alto = patch.aplica_nivel_alto;
+    if (patch.roles_ids !== undefined) payload.roles_ids = patch.roles_ids;
 
     await writeJson(`/questionnaires/${id}`, 'PATCH', payload);
     const rows = await dataService.getQuestionnaires();
@@ -423,3 +419,83 @@ const dataService = {
 };
 
 export default dataService;
+
+
+// --- Dimensions & Controls Types ---
+export type Dimension = {
+  id_dimension: number;
+  categoria: string;
+  nombre: string;
+  descripcion?: string;
+};
+
+export type Control = {
+  id_control: number;
+  nombre: string;
+  descripcion: string;
+  activo: boolean;
+  rec_alta: string;
+  rec_media: string;
+  rec_baja: string;
+  dimensiones: Dimension[];
+};
+
+export type ControlPayload = {
+  nombre: string;
+  descripcion: string;
+  activo: boolean;
+  rec_alta: string;
+  rec_media: string;
+  rec_baja: string;
+  dimensiones_ids: number[];
+};
+
+// --- Dimensions API ---
+export const getDimensions = (): Promise<Dimension[]> => {
+  return apiFetch('/core/dimensions');
+};
+
+export const createDimension = (data: Partial<Dimension>): Promise<Dimension> => {
+  return apiFetch('/core/dimensions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const updateDimension = (id: number, data: Partial<Dimension>): Promise<Dimension> => {
+  return apiFetch(`/core/dimensions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteDimension = (id: number): Promise<{ deleted: boolean }> => {
+  return apiFetch(`/core/dimensions/${id}`, {
+    method: 'DELETE',
+  });
+};
+
+// --- Controls API ---
+export const getControls = (): Promise<Control[]> => {
+  return apiFetch('/core/controls');
+};
+
+export const createControl = (data: ControlPayload): Promise<Control> => {
+  return apiFetch('/core/controls', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+};
+
+export const updateControl = (id: number, data: Partial<ControlPayload>): Promise<Control> => {
+  return apiFetch(`/core/controls/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteControl = (id: number): Promise<{ deleted: boolean }> => {
+  return apiFetch(`/core/controls/${id}`, {
+    method: 'DELETE',
+  });
+};

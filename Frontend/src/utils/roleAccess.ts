@@ -13,6 +13,9 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/HomePage', label: 'Home' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/users', label: 'Usuarios' },
+  { to: '/roles', label: 'Roles' },
+  { to: '/dimensions', label: 'Dimensiones ISO' },
+  { to: '/controls', label: 'Controles ISO' },
   { to: '/organizations', label: 'Organizaciones' },
   { to: '/question-bank', label: 'Banco de Preguntas' },
   { to: '/questionnaires', label: 'Formularios' },
@@ -46,7 +49,7 @@ export function isStaffRole(role: AppRole | null): boolean {
 }
 
 export function isUserRole(role: AppRole | null): boolean {
-  return role === 'user_nivel_bajo' || role === 'user_nivel_medio' || role === 'user_nivel_alto';
+  return role !== null && role !== 'admin' && role !== 'evaluator';
 }
 
 export function getNavItemsByRole(role: AppRole | null): NavItem[] {

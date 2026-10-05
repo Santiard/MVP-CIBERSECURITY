@@ -29,6 +29,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const [showPassword, setShowPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [availableRoles, setAvailableRoles] = useState<{ id_rol: number, nombre: string }[]>([]);
   const { showAlert } = useAlert();
 
   const passwordIssues = getPasswordPolicyIssues(password);
@@ -37,6 +38,7 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
   const showPasswordIssues = submitted || password.length > 0;
 
   useEffect(() => {
+    dataService.getRoles().then(setAvailableRoles).catch(console.error);
     setName(initial?.name || '');
     setEmail(initial?.email || '');
     setPhone(initial?.phone || '');
@@ -153,11 +155,11 @@ const UserForm: React.FC<Props> = ({ open = false, inline = false, onClose, init
 
       <label style={{ fontSize: 12 }}>Rol *</label>
       <select value={role} onChange={e => setRole(e.target.value)} required style={{ padding: 8, borderRadius: 8, border: '1px solid var(--border)' }}>
-        <option value="admin">Administrador</option>
-        <option value="evaluator">Evaluador</option>
-        <option value="user_nivel_bajo">Usuario (Nivel Bajo)</option>
-        <option value="user_nivel_medio">Usuario (Nivel Medio)</option>
-        <option value="user_nivel_alto">Usuario (Nivel Alto)</option>
+        {availableRoles.map(r => (
+          <option key={r.nombre} value={r.nombre}>
+            {r.nombre === 'admin' ? 'Administrador' : r.nombre === 'evaluator' ? 'Evaluador' : r.nombre}
+          </option>
+        ))}
       </select>
 
       <label style={{ fontSize: 12 }}>{initial?.id ? 'Nueva contraseña (opcional)' : 'Contraseña *'}</label>

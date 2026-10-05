@@ -1,4 +1,4 @@
-export type AppRole = 'admin' | 'evaluator' | 'user_nivel_bajo' | 'user_nivel_medio' | 'user_nivel_alto';
+export type AppRole = string;
 
 export type AuthUser = {
   id: number;
@@ -10,12 +10,9 @@ export type AuthUser = {
 export function normalizeRole(role: string | null | undefined): AppRole | null {
   if (!role) return null;
   const value = role.trim().toLowerCase();
-  if (value === 'admin' || value === 'evaluator' || value === 'user_nivel_bajo' || value === 'user_nivel_medio' || value === 'user_nivel_alto') {
-    return value as AppRole;
-  }
   // Fallback map legacy user role
   if (value === 'user') return 'user_nivel_bajo';
-  return null;
+  return value;
 }
 
 export function getStoredAuthUser(): AuthUser | null {

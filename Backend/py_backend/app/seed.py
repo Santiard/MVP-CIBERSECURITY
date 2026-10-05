@@ -1,10 +1,11 @@
 import os
 from datetime import date
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, delete
 
 from app.db import engine
 from infraestructure.database import (
+    DimensionORM,
     ActivoORM,
     ControlORM,
     EmpresaORM,
@@ -134,19 +135,90 @@ def _seed_roles_and_users(session: Session) -> None:
     session.flush()
 
 
-def _seed_controls(session: Session) -> None:
+def _seed_dimensions(session: Session) -> dict[str, DimensionORM]:
+    dimensions_data = [
+        {"categoria": "Propiedad de Seguridad", "nombre": "Confidencialidad"},
+        {"categoria": "Propiedad de Seguridad", "nombre": "Integridad"},
+        {"categoria": "Propiedad de Seguridad", "nombre": "Disponibilidad"},
+        {"categoria": "Tipo de Control", "nombre": "Preventivo"},
+        {"categoria": "Tipo de Control", "nombre": "Detectivo"},
+        {"categoria": "Tipo de Control", "nombre": "Correctivo"},
+        {"categoria": "Conceptos de Ciberseguridad", "nombre": "Identificar"},
+        {"categoria": "Conceptos de Ciberseguridad", "nombre": "Proteger"},
+        {"categoria": "Conceptos de Ciberseguridad", "nombre": "Detectar"},
+        {"categoria": "Conceptos de Ciberseguridad", "nombre": "Responder"},
+        {"categoria": "Conceptos de Ciberseguridad", "nombre": "Recuperar"},
+        {"categoria": "Capacidades Operativas", "nombre": "Gobierno"},
+        {"categoria": "Capacidades Operativas", "nombre": "Gestión de activos"},
+        {"categoria": "Capacidades Operativas", "nombre": "Seguridad de la información"},
+        {"categoria": "Capacidades Operativas", "nombre": "Seguridad de los RRHH"},
+        {"categoria": "Capacidades Operativas", "nombre": "Seguridad física"},
+        {"categoria": "Capacidades Operativas", "nombre": "Seguridad de sistemas y redes"},
+        {"categoria": "Capacidades Operativas", "nombre": "Seguridad de aplicaciones"},
+        {"categoria": "Capacidades Operativas", "nombre": "Configuración segura"},
+        {"categoria": "Capacidades Operativas", "nombre": "Gestión de identidades y accesos"},
+        {"categoria": "Capacidades Operativas", "nombre": "Gestión de amenazas y vulnerabilidades"},
+        {"categoria": "Capacidades Operativas", "nombre": "Continuidad"},
+        {"categoria": "Capacidades Operativas", "nombre": "Seguridad de las relaciones con proveedores"},
+        {"categoria": "Capacidades Operativas", "nombre": "Cumplimiento legal y normativo"},
+        {"categoria": "Capacidades Operativas", "nombre": "Gestión de eventos de seguridad"},
+        {"categoria": "Capacidades Operativas", "nombre": "Aseguramiento de la información"},
+        {"categoria": "Dominios de Seguridad", "nombre": "Gobernanza y ecosistema"},
+        {"categoria": "Dominios de Seguridad", "nombre": "Protección"},
+        {"categoria": "Dominios de Seguridad", "nombre": "Defensa"},
+        {"categoria": "Dominios de Seguridad", "nombre": "Resiliencia"}
+    ]
+    
+    dim_map = {}
+    existing = {d.nombre: d for d in session.exec(select(DimensionORM)).all()}
+    
+    for d_data in dimensions_data:
+        name = d_data["nombre"]
+        if name in existing:
+            dim_map[name] = existing[name]
+        else:
+            new_dim = DimensionORM(**d_data)
+            session.add(new_dim)
+            session.flush()
+            dim_map[name] = new_dim
+            
+    return dim_map
+
+def _seed_controls(session: Session, dim_map: dict[str, DimensionORM]) -> None:
     try:
         from app.iso_seed import controls_seed
     except ImportError:
         controls_seed = []
 
-    existing_names = {
-        item.nombre for item in session.exec(select(ControlORM)).all()
+    existing_controls = {
+        item.nombre: item for item in session.exec(select(ControlORM)).all()
     }
     for item in controls_seed:
-        if item["nombre"] in existing_names:
-            continue
-        session.add(ControlORM(**item))
+        c_conf = item.pop("confidencialidad", False)
+        c_int = item.pop("integridad", False)
+        c_disp = item.pop("disponibilidad", False)
+        item.pop("dimensiones", None) # Remove the old int field if it exists
+        
+        dims = []
+        if c_conf and "Confidencialidad" in dim_map:
+            dims.append(dim_map["Confidencialidad"])
+        if c_int and "Integridad" in dim_map:
+            dims.append(dim_map["Integridad"])
+        if c_disp and "Disponibilidad" in dim_map:
+            dims.append(dim_map["Disponibilidad"])
+            
+        # By default ISO 27002 controls are Preventivo
+        if "Preventivo" in dim_map:
+            dims.append(dim_map["Preventivo"])
+            
+        if item["nombre"] in existing_controls:
+            c = existing_controls[item["nombre"]]
+            c.dimensiones = dims
+            session.add(c)
+        else:
+            c = ControlORM(**item)
+            c.dimensiones = dims
+            session.add(c)
     session.flush()
 
 
@@ -225,64 +297,48 @@ def _seed_preguntas(session: Session) -> None:
 
 
 def _seed_formularios(session: Session) -> None:
+    from infraestructure.database.models import RolORM, FormularioRolORM
+    roles = {r.nombre: r for r in session.exec(select(RolORM)).all()}
     forms_seed = [
         {
             "nombre": "Formulario General de Seguridad (Todos los Colaboradores)",
-            "descripcion": "Cuestionario base en lenguaje neutro y accesible sobre hábitos de seguridad en el puesto de trabajo, descansos, contraseñas y prevención de riesgos para todo el personal.",
+            "descripcion": "Cuestionario base en lenguaje neutro y accesible sobre hábitos de seguridad en el puesto de trabajo.",
             "activo": True,
-            "aplica_nivel_bajo": True,
-            "aplica_nivel_medio": True,
-            "aplica_nivel_alto": True,
+            "roles": ["user_nivel_bajo", "user_nivel_medio", "user_nivel_alto"]
         },
         {
             "nombre": "Formulario Técnico de Ciberseguridad (Sistemas y TI)",
-            "descripcion": "Cuestionario técnico y operativo orientado al equipo de TI y soporte de sistemas: gestión de accesos, parches, redes, respaldos, hardening y monitoreo.",
+            "descripcion": "Cuestionario técnico y operativo orientado al equipo de TI.",
             "activo": True,
-            "aplica_nivel_bajo": False,
-            "aplica_nivel_medio": True,
-            "aplica_nivel_alto": True,
+            "roles": ["user_nivel_medio", "user_nivel_alto"]
         },
         {
             "nombre": "Formulario Estratégico (Directivos y Gerencia)",
-            "descripcion": "Cuestionario de nivel directivo y gerencial enfocado en gobierno de la seguridad, gestión de riesgos, presupuesto, continuidad del negocio y cumplimiento normativo.",
+            "descripcion": "Cuestionario directivo enfocado en gobierno de la seguridad y gestión de riesgos.",
             "activo": True,
-            "aplica_nivel_bajo": False,
-            "aplica_nivel_medio": False,
-            "aplica_nivel_alto": True,
+            "roles": ["user_nivel_alto"]
         }
     ]
 
     existing_forms = {f.nombre: f for f in session.exec(select(FormularioORM)).all()}
-    
-    # Si existía el nombre antiguo "Formulario Completo de Seguridad (Todos los Niveles)", renombrarlo
-    old_completo = existing_forms.get("Formulario Completo de Seguridad (Todos los Niveles)")
-    if old_completo and "Formulario General de Seguridad (Todos los Colaboradores)" not in existing_forms:
-        old_completo.nombre = "Formulario General de Seguridad (Todos los Colaboradores)"
-        old_completo.descripcion = forms_seed[0]["descripcion"]
-        old_completo.aplica_nivel_bajo = True
-        old_completo.aplica_nivel_medio = True
-        old_completo.aplica_nivel_alto = True
-        session.add(old_completo)
-        existing_forms[old_completo.nombre] = old_completo
-
-    # Si existía "Formulario Estratégico (Sólo Directivos)", actualizar nombre
-    old_estrategico = existing_forms.get("Formulario Estratégico (Sólo Directivos)")
-    if old_estrategico and "Formulario Estratégico (Directivos y Gerencia)" not in existing_forms:
-        old_estrategico.nombre = "Formulario Estratégico (Directivos y Gerencia)"
-        old_estrategico.descripcion = forms_seed[2]["descripcion"]
-        old_estrategico.aplica_nivel_bajo = False
-        old_estrategico.aplica_nivel_medio = False
-        old_estrategico.aplica_nivel_alto = True
-        session.add(old_estrategico)
-        existing_forms[old_estrategico.nombre] = old_estrategico
 
     for item in forms_seed:
+        roles_names = item.pop("roles", [])
         if item["nombre"] in existing_forms:
-            continue
-        form = FormularioORM(**item)
-        session.add(form)
-        session.flush()
-        existing_forms[item["nombre"]] = form
+            form = existing_forms[item["nombre"]]
+        else:
+            form = FormularioORM(**item)
+            session.add(form)
+            session.flush()
+            existing_forms[item["nombre"]] = form
+            
+        # Ensure role mapping
+        session.exec(delete(FormularioRolORM).where(FormularioRolORM.id_formulario == form.id_formulario))
+        for r_name in roles_names:
+            if r_name in roles:
+                session.add(FormularioRolORM(id_formulario=form.id_formulario, id_rol=roles[r_name].id_rol))
+
+    session.flush()
 
     session.flush()
 
@@ -362,7 +418,8 @@ def seed_data_if_enabled() -> None:
     with Session(engine) as session:
         _seed_empresas(session)
         _seed_roles_and_users(session)
-        _seed_controls(session)
+        dim_map = _seed_dimensions(session)
+        _seed_controls(session, dim_map)
         # Los formularios deben existir ANTES que las preguntas para poder vincularlas
         _seed_formularios(session)
         _seed_preguntas(session)

@@ -89,10 +89,33 @@ class FormularioRead(BaseModel):
     nombre: str
     descripcion: str
     activo: bool
-    aplica_nivel_bajo: bool
-    aplica_nivel_medio: bool
-    aplica_nivel_alto: bool
+    roles_ids: list[int] = Field(default_factory=list)
 
+class DimensionRead(BaseModel):
+    id_dimension: int
+    categoria: str
+    nombre: str
+    descripcion: str | None = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class ControlCreate(BaseModel):
+    nombre: str
+    descripcion: str
+    activo: bool = True
+    rec_alta: str = ""
+    rec_media: str = ""
+    rec_baja: str = ""
+    dimensiones_ids: list[int] = Field(default_factory=list)
+
+class ControlUpdate(BaseModel):
+    nombre: str | None = None
+    descripcion: str | None = None
+    activo: bool | None = None
+    rec_alta: str | None = None
+    rec_media: str | None = None
+    rec_baja: str | None = None
+    dimensiones_ids: list[int] | None = None
 
 class ControlRead(BaseModel):
     """Esquema de lectura para Controles ISO."""
@@ -102,23 +125,18 @@ class ControlRead(BaseModel):
     id_control: int
     nombre: str
     descripcion: str
-    dimensiones: int = 0
     activo: bool = True
-    confidencialidad: bool
-    integridad: bool
-    disponibilidad: bool
     rec_alta: str
     rec_media: str
     rec_baja: str
+    dimensiones: list[DimensionRead] = Field(default_factory=list)
 
 
 class FormularioRandomCreate(BaseModel):
     """Payload para autogenerar un Formulario."""
     nombre: str
     descripcion: str
-    aplica_nivel_bajo: bool = False
-    aplica_nivel_medio: bool = False
-    aplica_nivel_alto: bool = False
+    roles_ids: list[int] = Field(default_factory=list)
     total_preguntas: int = 20
 
 

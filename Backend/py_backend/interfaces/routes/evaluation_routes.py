@@ -86,12 +86,14 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
         if not form:
             raise HTTPException(status_code=404, detail="Formulario no encontrado")
 
-        if target_role == "user_nivel_bajo" and not form.aplica_nivel_bajo:
-            raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel bajo.")
-        elif target_role == "user_nivel_medio" and not form.aplica_nivel_medio:
-            raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel medio.")
-        elif target_role == "user_nivel_alto" and not form.aplica_nivel_alto:
-            raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel alto.")
+        from infraestructure.database.models import FormularioRolORM
+        # Check if form applies to user's role
+        if target_user.id_rol:
+            has_role = session.exec(
+                select(FormularioRolORM).where(FormularioRolORM.id_formulario == form.id_formulario, FormularioRolORM.id_rol == target_user.id_rol)
+            ).first()
+            if not has_role:
+                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para el rol del usuario asignado.")
 
     fecha_eval = input_data.fecha or date.today()
 
@@ -179,12 +181,13 @@ def update_evaluation(
             form = session.get(FormularioORM, input_data.id_formulario)
             if not form:
                 raise HTTPException(status_code=404, detail="Formulario no encontrado")
-            if target_role == "user_nivel_bajo" and not form.aplica_nivel_bajo:
-                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel bajo.")
-            elif target_role == "user_nivel_medio" and not form.aplica_nivel_medio:
-                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel medio.")
-            elif target_role == "user_nivel_alto" and not form.aplica_nivel_alto:
-                raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para usuarios de nivel alto.")
+            from infraestructure.database.models import FormularioRolORM
+            if target_user.id_rol:
+                has_role = session.exec(
+                    select(FormularioRolORM).where(FormularioRolORM.id_formulario == form.id_formulario, FormularioRolORM.id_rol == target_user.id_rol)
+                ).first()
+                if not has_role:
+                    raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para el rol del usuario asignado.")
 
     patch = input_data.model_dump(exclude_unset=True)
     if "answers" in patch and patch.get("answers") is not None:

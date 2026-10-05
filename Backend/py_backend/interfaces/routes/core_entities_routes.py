@@ -5,9 +5,10 @@ from sqlmodel import SQLModel, Session, select
 
 from app.access_control import require_admin, require_roles, role_lower
 from app.db import engine
-from app.schemas import RiskRead
+from app.schemas import RiskRead, ControlRead, DimensionRead, ControlCreate, ControlUpdate
 from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database.models import (
+    DimensionORM,
     ControlORM,
     FormularioORM,
     FormularioPreguntaORM,
@@ -52,17 +53,7 @@ def _register_single_pk_crud(
 
     @router.get(f"/{resource}", name=f"list_{resource}", dependencies=read_deps)
     def list_items(session: Session = Depends(_get_session), _model: type[SQLModel] = model, current_user: dict = Depends(auth_middleware)):
-        if resource == "questionnaires" and role_lower(current_user) == "evaluator":
-            from infraestructure.database.models import EvaluacionORM, FormularioORM
-            uid = int(current_user["user_id"])
-            stmt = (
-                select(_model)
-                .join(EvaluacionORM, EvaluacionORM.id_formulario == FormularioORM.id_formulario)
-                .where(EvaluacionORM.id_evaluador == uid)
-                .distinct()
-            )
-        else:
-            stmt = select(_model).order_by(getattr(_model, pk_name))
+        stmt = select(_model).order_by(getattr(_model, pk_name))
         rows = session.exec(stmt).all()
         return [_serialize(row) for row in rows]
 
@@ -183,17 +174,23 @@ def generate_random_form(
             preguntas_seleccionadas.add(restantes[i])
             
     # 3. Crear el Formulario
+    from infraestructure.database.models import FormularioRolORM
+    roles_ids = payload.get("roles_ids", [])
+    
     nuevo_form = FormularioORM(
         nombre=nombre,
         descripcion=descripcion,
-        aplica_nivel_bajo=bool(payload.get("aplica_nivel_bajo", False)),
-        aplica_nivel_medio=bool(payload.get("aplica_nivel_medio", False)),
-        aplica_nivel_alto=bool(payload.get("aplica_nivel_alto", False)),
         activo=True
     )
     session.add(nuevo_form)
     session.commit()
     session.refresh(nuevo_form)
+    
+    # 3.5. Vincular roles
+    for rid in roles_ids:
+        link_rol = FormularioRolORM(id_formulario=nuevo_form.id_formulario, id_rol=int(rid))
+        session.add(link_rol)
+    session.commit()
     
     # 4. Vincular preguntas al Formulario
     for id_pregunta in list(preguntas_seleccionadas)[:total_preguntas]:
@@ -203,18 +200,162 @@ def generate_random_form(
     session.commit()
     return _serialize(nuevo_form)
 
-_register_single_pk_crud(
-    "questionnaires",
-    FormularioORM,
-    "id_formulario",
-    write_roles=("admin",),
-)
-_register_single_pk_crud(
-    "controls",
-    ControlORM,
-    "id_control",
-    write_roles=("admin",),
-)
+@router.get("/questionnaires", name="list_questionnaires", dependencies=[Depends(require_roles("admin", "evaluator"))])
+def list_questionnaires(session: Session = Depends(_get_session), current_user: dict = Depends(auth_middleware)):
+    from infraestructure.database.models import EvaluacionORM, FormularioORM, FormularioRolORM
+    
+    if role_lower(current_user) == "evaluator":
+        uid = int(current_user["user_id"])
+        stmt = (
+            select(FormularioORM)
+            .join(EvaluacionORM, EvaluacionORM.id_formulario == FormularioORM.id_formulario)
+            .where(EvaluacionORM.id_evaluador == uid)
+            .distinct()
+        )
+    else:
+        stmt = select(FormularioORM).order_by(FormularioORM.id_formulario)
+        
+    rows = session.exec(stmt).all()
+    out = []
+    for row in rows:
+        d = _serialize(row)
+        roles = session.exec(select(FormularioRolORM.id_rol).where(FormularioRolORM.id_formulario == row.id_formulario)).all()
+        d["roles_ids"] = roles
+        out.append(d)
+    return out
+
+@router.get("/questionnaires/{item_id}", name="get_questionnaires", dependencies=[Depends(require_roles("admin", "evaluator"))])
+def get_questionnaires(item_id: int, session: Session = Depends(_get_session)):
+    from infraestructure.database.models import FormularioRolORM
+    item = session.get(FormularioORM, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="questionnaires not found")
+    d = _serialize(item)
+    roles = session.exec(select(FormularioRolORM.id_rol).where(FormularioRolORM.id_formulario == item.id_formulario)).all()
+    d["roles_ids"] = roles
+    return d
+
+@router.post("/questionnaires", name="create_questionnaires", dependencies=[Depends(require_roles("admin"))])
+def create_questionnaires(payload: dict[str, Any], session: Session = Depends(_get_session)):
+    from infraestructure.database.models import FormularioRolORM
+    data = dict(payload)
+    roles_ids = data.pop("roles_ids", [])
+    data.pop("id_formulario", None)
+    
+    item = FormularioORM(**data)
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    
+    for rid in roles_ids:
+        session.add(FormularioRolORM(id_formulario=item.id_formulario, id_rol=int(rid)))
+    session.commit()
+    
+    d = _serialize(item)
+    d["roles_ids"] = roles_ids
+    return d
+
+@router.patch("/questionnaires/{item_id}", name="update_questionnaires", dependencies=[Depends(require_roles("admin"))])
+def update_questionnaires(item_id: int, payload: dict[str, Any], session: Session = Depends(_get_session)):
+    from infraestructure.database.models import FormularioRolORM
+    item = session.get(FormularioORM, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="questionnaires not found")
+        
+    roles_ids = payload.get("roles_ids")
+    
+    for k, v in payload.items():
+        if k in ("id_formulario", "roles_ids"): continue
+        if hasattr(item, k):
+            setattr(item, k, v)
+            
+    if roles_ids is not None:
+        session.exec(delete(FormularioRolORM).where(FormularioRolORM.id_formulario == item.id_formulario))
+        for rid in roles_ids:
+            session.add(FormularioRolORM(id_formulario=item.id_formulario, id_rol=int(rid)))
+            
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    
+    d = _serialize(item)
+    final_roles = session.exec(select(FormularioRolORM.id_rol).where(FormularioRolORM.id_formulario == item.id_formulario)).all()
+    d["roles_ids"] = final_roles
+    return d
+
+@router.delete("/questionnaires/{item_id}", name="delete_questionnaires", dependencies=[Depends(require_roles("admin"))])
+def delete_questionnaires(item_id: int, session: Session = Depends(_get_session)):
+    from infraestructure.database.models import FormularioRolORM
+    item = session.get(FormularioORM, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="questionnaires not found")
+    session.exec(delete(FormularioRolORM).where(FormularioRolORM.id_formulario == item.id_formulario))
+    session.delete(item)
+    session.commit()
+    return {"deleted": True, "resource": "questionnaires", "id": item_id}
+
+
+@router.get("/controls", response_model=list[ControlRead], name="list_controls")
+def list_controls(session: Session = Depends(_get_session)):
+    return session.exec(select(ControlORM).order_by(ControlORM.id_control)).all()
+
+@router.get("/controls/{control_id}", response_model=ControlRead, name="get_control")
+def get_control(control_id: int, session: Session = Depends(_get_session)):
+    c = session.get(ControlORM, control_id)
+    if not c: raise HTTPException(404, "Control no encontrado")
+    return c
+
+@router.post("/controls", response_model=ControlRead, name="create_control", dependencies=[Depends(require_roles("admin"))])
+def create_control(payload: ControlCreate, session: Session = Depends(_get_session)):
+    c = ControlORM(
+        nombre=payload.nombre,
+        descripcion=payload.descripcion,
+        activo=payload.activo,
+        rec_alta=payload.rec_alta,
+        rec_media=payload.rec_media,
+        rec_baja=payload.rec_baja
+    )
+    if payload.dimensiones_ids:
+        dims = session.exec(select(DimensionORM).where(col(DimensionORM.id_dimension).in_(payload.dimensiones_ids))).all()
+        c.dimensiones = list(dims)
+    session.add(c)
+    session.commit()
+    session.refresh(c)
+    return c
+
+@router.put("/controls/{control_id}", response_model=ControlRead, name="update_control", dependencies=[Depends(require_roles("admin"))])
+def update_control(control_id: int, payload: ControlUpdate, session: Session = Depends(_get_session)):
+    c = session.get(ControlORM, control_id)
+    if not c:
+        raise HTTPException(404, "Control no encontrado")
+    
+    update_data = payload.model_dump(exclude_unset=True)
+    dim_ids = update_data.pop("dimensiones_ids", None)
+    
+    for key, val in update_data.items():
+        setattr(c, key, val)
+        
+    if dim_ids is not None:
+        dims = session.exec(select(DimensionORM).where(col(DimensionORM.id_dimension).in_(dim_ids))).all()
+        c.dimensiones = list(dims)
+        
+    session.add(c)
+    session.commit()
+    session.refresh(c)
+    return c
+
+@router.delete("/controls/{control_id}", name="delete_control", dependencies=[Depends(require_roles("admin"))])
+def delete_control(control_id: int, session: Session = Depends(_get_session)):
+    c = session.get(ControlORM, control_id)
+    if not c:
+        raise HTTPException(404, "Control no encontrado")
+    session.delete(c)
+    session.commit()
+    return {"deleted": True, "id": control_id}
+
+
+_register_single_pk_crud("dimensions", DimensionORM, "id_dimension", write_roles=("admin",))
+
 
 
 @router.get("/questions/by-questionnaire/{formulario_id}", name="list_questions_by_questionnaire")

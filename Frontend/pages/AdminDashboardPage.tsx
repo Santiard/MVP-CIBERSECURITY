@@ -163,7 +163,13 @@ const AdminDashboardPage: React.FC = () => {
             <div className="card" style={{ padding: 24, textAlign: 'center' }}>
               <h3 style={{ marginTop: 0, marginBottom: 20, fontSize: 16, color: 'var(--blue-700)' }}>Accesos Rápidos</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-                {isAdmin && <a href="/users" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Gestión de Usuarios</a>}
+                {isAdmin && (
+                  <>
+                    <a href="/users" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Gestión de Usuarios</a>
+                    <a href="/dimensions" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Dimensiones ISO</a>
+                    <a href="/controls" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Controles ISO</a>
+                  </>
+                )}
                 <a href="/organizations" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Organizaciones</a>
                 <a href="/questionnaires" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Catálogo de Formularios</a>
                 <a href="/evaluations" className="btn btn-secondary" style={{ textDecoration: 'none' }}>Evaluaciones</a>

@@ -1,3 +1,132 @@
+# MVP CIBERSECURITY
+
+
+## Modelo Entidad-Relación (Diagrama de Clases)
+
+A continuación se detalla la arquitectura de base de datos relacional para el sistema de ciber-madurez, reflejando el soporte completo a la ISO 27002 moderna y la escalabilidad de roles dinámicos.
+
+```mermaid
+erDiagram
+    EMPRESAS {
+        int id_empresa PK
+        string nombre
+        string sector
+        string tamano
+        string region
+    }
+
+    USUARIOS {
+        uuid id PK
+        string email
+        string password_hash
+        string full_name
+        string phone
+        int id_empresa FK
+        boolean is_active
+    }
+
+    ROLES {
+        int id_rol PK
+        string nombre
+        string descripcion
+    }
+
+    USUARIO_ROL {
+        uuid user_id PK, FK
+        int id_rol PK, FK
+    }
+
+    DIMENSIONES {
+        int id_dimension PK
+        string categoria
+        string nombre
+        string descripcion
+    }
+
+    CONTROLES {
+        int id_control PK
+        string nombre
+        string descripcion
+        boolean activo
+        string rec_alta
+        string rec_media
+        string rec_baja
+    }
+
+    CONTROL_DIMENSION {
+        int id_control PK, FK
+        int id_dimension PK, FK
+    }
+
+    PREGUNTAS {
+        int id_pregunta PK
+        string texto
+        boolean activo
+        int id_nivel FK
+    }
+
+    PREGUNTA_CONTROL {
+        int id_pregunta PK, FK
+        int id_control PK, FK
+    }
+
+    FORMULARIOS {
+        int id_formulario PK
+        string nombre
+        string descripcion
+        boolean activo
+    }
+
+    FORMULARIO_PREGUNTA {
+        int id_formulario PK, FK
+        int id_pregunta PK, FK
+    }
+
+    FORMULARIO_ROL {
+        int id_formulario PK, FK
+        int id_rol PK, FK
+    }
+
+    EVALUACIONES {
+        int id_evaluacion PK
+        int id_empresa FK
+        int id_formulario FK
+        datetime fecha_inicio
+        datetime fecha_fin
+        string estado
+    }
+
+    RESPUESTAS {
+        int id_respuesta PK
+        int id_evaluacion FK
+        int id_pregunta FK
+        int valor
+        string evidencia
+    }
+
+    EMPRESAS ||--o{ USUARIOS : "tiene"
+    USUARIOS ||--o{ USUARIO_ROL : "posee"
+    ROLES ||--o{ USUARIO_ROL : "es_asignado"
+    
+    CONTROLES ||--o{ CONTROL_DIMENSION : "clasificado_en"
+    DIMENSIONES ||--o{ CONTROL_DIMENSION : "clasifica_a"
+
+    PREGUNTAS ||--o{ PREGUNTA_CONTROL : "evalua"
+    CONTROLES ||--o{ PREGUNTA_CONTROL : "es_evaluado_por"
+
+    FORMULARIOS ||--o{ FORMULARIO_PREGUNTA : "contiene"
+    PREGUNTAS ||--o{ FORMULARIO_PREGUNTA : "pertenece_a"
+
+    FORMULARIOS ||--o{ FORMULARIO_ROL : "aplica_a"
+    ROLES ||--o{ FORMULARIO_ROL : "tiene_asignado"
+
+    EMPRESAS ||--o{ EVALUACIONES : "realiza"
+    FORMULARIOS ||--o{ EVALUACIONES : "define"
+
+    EVALUACIONES ||--o{ RESPUESTAS : "contiene"
+    PREGUNTAS ||--o{ RESPUESTAS : "es_respondida_en"
+```
+
 # MVP Ciberseguridad
 
 ## 🚀 Cómo ejecutar el proyecto (Docker)

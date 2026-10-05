@@ -5,7 +5,7 @@ import QuestionnairePreviewModal from './QuestionnairePreviewModal';
 import editIcon from '../images/edit.svg';
 import Switch from './Switch';
 
-type Q = { id: string; name: string; description: string; active: boolean; aplica_nivel_bajo: boolean; aplica_nivel_medio: boolean; aplica_nivel_alto: boolean };
+type Q = { id: string; name: string; description: string; active: boolean; roles_ids: number[] };
 
 type Props = { mode?: 'admin' | 'evaluator' };
 
@@ -15,7 +15,21 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
-  const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
+  
+  // Auto-generate Modal states
+  const [openAutoModal, setOpenAutoModal] = useState(false);
+  const [autoParams, setAutoParams] = useState({ nombre: 'Formulario Autogenerado', descripcion: 'Formulario autogenerado desde catálogo ISO.', total_preguntas: 20, preguntas_por_dimension: 1, roles_ids: [] as number[], dimensiones_ids: [] as number[] });
+  const [availableDimensions, setAvailableDimensions] = useState<Dimension[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<{id_rol: number, nombre: string}[]>([]);
+
+  useEffect(() => {
+    if (openAutoModal) {
+      dataService.getRoles().then(setAvailableRoles).catch(console.error);
+      getDimensions().then(setAvailableDimensions).catch(console.error);
+    }
+  }, [openAutoModal]);
+
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Q | null>(null);
   const [previewQ, setPreviewQ] = useState<Q | null>(null);
@@ -53,7 +67,7 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
     await load();
   };
 
-  const handleSave = async (payload: { name: string; description: string; active: boolean; aplica_nivel_bajo: boolean; aplica_nivel_medio: boolean; aplica_nivel_alto: boolean }) => {
+  const handleSave = async (payload: { name: string; description: string; active: boolean; roles_ids: number[] }) => {
     if (editing?.id) {
       return await dataService.updateQuestionnaire(editing.id, payload as any);
     } else {
@@ -73,9 +87,7 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
         nombre: `Auditoría Aleatoria ${new Date().toLocaleDateString()}`,
         descripcion: "Generado automáticamente asegurando cobertura ISO 27001",
         total_preguntas: 30,
-        aplica_nivel_bajo: false,
-        aplica_nivel_medio: true,
-        aplica_nivel_alto: true
+        roles_ids: []
       });
       await load();
     } catch (err: any) {
@@ -101,7 +113,7 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
         </select>
         {mode === 'admin' && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <button className="btn" onClick={handleAutoGenerate} title="Genera un formulario con al menos una pregunta por control ISO" disabled={loading}>
+            <button className="btn" onClick={() => setOpenAutoModal(true)} title="Genera un formulario con al menos una pregunta por control ISO" disabled={loading}>
               Auto-generar (ISO)
             </button>
             <button className="btn btn-primary" onClick={() => { setEditing(null); setOpenForm(true); }}>Nuevo formulario</button>
@@ -196,6 +208,84 @@ const QuestionnairesTable: React.FC<Props> = ({ mode = 'admin' }) => {
             <button className="btn" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1}>Prev</button>
             <span style={{ margin: '0 4px', minWidth: 42, textAlign: 'center' }}>{safePage}/{pages}</span>
             <button className="btn" onClick={() => setPage((p) => Math.min(pages, p + 1))} disabled={safePage >= pages}>Next</button>
+          </div>
+        </div>
+      )}
+      {openAutoModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Configurar Formulario Autogenerado</h2>
+            <form onSubmit={handleAutoGenerateSubmit}>
+              <div className="grid grid-cols-1 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                  <input type="text" required value={autoParams.nombre} onChange={e => setAutoParams({...autoParams, nombre: e.target.value})} className="w-full border p-2 rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                  <textarea required value={autoParams.descripcion} onChange={e => setAutoParams({...autoParams, descripcion: e.target.value})} className="w-full border p-2 rounded" rows={2} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Límite Total de Preguntas</label>
+                    <input type="number" required min="1" max="500" value={autoParams.total_preguntas} onChange={e => setAutoParams({...autoParams, total_preguntas: parseInt(e.target.value)})} className="w-full border p-2 rounded" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Preguntas por Dimensión ISO</label>
+                    <input type="number" required min="1" max="50" value={autoParams.preguntas_por_dimension} onChange={e => setAutoParams({...autoParams, preguntas_por_dimension: parseInt(e.target.value)})} className="w-full border p-2 rounded" />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Usuario (Roles / Escolaridad)</label>
+                  <div className="border p-3 rounded flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                    {availableRoles.filter(r => !['admin', 'evaluator'].includes(r.nombre)).map(rol => (
+                      <label key={rol.id_rol} className="inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mr-1"
+                          checked={autoParams.roles_ids.includes(rol.id_rol)}
+                          onChange={(e) => {
+                            if (e.target.checked) setAutoParams({...autoParams, roles_ids: [...autoParams.roles_ids, rol.id_rol]});
+                            else setAutoParams({...autoParams, roles_ids: autoParams.roles_ids.filter(id => id !== rol.id_rol)});
+                          }}
+                        />
+                        <span className="text-sm mr-3">{rol.nombre}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Dimensiones ISO a evaluar (Dejar vacío para todas)</label>
+                  <div className="border p-3 rounded flex flex-wrap gap-2 max-h-48 overflow-y-auto bg-gray-50">
+                    {availableDimensions.map(dim => (
+                      <label key={dim.id_dimension} className="inline-flex items-center cursor-pointer bg-white border px-2 py-1 rounded text-xs hover:bg-blue-50">
+                        <input
+                          type="checkbox"
+                          className="mr-1"
+                          checked={autoParams.dimensiones_ids.includes(dim.id_dimension)}
+                          onChange={(e) => {
+                            if (e.target.checked) setAutoParams({...autoParams, dimensiones_ids: [...autoParams.dimensiones_ids, dim.id_dimension]});
+                            else setAutoParams({...autoParams, dimensiones_ids: autoParams.dimensiones_ids.filter(id => id !== dim.id_dimension)});
+                          }}
+                        />
+                        {dim.nombre}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button type="button" onClick={() => setOpenAutoModal(false)} className="px-4 py-2 border rounded hover:bg-gray-100">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700">
+                  {loading ? 'Generando...' : 'Generar Formulario'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
