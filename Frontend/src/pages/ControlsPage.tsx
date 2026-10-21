@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Layout from '../components/Layout';
 import {
   getControls,
   createControl,
@@ -15,7 +16,6 @@ export const ControlsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [nombre, setNombre] = useState('');
@@ -30,8 +30,8 @@ export const ControlsPage: React.FC = () => {
     setLoading(true);
     try {
       const [ctrlsData, dimsData] = await Promise.all([getControls(), getDimensions()]);
-      setControls(ctrlsData);
-      setDimensions(dimsData);
+      setControls(Array.isArray(ctrlsData) ? ctrlsData : []);
+      setDimensions(Array.isArray(dimsData) ? dimsData : []);
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Error al cargar los datos');
@@ -41,7 +41,7 @@ export const ControlsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, []);
 
   const handleOpenModal = (ctrl?: Control) => {
@@ -53,7 +53,7 @@ export const ControlsPage: React.FC = () => {
       setRecMedia(ctrl.rec_media || '');
       setRecBaja(ctrl.rec_baja || '');
       setActivo(ctrl.activo);
-      setSelectedDims(ctrl.dimensiones.map((d) => d.id_dimension));
+      setSelectedDims((ctrl.dimensiones || []).map((d) => d.id_dimension));
     } else {
       setEditingId(null);
       setNombre('');
@@ -93,7 +93,7 @@ export const ControlsPage: React.FC = () => {
         await createControl(payload);
       }
       setIsModalOpen(false);
-      fetchData();
+      void fetchData();
     } catch (err: any) {
       alert('Error al guardar control: ' + err.message);
     }
@@ -103,16 +103,12 @@ export const ControlsPage: React.FC = () => {
     if (!window.confirm('¿Eliminar este control?')) return;
     try {
       await deleteControl(id);
-      fetchData();
+      void fetchData();
     } catch (err: any) {
       alert('Error al eliminar control: ' + err.message);
     }
   };
 
-  if (loading) return <div className="p-4">Cargando controles...</div>;
-  if (error) return <div className="p-4 text-red-600">{error}</div>;
-
-  // Group dimensions by Category for the UI
   const groupedDimensions = dimensions.reduce((acc, dim) => {
     if (!acc[dim.categoria]) acc[dim.categoria] = [];
     acc[dim.categoria].push(dim);
@@ -120,135 +116,228 @@ export const ControlsPage: React.FC = () => {
   }, {} as Record<string, Dimension[]>);
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Gestión de Controles</h1>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700"
-        >
-          Crear Control
-        </button>
-      </div>
-
-      <div className="overflow-x-auto bg-white rounded shadow">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-1/4">Control</th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">Dimensiones</th>
-              <th className="px-4 py-3 text-center font-semibold text-gray-700">Estado</th>
-              <th className="px-4 py-3 text-right font-semibold text-gray-700">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {controls.map((ctrl) => (
-              <tr key={ctrl.id_control} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-800">
-                  {ctrl.nombre}
-                  <div className="text-xs text-gray-500 mt-1 line-clamp-2">{ctrl.descripcion}</div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {ctrl.dimensiones.map((d) => (
-                      <span
-                        key={d.id_dimension}
-                        className="bg-blue-100 text-blue-800 text-[10px] px-2 py-0.5 rounded-full"
-                        title={d.categoria}
-                      >
-                        {d.nombre}
-                      </span>
-                    ))}
-                    {ctrl.dimensiones.length === 0 && <span className="text-gray-400 text-xs">Sin dimensiones</span>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`px-2 py-1 text-xs rounded-full ${ctrl.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {ctrl.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => handleOpenModal(ctrl)} className="text-blue-600 hover:text-blue-800 mr-3">
-                    Editar
-                  </button>
-                  <button onClick={() => handleDelete(ctrl.id_control)} className="text-red-600 hover:text-red-800">
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 p-4">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-3xl max-h-full overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">
-              {editingId ? 'Editar Control' : 'Nuevo Control'}
-            </h2>
-            <form onSubmit={handleSave}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Control</label>
-                  <input type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full border p-2 rounded" />
-                </div>
-                <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                  <textarea required value={descripcion} onChange={(e) => setDescripcion(e.target.value)} className="w-full border p-2 rounded" rows={2} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recomendación Alta</label>
-                  <textarea value={recAlta} onChange={(e) => setRecAlta(e.target.value)} className="w-full border p-2 rounded" rows={2} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recomendación Media</label>
-                  <textarea value={recMedia} onChange={(e) => setRecMedia(e.target.value)} className="w-full border p-2 rounded" rows={2} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recomendación Baja</label>
-                  <textarea value={recBaja} onChange={(e) => setRecBaja(e.target.value)} className="w-full border p-2 rounded" rows={2} />
-                </div>
-                <div className="flex items-center mt-6">
-                  <input type="checkbox" id="activo" checked={activo} onChange={(e) => setActivo(e.target.checked)} className="mr-2" />
-                  <label htmlFor="activo" className="text-sm font-medium text-gray-700">Control Activo</label>
-                </div>
-              </div>
-
-              <div className="border-t pt-4 mb-4">
-                <h3 className="text-lg font-semibold mb-3">Dimensiones Asignadas</h3>
-                {Object.entries(groupedDimensions).map(([cat, dims]) => (
-                  <div key={cat} className="mb-3">
-                    <div className="text-sm font-bold text-gray-600 mb-1 border-b pb-1">{cat}</div>
-                    <div className="flex flex-wrap gap-2">
-                      {dims.map((d) => (
-                        <label key={d.id_dimension} className="inline-flex items-center bg-gray-50 border px-2 py-1 rounded cursor-pointer hover:bg-blue-50">
-                          <input
-                            type="checkbox"
-                            className="mr-2"
-                            checked={selectedDims.includes(d.id_dimension)}
-                            onChange={() => toggleDimension(d.id_dimension)}
-                          />
-                          <span className="text-xs">{d.nombre}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-end space-x-2 mt-6">
-                <button type="button" onClick={handleCloseModal} className="px-4 py-2 border rounded hover:bg-gray-100">
-                  Cancelar
-                </button>
-                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded shadow hover:bg-indigo-700">
-                  Guardar
-                </button>
-              </div>
-            </form>
+    <Layout>
+      <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ margin: 0 }}>Gestión de Controles ISO</h2>
+            <button onClick={() => handleOpenModal()} className="btn btn-primary">
+              Crear Control
+            </button>
           </div>
+
+          {loading && <p style={{ color: 'var(--muted)' }}>Cargando controles...</p>}
+          {error && <p style={{ color: 'var(--danger)' }}>{error}</p>}
+
+          {!loading && !error && (
+            <div className="table-responsive-container">
+              <table className="table-responsive">
+                <thead>
+                  <tr>
+                    <th>Control</th>
+                    <th>Dimensiones</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {controls.map((ctrl) => (
+                    <tr key={ctrl.id_control}>
+                      <td style={{ textAlign: 'left' }}>
+                        <div style={{ fontWeight: 600 }}>{ctrl.nombre}</div>
+                        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{ctrl.descripcion}</div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {(ctrl.dimensiones || []).map((d) => (
+                            <span
+                              key={d.id_dimension}
+                              style={{
+                                background: 'var(--surface-light)',
+                                border: '1px solid var(--border)',
+                                fontSize: 11,
+                                padding: '2px 8px',
+                                borderRadius: 999,
+                              }}
+                              title={d.categoria}
+                            >
+                              {d.nombre}
+                            </span>
+                          ))}
+                          {(!ctrl.dimensiones || ctrl.dimensiones.length === 0) && (
+                            <span style={{ color: 'var(--muted)', fontSize: 12 }}>Sin dimensiones</span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: 999,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: ctrl.activo ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)',
+                            color: ctrl.activo ? 'var(--success)' : 'var(--danger)',
+                          }}
+                        >
+                          {ctrl.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => handleOpenModal(ctrl)} className="btn" style={{ marginRight: 8 }}>
+                          Editar
+                        </button>
+                        <button onClick={() => handleDelete(ctrl.id_control)} className="btn" style={{ color: 'var(--danger)' }}>
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {controls.length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>
+                        No hay controles registrados.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+
+        {isModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(2,6,23,0.45)',
+              zIndex: 9999,
+              padding: 16,
+            }}
+          >
+            <div
+              className="card"
+              style={{
+                width: '100%',
+                maxWidth: 720,
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                background: 'var(--surface, #fff)',
+                padding: 24,
+                borderRadius: 12,
+              }}
+            >
+              <h3 style={{ marginTop: 0, marginBottom: 16 }}>
+                {editingId ? 'Editar Control' : 'Nuevo Control'}
+              </h3>
+              <form onSubmit={handleSave} style={{ display: 'grid', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Nombre del Control *</label>
+                  <input
+                    type="text"
+                    required
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Descripción *</label>
+                  <textarea
+                    required
+                    value={descripcion}
+                    onChange={(e) => setDescripcion(e.target.value)}
+                    style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                    rows={2}
+                  />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Recomendación Alta</label>
+                    <textarea
+                      value={recAlta}
+                      onChange={(e) => setRecAlta(e.target.value)}
+                      style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Recomendación Media</label>
+                    <textarea
+                      value={recMedia}
+                      onChange={(e) => setRecMedia(e.target.value)}
+                      style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                      rows={2}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 13, marginBottom: 4 }}>Recomendación Baja</label>
+                    <textarea
+                      value={recBaja}
+                      onChange={(e) => setRecBaja(e.target.value)}
+                      style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+                    <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
+                    Control Activo
+                  </label>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                  <h4 style={{ margin: '0 0 12px 0' }}>Dimensiones Asignadas</h4>
+                  {Object.entries(groupedDimensions).map(([cat, dims]) => (
+                    <div key={cat} style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--muted)' }}>{cat}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {dims.map((d) => (
+                          <label
+                            key={d.id_dimension}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              background: 'var(--surface-light)',
+                              border: '1px solid var(--border)',
+                              padding: '4px 10px',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 12,
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedDims.includes(d.id_dimension)}
+                              onChange={() => toggleDimension(d.id_dimension)}
+                            />
+                            <span>{d.nombre}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+                  <button type="button" onClick={handleCloseModal} className="btn">
+                    Cancelar
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Guardar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    </Layout>
   );
 };

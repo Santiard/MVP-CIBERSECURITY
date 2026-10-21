@@ -61,6 +61,30 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/roles"
+          element={
+            <ProtectedRoute>
+              <RolesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dimensions"
+          element={
+            <ProtectedRoute>
+              <DimensionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/controls"
+          element={
+            <ProtectedRoute>
+              <ControlsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/organizations"
           element={
             <ProtectedRoute>

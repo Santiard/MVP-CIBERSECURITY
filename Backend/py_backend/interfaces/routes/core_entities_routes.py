@@ -1,7 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import SQLModel, Session, select
+from sqlmodel import SQLModel, Session, select, col, delete
 
 from app.access_control import require_admin, require_roles, role_lower
 from app.db import engine
@@ -10,9 +10,12 @@ from app.validation import PASSWORD_POLICY_MESSAGE, is_strong_password
 from infraestructure.database.models import (
     DimensionORM,
     ControlORM,
+    ControlDimensionORM,
     FormularioORM,
     FormularioPreguntaORM,
+    FormularioRolORM,
     PreguntaORM,
+    PreguntaControlORM,
     RiesgoORM,
     RolORM,
     UsuarioORM,
@@ -136,47 +139,60 @@ def generate_random_form(
     session: Session = Depends(_get_session)
 ):
     """
-    Genera un Formulario aleatorio asegurando al menos 1 pregunta por cada Control ISO.
-    Si total_preguntas > cantidad_controles, se rellenará con preguntas aleatorias del banco.
+    Genera un Formulario aleatorio filtrando por dimensiones ISO (si se indican)
+    y muestreando preguntas_por_dimension hasta total_preguntas.
     """
     import random
-    from infraestructure.database.models import PreguntaControlORM
-    
+
     total_preguntas = int(payload.get("total_preguntas", 20))
+    preguntas_por_dimension = int(payload.get("preguntas_por_dimension", 1))
+    dimensiones_ids = payload.get("dimensiones_ids") or []
     nombre = payload.get("nombre", "Formulario Autogenerado")
     descripcion = payload.get("descripcion", "Autogenerado aleatoriamente.")
-    
-    # 1. Obtener todos los controles
-    controles = session.exec(select(ControlORM)).all()
-    if not controles:
-        raise HTTPException(status_code=400, detail="No hay controles ISO en la base de datos.")
-    
-    # 2. Por cada control, obtener sus preguntas
-    preguntas_seleccionadas = set()
+
     todas_preguntas_banco = session.exec(select(PreguntaORM)).all()
     if not todas_preguntas_banco:
         raise HTTPException(status_code=400, detail="El banco de preguntas está vacío.")
-        
-    for control in controles:
-        # Preguntas vinculadas a este control
-        links = session.exec(select(PreguntaControlORM).where(PreguntaControlORM.id_control == control.id_control)).all()
-        if links:
-            elegida = random.choice(links)
-            preguntas_seleccionadas.add(elegida.id_pregunta)
 
-    # Si nos pasamos de total_preguntas por asegurar 1 por control, lo acotamos (o lo dejamos, según requerimiento)
-    # Rellenar si faltan
+    if dimensiones_ids:
+        dims = session.exec(select(DimensionORM).where(col(DimensionORM.id_dimension).in_(dimensiones_ids))).all()
+    else:
+        dims = session.exec(select(DimensionORM)).all()
+
+    preguntas_seleccionadas: set[int] = set()
+
+    if dims:
+        for dim in dims:
+            ctrl_links = session.exec(
+                select(ControlDimensionORM).where(ControlDimensionORM.id_dimension == dim.id_dimension)
+            ).all()
+            ctrl_ids = [cl.id_control for cl in ctrl_links]
+            if not ctrl_ids:
+                continue
+            q_links = session.exec(
+                select(PreguntaControlORM).where(col(PreguntaControlORM.id_control).in_(ctrl_ids))
+            ).all()
+            candidatas = list({ql.id_pregunta for ql in q_links if ql.id_pregunta not in preguntas_seleccionadas})
+            if candidatas:
+                elegidas = random.sample(candidatas, min(preguntas_por_dimension, len(candidatas)))
+                preguntas_seleccionadas.update(elegidas)
+    else:
+        controles = session.exec(select(ControlORM)).all()
+        for control in controles:
+            links = session.exec(select(PreguntaControlORM).where(PreguntaControlORM.id_control == control.id_control)).all()
+            if links:
+                elegida = random.choice(links)
+                preguntas_seleccionadas.add(elegida.id_pregunta)
+
     if len(preguntas_seleccionadas) < total_preguntas:
         restantes = [p.id_pregunta for p in todas_preguntas_banco if p.id_pregunta not in preguntas_seleccionadas]
         random.shuffle(restantes)
         faltantes = total_preguntas - len(preguntas_seleccionadas)
         for i in range(min(faltantes, len(restantes))):
             preguntas_seleccionadas.add(restantes[i])
-            
-    # 3. Crear el Formulario
-    from infraestructure.database.models import FormularioRolORM
+
     roles_ids = payload.get("roles_ids", [])
-    
+
     nuevo_form = FormularioORM(
         nombre=nombre,
         descripcion=descripcion,
@@ -185,20 +201,20 @@ def generate_random_form(
     session.add(nuevo_form)
     session.commit()
     session.refresh(nuevo_form)
-    
-    # 3.5. Vincular roles
+
     for rid in roles_ids:
         link_rol = FormularioRolORM(id_formulario=nuevo_form.id_formulario, id_rol=int(rid))
         session.add(link_rol)
     session.commit()
-    
-    # 4. Vincular preguntas al Formulario
+
     for id_pregunta in list(preguntas_seleccionadas)[:total_preguntas]:
         link = FormularioPreguntaORM(id_formulario=nuevo_form.id_formulario, id_pregunta=id_pregunta)
         session.add(link)
-    
+
     session.commit()
-    return _serialize(nuevo_form)
+    d = _serialize(nuevo_form)
+    d["roles_ids"] = [int(r) for r in roles_ids]
+    return d
 
 @router.get("/questionnaires", name="list_questionnaires", dependencies=[Depends(require_roles("admin", "evaluator"))])
 def list_questionnaires(session: Session = Depends(_get_session), current_user: dict = Depends(auth_middleware)):
@@ -226,7 +242,6 @@ def list_questionnaires(session: Session = Depends(_get_session), current_user: 
 
 @router.get("/questionnaires/{item_id}", name="get_questionnaires", dependencies=[Depends(require_roles("admin", "evaluator"))])
 def get_questionnaires(item_id: int, session: Session = Depends(_get_session)):
-    from infraestructure.database.models import FormularioRolORM
     item = session.get(FormularioORM, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="questionnaires not found")
@@ -237,7 +252,6 @@ def get_questionnaires(item_id: int, session: Session = Depends(_get_session)):
 
 @router.post("/questionnaires", name="create_questionnaires", dependencies=[Depends(require_roles("admin"))])
 def create_questionnaires(payload: dict[str, Any], session: Session = Depends(_get_session)):
-    from infraestructure.database.models import FormularioRolORM
     data = dict(payload)
     roles_ids = data.pop("roles_ids", [])
     data.pop("id_formulario", None)
@@ -257,7 +271,6 @@ def create_questionnaires(payload: dict[str, Any], session: Session = Depends(_g
 
 @router.patch("/questionnaires/{item_id}", name="update_questionnaires", dependencies=[Depends(require_roles("admin"))])
 def update_questionnaires(item_id: int, payload: dict[str, Any], session: Session = Depends(_get_session)):
-    from infraestructure.database.models import FormularioRolORM
     item = session.get(FormularioORM, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="questionnaires not found")
@@ -285,7 +298,6 @@ def update_questionnaires(item_id: int, payload: dict[str, Any], session: Sessio
 
 @router.delete("/questionnaires/{item_id}", name="delete_questionnaires", dependencies=[Depends(require_roles("admin"))])
 def delete_questionnaires(item_id: int, session: Session = Depends(_get_session)):
-    from infraestructure.database.models import FormularioRolORM
     item = session.get(FormularioORM, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="questionnaires not found")

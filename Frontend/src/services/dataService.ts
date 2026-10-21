@@ -36,9 +36,10 @@ type Questionnaire = {
   name: string;
   description: string;
   active: boolean;
-  aplica_nivel_bajo: boolean;
-  aplica_nivel_medio: boolean;
-  aplica_nivel_alto: boolean;
+  roles_ids?: number[];
+  aplica_nivel_bajo?: boolean;
+  aplica_nivel_medio?: boolean;
+  aplica_nivel_alto?: boolean;
 };
 
 type RoleApi = { id_rol: number; nombre: string };
@@ -56,6 +57,7 @@ type QuestionnaireApi = {
   nombre: string;
   descripcion: string;
   activo?: boolean;
+  roles_ids?: number[];
   aplica_nivel_bajo?: boolean;
   aplica_nivel_medio?: boolean;
   aplica_nivel_alto?: boolean;
@@ -168,6 +170,22 @@ const dataService = {
     };
   },
 
+  // --- Roles ---
+  getRoles: async (): Promise<RoleApi[]> => {
+    return readJson<RoleApi[]>('/roles');
+  },
+  createRole: async (payload: { nombre: string }): Promise<RoleApi> => {
+    const created = await writeJson<RoleApi>('/roles', 'POST', payload);
+    if (created?.id_rol && created?.nombre) {
+      roleIdByName.set(created.nombre, created.id_rol);
+    }
+    return created;
+  },
+  deleteRole: async (id: number): Promise<void> => {
+    await remove(`/roles/${id}`);
+    roleIdByName.clear();
+  },
+
   // --- Questions (Preguntas) ---
   getQuestionsByControl: async (controlId: string): Promise<Question[]> => {
     const rows = await readJson<any[]>(`/question-bank/by-formulario/${encodeURIComponent(controlId)}`);
@@ -181,7 +199,6 @@ const dataService = {
       active: true, // Bank questions don't have individual active flags for forms
     }));
   },
-
 
   createQuestion: async (q: Omit<Question, 'id'>): Promise<Question> => {
     const created = await writeJson<QuestionApi>('/questions', 'POST', {
@@ -219,6 +236,7 @@ const dataService = {
   deleteQuestion: async (id: string) => {
     return remove(`/questions/${id}`);
   },
+
   // Users
   getUsers: async (): Promise<User[]> => {
     const [users, roles] = await Promise.all([
@@ -232,7 +250,7 @@ const dataService = {
       name: u.nombre,
       email: u.correo,
       phone: u.telefono,
-      role: roleById.get(u.id_rol) || 'user',
+      role: roleById.get(u.id_rol) || 'user_nivel_bajo',
       active: u.activo ?? true,
     }));
   },
@@ -348,13 +366,12 @@ const dataService = {
       nombre: q.name,
       descripcion: q.description,
       activo: q.active,
-      aplica_nivel_bajo: q.aplica_nivel_bajo,
-      aplica_nivel_medio: q.aplica_nivel_medio,
-      aplica_nivel_alto: q.aplica_nivel_alto,
+      roles_ids: q.roles_ids ?? [],
     });
     return {
       id: String(created.id_formulario),
       ...q,
+      roles_ids: created.roles_ids ?? q.roles_ids ?? [],
     };
   },
   generateRandomQuestionnaire: async (payload: { nombre: string; descripcion: string; total_preguntas: number; roles_ids: number[]; dimensiones_ids: number[]; preguntas_por_dimension: number }) => {
@@ -364,9 +381,7 @@ const dataService = {
       name: created.nombre,
       description: created.descripcion,
       active: created.activo ?? true,
-      aplica_nivel_bajo: created.aplica_nivel_bajo ?? false,
-      aplica_nivel_medio: created.aplica_nivel_medio ?? false,
-      aplica_nivel_alto: created.aplica_nivel_alto ?? false,
+      roles_ids: created.roles_ids ?? payload.roles_ids ?? [],
     };
   },
   updateQuestionnaire: async (id: string, patch: Partial<Questionnaire>) => {
@@ -402,24 +417,23 @@ const dataService = {
   checkOrgEmailExists: async (email: string, excludeId?: string) => {
     if (!email) return false;
     const orgs = await dataService.getOrgs();
-    return orgs.some((o: Org) => o.email?.toLowerCase() === email.toLowerCase() && o.id !== excludeId);
+    return orgs.some((o: Org) => o.email?.toLowerCase() === email.toLowerCase() && String(o.id_empresa) !== excludeId);
   },
   checkOrgNitExists: async (nit: string, excludeId?: string) => {
     const normalized = normalizeDigits(nit);
     if (!normalized) return false;
     const orgs = await dataService.getOrgs();
-    return orgs.some((o: Org) => normalizeDigits(o.nit) === normalized && o.id !== excludeId);
+    return orgs.some((o: Org) => normalizeDigits(o.nit) === normalized && String(o.id_empresa) !== excludeId);
   },
   checkOrgPhoneExists: async (phone: string, excludeId?: string) => {
     const normalized = normalizeDigits(phone);
     if (!normalized) return false;
     const orgs = await dataService.getOrgs();
-    return orgs.some((o: Org) => normalizeDigits(o.phone) === normalized && o.id !== excludeId);
-  }
+    return orgs.some((o: Org) => normalizeDigits(o.phone) === normalized && String(o.id_empresa) !== excludeId);
+  },
 };
 
 export default dataService;
-
 
 // --- Dimensions & Controls Types ---
 export type Dimension = {
@@ -452,50 +466,36 @@ export type ControlPayload = {
 
 // --- Dimensions API ---
 export const getDimensions = (): Promise<Dimension[]> => {
-  return apiFetch('/core/dimensions');
+  return readJson<Dimension[]>('/dimensions');
 };
 
 export const createDimension = (data: Partial<Dimension>): Promise<Dimension> => {
-  return apiFetch('/core/dimensions', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+  return writeJson<Dimension>('/dimensions', 'POST', data);
 };
 
 export const updateDimension = (id: number, data: Partial<Dimension>): Promise<Dimension> => {
-  return apiFetch(`/core/dimensions/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
+  return writeJson<Dimension>(`/dimensions/${id}`, 'PATCH', data);
 };
 
-export const deleteDimension = (id: number): Promise<{ deleted: boolean }> => {
-  return apiFetch(`/core/dimensions/${id}`, {
-    method: 'DELETE',
-  });
+export const deleteDimension = async (id: number): Promise<{ deleted: boolean }> => {
+  await remove(`/dimensions/${id}`);
+  return { deleted: true };
 };
 
 // --- Controls API ---
 export const getControls = (): Promise<Control[]> => {
-  return apiFetch('/core/controls');
+  return readJson<Control[]>('/controls');
 };
 
 export const createControl = (data: ControlPayload): Promise<Control> => {
-  return apiFetch('/core/controls', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
+  return writeJson<Control>('/controls', 'POST', data);
 };
 
 export const updateControl = (id: number, data: Partial<ControlPayload>): Promise<Control> => {
-  return apiFetch(`/core/controls/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  });
+  return writeJson<Control>(`/controls/${id}`, 'PUT', data);
 };
 
-export const deleteControl = (id: number): Promise<{ deleted: boolean }> => {
-  return apiFetch(`/core/controls/${id}`, {
-    method: 'DELETE',
-  });
+export const deleteControl = async (id: number): Promise<{ deleted: boolean }> => {
+  await remove(`/controls/${id}`);
+  return { deleted: true };
 };

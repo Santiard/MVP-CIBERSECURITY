@@ -28,6 +28,7 @@ class SQLEvaluationRepository:
         with Session(engine) as session:
             item = EvaluacionORM(
                 id_empresa=org_id,
+                id_formulario=int(data.get("id_formulario") or 1),
                 id_usuario=user_id,
                 id_evaluador=data.get("evaluator_id"),
                 fecha=data.get("fecha") or date.today(),
@@ -54,6 +55,8 @@ class SQLEvaluationRepository:
                 return None
             if "organization_id" in payload and payload["organization_id"] is not None:
                 item.id_empresa = int(payload["organization_id"])
+            if "id_formulario" in payload and payload["id_formulario"] is not None:
+                item.id_formulario = int(payload["id_formulario"])
             if "answers" in payload and payload["answers"] is not None:
                 item.datos_respuestas = payload["answers"]
             if "user_id" in payload and payload["user_id"] is not None:

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class EvaluationDTO(BaseModel):
     id: Optional[str] = None
     organization_id: int
+    id_formulario: Optional[int] = None
     answers: Optional[dict[str, Any]] = None
     user_id: Optional[int] = None
     evaluator_id: Optional[int] = None

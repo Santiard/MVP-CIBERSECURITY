@@ -20,9 +20,9 @@ class SqlEvaluationRepository(EvaluationRepository):
             organization_id=int(evaluation["organization_id"]),
             answers=evaluation.get("answers", {}),
         )
-        # SQLEvaluationRepository acepta dict con user_id opcional vía setattr
         save_dict = {
             "organization_id": payload.organization_id,
+            "id_formulario": evaluation.get("id_formulario"),
             "answers": payload.answers,
             "user_id": evaluation.get("user_id"),
             "evaluator_id": evaluation.get("evaluator_id"),

@@ -16,8 +16,8 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   const [description, setDescription] = useState('');
   const [active, setActive] = useState(true);
   const [rolesIds, setRolesIds] = useState<number[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<{id_rol: number, nombre: string}[]>([]);
-  
+  const [availableRoles, setAvailableRoles] = useState<{ id_rol: number; nombre: string }[]>([]);
+
   // Transfer list states
   const [bankQuestions, setBankQuestions] = useState<BankQuestion[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -27,7 +27,7 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   const { showAlert } = useAlert();
 
   const [openNewQuestion, setOpenNewQuestion] = useState(false);
-  
+
   // Search filters
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
@@ -37,7 +37,7 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     try {
       const qs = await questionBankApi.list();
       setBankQuestions(qs);
-      
+
       if (controlIdToSelect) {
         const idNum = Number(controlIdToSelect);
         const sel = new Set<string>();
@@ -61,8 +61,10 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
       setDescription(initial?.description ?? '');
       setActive(initial?.active ?? true);
       setRolesIds(initial?.roles_ids ?? []);
-      import('../services/dataService').then(mod => mod.default.getRoles().then(setAvailableRoles).catch(console.error));
-      
+      import('../services/dataService').then((mod) =>
+        mod.default.getRoles().then(setAvailableRoles).catch(console.error)
+      );
+
       setSelectedIds(new Set());
       void loadBank(initial?.id);
     } else {
@@ -72,9 +74,9 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   }, [open, initial]);
 
   const handleSavedQuestion = async (createdId?: string) => {
-    await loadBank(initial?.id); 
+    await loadBank(initial?.id);
     if (createdId) {
-      setSelectedIds(prev => {
+      setSelectedIds((prev) => {
         const next = new Set(prev);
         next.add(createdId);
         return next;
@@ -98,24 +100,21 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
 
     setSaving(true);
     try {
-      const result = await saveFn({ 
-        name: name.trim(), 
-        description: description.trim(), 
-        active, 
-        aplica_nivel_bajo: aplicaNivelBajo,
-        aplica_nivel_medio: aplicaNivelMedio,
-        aplica_nivel_alto: aplicaNivelAlto
+      const result = await saveFn({
+        name: name.trim(),
+        description: description.trim(),
+        active,
+        roles_ids: rolesIds,
       });
-      
+
       const controlIdNum = Number(result.id || initial?.id);
-      
+
       if (controlIdNum) {
-        // Compute diff for questions
         const linkPromises: Promise<any>[] = [];
         for (const q of bankQuestions) {
           const wasSelected = q.linkedControls.includes(controlIdNum);
           const isSelected = selectedIds.has(q.id);
-          
+
           if (isSelected && !wasSelected) {
             linkPromises.push(questionBankApi.linkToControl(q.id, controlIdNum).catch(() => {}));
           } else if (!isSelected && wasSelected) {
@@ -144,7 +143,7 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   };
 
   const toggleSelect = (id: string, select: boolean) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (select) next.add(id);
       else next.delete(id);
@@ -154,14 +153,14 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
 
   const availableQuestions = useMemo(() => {
     return bankQuestions
-      .filter(q => !selectedIds.has(q.id))
-      .filter(q => q.text.toLowerCase().includes(leftSearch.toLowerCase()));
+      .filter((q) => !selectedIds.has(q.id))
+      .filter((q) => q.text.toLowerCase().includes(leftSearch.toLowerCase()));
   }, [bankQuestions, selectedIds, leftSearch]);
 
   const assignedQuestions = useMemo(() => {
     return bankQuestions
-      .filter(q => selectedIds.has(q.id))
-      .filter(q => q.text.toLowerCase().includes(rightSearch.toLowerCase()));
+      .filter((q) => selectedIds.has(q.id))
+      .filter((q) => q.text.toLowerCase().includes(rightSearch.toLowerCase()));
   }, [bankQuestions, selectedIds, rightSearch]);
 
   const renderGroupedList = (list: BankQuestion[], action: 'add' | 'remove') => {
@@ -173,25 +172,52 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
     }, {});
 
     const keys = Object.keys(byDim).sort();
-    if (keys.length === 0) return <div style={{ padding: 16, textAlign: 'center', color: 'var(--muted)' }}>No hay preguntas.</div>;
+    if (keys.length === 0)
+      return <div style={{ padding: 16, textAlign: 'center', color: 'var(--muted)' }}>No hay preguntas.</div>;
 
     return (
       <div style={{ display: 'grid', gap: 12 }}>
-        {keys.map(dim => (
+        {keys.map((dim) => (
           <div key={dim}>
-            <div style={{ fontSize: 13, fontWeight: 700, padding: '8px 12px', background: 'var(--surface-muted, rgba(25,118,210,0.06))', borderRadius: 6, marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                padding: '8px 12px',
+                background: 'var(--surface-muted, rgba(25,118,210,0.06))',
+                borderRadius: 6,
+                marginBottom: 4,
+              }}
+            >
               {dim} ({byDim[dim].length})
             </div>
-            {byDim[dim].map(q => (
-              <div key={q.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 4px', borderBottom: '1px solid var(--border)' }}>
+            {byDim[dim].map((q) => (
+              <div
+                key={q.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  padding: '8px 4px',
+                  borderBottom: '1px solid var(--border)',
+                }}
+              >
                 <button
                   type="button"
                   onClick={() => toggleSelect(q.id, action === 'add')}
                   style={{
-                    minWidth: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 24,
+                    height: 24,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     background: action === 'add' ? 'var(--surface-muted, rgba(25,118,210,0.08))' : 'rgba(239,68,68,0.1)',
                     color: action === 'add' ? 'var(--primary)' : 'var(--danger)',
-                    border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 700, fontSize: 14
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: 14,
                   }}
                   title={action === 'add' ? 'Asignar al formulario' : 'Quitar del formulario'}
                 >
@@ -212,60 +238,125 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
   if (!open) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2,6,23,0.4)' }}>
-      
-      {/* Modal para crear pregunta (se abre SOBRE este modal) */}
-      <QuestionForm
-        open={openNewQuestion}
-        onClose={() => setOpenNewQuestion(false)}
-        onSaved={handleSavedQuestion}
-      />
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(2,6,23,0.4)',
+      }}
+    >
+      <QuestionForm open={openNewQuestion} onClose={() => setOpenNewQuestion(false)} onSaved={handleSavedQuestion} />
 
-      <form noValidate onSubmit={submit} style={{ width: '95vw', maxWidth: 1100, maxHeight: '95vh', background: 'var(--surface)', borderRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        
-        {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <form
+        noValidate
+        onSubmit={submit}
+        style={{
+          width: '95vw',
+          maxWidth: 1100,
+          maxHeight: '95vh',
+          background: 'var(--surface)',
+          borderRadius: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            padding: '20px 24px',
+            borderBottom: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <h2 style={{ margin: 0, fontSize: 20 }}>{initial?.id ? 'Editar Formulario' : 'Nuevo Formulario'}</h2>
-          <button type="button" onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--muted)' }}>&times;</button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{ background: 'transparent', border: 'none', fontSize: 24, cursor: 'pointer', color: 'var(--muted)' }}
+          >
+            &times;
+          </button>
         </div>
 
-        {/* Content */}
         <div style={{ padding: 24, overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
-          
-          {/* Top Section: Form Fields */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
             <div>
               <label style={{ display: 'block', marginBottom: 4, fontSize: 13, color: 'var(--muted)' }}>Nombre *</label>
-              <input value={name} onChange={e => setName(e.target.value)} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }} />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box' }}
+              />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', marginBottom: 4, fontSize: 13, color: 'var(--muted)' }}>Descripción *</label>
-              <textarea value={description} onChange={e => setDescription(e.target.value)} required style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', boxSizing: 'border-box', minHeight: 60, fontFamily: 'inherit', resize: 'vertical' }} />
+              <label style={{ display: 'block', marginBottom: 4, fontSize: 13, color: 'var(--muted)' }}>
+                Descripción *
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: 10,
+                  borderRadius: 8,
+                  border: '1px solid var(--border)',
+                  boxSizing: 'border-box',
+                  minHeight: 60,
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
             </div>
-            
-            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 24, padding: '12px 16px', background: 'var(--surface-light)', borderRadius: 8, border: '1px solid var(--border)' }}>
+
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                display: 'flex',
+                gap: 24,
+                padding: '12px 16px',
+                background: 'var(--surface-light)',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+              }}
+            >
               <div>
-                <strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>Niveles de Usuario que responden este formulario</strong>
-                <div style={{ display: 'flex', gap: 24 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                    <input type="checkbox" checked={aplicaNivelBajo} onChange={e => setAplicaNivelBajo(e.target.checked)} />
-                    Nivel Bajo
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                    <input type="checkbox" checked={aplicaNivelMedio} onChange={e => setAplicaNivelMedio(e.target.checked)} />
-                    Nivel Medio
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                    <input type="checkbox" checked={aplicaNivelAlto} onChange={e => setAplicaNivelAlto(e.target.checked)} />
-                    Nivel Alto
-                  </label>
+                <strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
+                  Niveles de Usuario que responden este formulario
+                </strong>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  {availableRoles
+                    .filter((r) => !['admin', 'evaluator'].includes(r.nombre))
+                    .map((rol) => (
+                      <label
+                        key={rol.id_rol}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={rolesIds.includes(rol.id_rol)}
+                          onChange={(e) => {
+                            if (e.target.checked) setRolesIds((prev) => [...prev, rol.id_rol]);
+                            else setRolesIds((prev) => prev.filter((id) => id !== rol.id_rol));
+                          }}
+                        />
+                        {rol.nombre}
+                      </label>
+                    ))}
                 </div>
               </div>
             </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
-                <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
+                <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
                 Formulario Activo
               </label>
             </div>
@@ -273,7 +364,6 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
 
           <div style={{ height: 1, background: 'var(--border)' }} />
 
-          {/* Bottom Section: Transfer List */}
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 400 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 16 }}>Asignación de Preguntas</h3>
@@ -283,44 +373,115 @@ const QuestionnaireForm: React.FC<Props> = ({ open, initial, onClose, onSaved, s
             </div>
 
             <div style={{ display: 'flex', gap: 16, flex: 1, alignItems: 'stretch' }}>
-              
-              {/* Left Column: Bank */}
-              <div style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', background: 'var(--surface-light)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div
+                style={{
+                  flex: 1,
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    background: 'var(--surface-light)',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
                   <span style={{ fontWeight: 600, fontSize: 14 }}>Banco de Preguntas</span>
-                  <button type="button" className="btn btn-primary" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => setOpenNewQuestion(true)}>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ padding: '4px 8px', fontSize: 12 }}
+                    onClick={() => setOpenNewQuestion(true)}
+                  >
                     + Crear en banco
                   </button>
                 </div>
                 <div style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
-                  <input placeholder="Buscar en el banco..." value={leftSearch} onChange={e => setLeftSearch(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', boxSizing: 'border-box', fontSize: 13 }} />
+                  <input
+                    placeholder="Buscar en el banco..."
+                    value={leftSearch}
+                    onChange={(e) => setLeftSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      boxSizing: 'border-box',
+                      fontSize: 13,
+                    }}
+                  />
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                  {loadingBank ? <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>Cargando banco...</div> : renderGroupedList(availableQuestions, 'add')}
+                  {loadingBank ? (
+                    <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>Cargando banco...</div>
+                  ) : (
+                    renderGroupedList(availableQuestions, 'add')
+                  )}
                 </div>
               </div>
 
-              {/* Right Column: Assigned */}
-              <div style={{ flex: 1, border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', background: 'var(--surface-light)', borderBottom: '1px solid var(--border)' }}>
+              <div
+                style={{
+                  flex: 1,
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    background: 'var(--surface-light)',
+                    borderBottom: '1px solid var(--border)',
+                  }}
+                >
                   <span style={{ fontWeight: 600, fontSize: 14 }}>Preguntas del Formulario</span>
                 </div>
                 <div style={{ padding: 12, borderBottom: '1px solid var(--border)' }}>
-                  <input placeholder="Buscar en asignadas..." value={rightSearch} onChange={e => setRightSearch(e.target.value)} style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', boxSizing: 'border-box', fontSize: 13 }} />
+                  <input
+                    placeholder="Buscar en asignadas..."
+                    value={rightSearch}
+                    onChange={(e) => setRightSearch(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      boxSizing: 'border-box',
+                      fontSize: 13,
+                    }}
+                  />
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
                   {renderGroupedList(assignedQuestions, 'remove')}
                 </div>
               </div>
-
             </div>
           </div>
-
         </div>
 
-        {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 12, background: 'var(--surface-light)' }}>
-          <button type="button" className="btn" onClick={onClose}>Cancelar</button>
+        <div
+          style={{
+            padding: '16px 24px',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: 12,
+            background: 'var(--surface-light)',
+          }}
+        >
+          <button type="button" className="btn" onClick={onClose}>
+            Cancelar
+          </button>
           <button type="submit" className="btn btn-primary" disabled={saving || loadingBank}>
             {saving ? 'Guardando...' : initial?.id ? 'Guardar Cambios' : 'Crear Formulario'}
           </button>

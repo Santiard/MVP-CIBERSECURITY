@@ -11,6 +11,7 @@ class CreateEvaluationUseCase:
     def execute(self, input_dto: EvaluationDTO) -> Any:
         payload = {
             "organization_id": int(input_dto.organization_id),
+            "id_formulario": input_dto.id_formulario,
             "answers": input_dto.answers or {},
             "user_id": input_dto.user_id,
             "evaluator_id": input_dto.evaluator_id,
