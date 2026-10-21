@@ -105,7 +105,7 @@ class EvaluacionORM(SQLModel, table=True):
     id_evaluador: Optional[int] = Field(default=None, foreign_key="usuarios.id_usuario")
     id_formulario: int = Field(foreign_key="formularios.id_formulario")
     datos_respuestas: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    creado_en: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    creado_en: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     usuario: Optional["UsuarioORM"] = Relationship(
         back_populates="evaluaciones_titular",
