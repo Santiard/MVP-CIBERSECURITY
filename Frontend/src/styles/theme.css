@@ -529,3 +529,41 @@ table th, table td {
 /* Example CSS variables usage comment:
   Use tokens like var(--btn-primary-bg) and theme classes .theme-light/.theme-dark on the root element.
 */
+
+
+/* Theme-adaptive form controls, tables, and secondary buttons for Light & Dark modes */
+.theme-dark select,
+.theme-dark input[type="text"],
+.theme-dark input[type="date"],
+.theme-dark input[type="search"],
+.theme-dark option,
+.theme-dark optgroup {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.theme-light select,
+.theme-light input[type="text"],
+.theme-light input[type="date"],
+.theme-light input[type="search"],
+.theme-light option,
+.theme-light optgroup {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.btn:not(.btn-primary):not(.btn-icon) {
+  background: var(--bg-page);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn:not(.btn-primary):not(.btn-icon):hover {
+  background: color-mix(in srgb, var(--blue-500) 12%, var(--surface));
+}
+
+.table-responsive thead {
+  background: var(--surface) !important;
+}

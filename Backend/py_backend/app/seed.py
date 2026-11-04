@@ -390,24 +390,103 @@ def _seed_vulnerabilities(session: Session) -> None:
 
 
 def _seed_evaluaciones(session: Session) -> None:
-    existing_evaluation = session.exec(select(EvaluacionORM).limit(1)).first()
-    if existing_evaluation is not None:
+    empresa = session.exec(select(EmpresaORM).where(EmpresaORM.nombre == "ACME Ciberseguridad")).first() or session.exec(select(EmpresaORM)).first()
+    if empresa is None:
         return
 
-    empresa = session.exec(select(EmpresaORM)).first()
-    usuario = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario3@mvp.local")).first()
-    formulario = session.exec(select(FormularioORM)).first()
-    if empresa is None or usuario is None or formulario is None:
-        return
+    evaluador = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "evaluador@mvp.local")).first()
+    eval_id = evaluador.id_usuario if evaluador else None
 
-    ev = EvaluacionORM(
-        fecha=date.today(),
-        estado="pendiente",
-        id_usuario=usuario.id_usuario,
-        id_empresa=empresa.id_empresa,
-        id_formulario=formulario.id_formulario,
-    )
-    session.add(ev)
+    u_bajo = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario1@mvp.local")).first()
+    u_medio = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario2@mvp.local")).first()
+    u_alto = session.exec(select(UsuarioORM).where(UsuarioORM.correo == "usuario3@mvp.local")).first()
+
+    f_general = session.exec(select(FormularioORM).where(FormularioORM.nombre.like("%General%"))).first()
+    f_tecnico = session.exec(select(FormularioORM).where(FormularioORM.nombre.like("%Técnico%") | FormularioORM.nombre.like("%Tecnico%"))).first()
+    f_estrategico = session.exec(select(FormularioORM).where(FormularioORM.nombre.like("%Estratégico%") | FormularioORM.nombre.like("%Estrategico%"))).first()
+
+    all_evals = session.exec(select(EvaluacionORM)).all()
+
+    def _build_answers(form_id: int, level_kind: str) -> dict:
+        links = session.exec(select(FormularioPreguntaORM).where(FormularioPreguntaORM.id_formulario == form_id)).all()
+        ans = {}
+        for idx, lnk in enumerate(links):
+            q = session.get(PreguntaORM, lnk.id_pregunta)
+            if not q:
+                continue
+            txt = q.texto.lower()
+            is_reverse = any(p in txt for p in (
+                "deja papeles, carpetas o notas",
+                "comparte su contraseña",
+                "anota sus contraseñas en notas adhesivas",
+                "conecta memorias usb personales",
+            ))
+            if level_kind == "bajo":
+                if "redes sociales" in txt or "remitente real" in txt or "herramientas gratuitas" in txt:
+                    val = 2
+                    com = "Se observaron casos de uso de convertidores PDF gratuitos y exposición involuntaria en fotos."
+                elif "vpn" in txt or "bloquea" in txt:
+                    val = 4
+                    com = "Cumplimiento adecuado en bloqueo de sesión y uso de VPN corporativa."
+                else:
+                    val = [3, 4, 2, 4, 3][idx % 5]
+                    com = "Evaluación operativa de hábitos en puesto de trabajo." if idx % 4 == 0 else ""
+                if is_reverse:
+                    val = 6 - val
+            elif level_kind == "medio":
+                if "siem" in txt or "restauración de datos" in txt or "activos de información críticos" in txt or "entes reguladores" in txt:
+                    val = 2
+                    com = "Brecha técnica: logs no centralizados en SIEM y sin simulacros recientes de restauración."
+                elif "document" in (q.dimension or "").lower():
+                    val = 2
+                    com = "Control aplicado operativamente por TI pero sin procedimiento formal documentado."
+                else:
+                    val = [4, 5, 3, 4, 4][idx % 5]
+                    com = "Control técnico verificado en infraestructura." if idx % 5 == 0 else ""
+            else:
+                if "activos de información críticos" in txt or "entes reguladores" in txt:
+                    val = 5
+                    com = "La gerencia considera que el inventario y protocolo regulatorio están completamente cubiertos."
+                elif "simulación o pruebas de crisis" in txt or "rto" in txt:
+                    val = 2
+                    com = "Pendiente definir RTO/RPO formales y ejecutar simulacro anual de ransomware con el comité."
+                else:
+                    val = [4, 5, 4, 3, 5][idx % 5]
+                    com = "Aprobado en comité directivo." if idx % 4 == 0 else ""
+            ans[str(q.id_pregunta)] = {"valor": val, "comentario": com}
+        return ans
+
+    seed_pairs = [
+        (u_bajo, f_general, "bajo"),
+        (u_medio, f_tecnico, "medio"),
+        (u_alto, f_estrategico, "alto"),
+    ]
+
+    for user_obj, form_obj, kind in seed_pairs:
+        if not user_obj or not form_obj or user_obj.id_usuario is None or form_obj.id_formulario is None:
+            continue
+        existing = next(
+            (e for e in all_evals if e.id_usuario == user_obj.id_usuario and e.id_formulario == form_obj.id_formulario),
+            None,
+        )
+        answers_dict = _build_answers(form_obj.id_formulario, kind)
+        if existing:
+            if not existing.datos_respuestas or len(existing.datos_respuestas) == 0:
+                existing.datos_respuestas = answers_dict
+                existing.estado = "Finalizada"
+                existing.id_evaluador = eval_id
+                session.add(existing)
+        else:
+            ev = EvaluacionORM(
+                fecha=date.today(),
+                estado="Finalizada",
+                id_usuario=user_obj.id_usuario,
+                id_empresa=empresa.id_empresa,
+                id_evaluador=eval_id,
+                id_formulario=form_obj.id_formulario,
+                datos_respuestas=answers_dict,
+            )
+            session.add(ev)
     session.flush()
 
 

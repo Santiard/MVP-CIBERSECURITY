@@ -16,6 +16,7 @@ import ReportsPage from './pages/ReportsPage';
 import OrganizationDetailPage from './pages/OrganizationDetailPage';
 import EvaluationsPage from './pages/EvaluationsPage';
 import ReportViewPage from './pages/ReportViewPage';
+import ResultsDashboardPage from './pages/ResultsDashboardPage';
 import VulnerabilitiesPage from './pages/VulnerabilitiesPage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
 import QuestionnairesPage from './pages/QuestionnairesPage';
@@ -129,6 +130,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ReportViewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/results-dashboard"
+          element={
+            <ProtectedRoute>
+              <ResultsDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/results-dashboard/:id"
+          element={
+            <ProtectedRoute>
+              <ResultsDashboardPage />
             </ProtectedRoute>
           }
         />

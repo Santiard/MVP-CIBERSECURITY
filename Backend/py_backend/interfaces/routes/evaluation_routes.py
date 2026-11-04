@@ -76,23 +76,36 @@ def create_evaluation(input_data: EvaluationCreate, current_user: dict = Depends
 
     # Validar que el Formulario aplique al rol del usuario
     with Session(engine) as session:
-        target_user = session.get(UsuarioORM, uid)
-        if not target_user:
-            raise HTTPException(status_code=404, detail="Usuario asignado no encontrado")
-        rol_obj = session.get(RolORM, target_user.id_rol)
-        target_role = rol_obj.nombre if rol_obj else ""
-
         form = session.get(FormularioORM, input_data.id_formulario)
         if not form:
             raise HTTPException(status_code=404, detail="Formulario no encontrado")
 
         from infraestructure.database.models import FormularioRolORM
+        form_role_ids = set(
+            session.exec(
+                select(FormularioRolORM.id_rol).where(FormularioRolORM.id_formulario == form.id_formulario)
+            ).all()
+        )
+
+        if not is_org_user(current_user) and input_data.user_id is None:
+            org_users = session.exec(
+                select(UsuarioORM).where(UsuarioORM.id_empresa == id_empresa, UsuarioORM.activo == True)
+            ).all()
+            matching_user = next((u for u in org_users if not form_role_ids or u.id_rol in form_role_ids), None)
+            if matching_user and matching_user.id_usuario is not None:
+                uid = matching_user.id_usuario
+            elif org_users and org_users[0].id_usuario is not None:
+                uid = org_users[0].id_usuario
+
+        target_user = session.get(UsuarioORM, uid)
+        if not target_user:
+            raise HTTPException(status_code=404, detail="Usuario asignado no encontrado")
+        rol_obj = session.get(RolORM, target_user.id_rol)
+        target_role = (rol_obj.nombre if rol_obj else "").lower()
+
         # Check if form applies to user's role
-        if target_user.id_rol:
-            has_role = session.exec(
-                select(FormularioRolORM).where(FormularioRolORM.id_formulario == form.id_formulario, FormularioRolORM.id_rol == target_user.id_rol)
-            ).first()
-            if not has_role:
+        if target_role.startswith("user_nivel_") and form_role_ids:
+            if target_user.id_rol not in form_role_ids:
                 raise HTTPException(status_code=400, detail=f"El formulario '{form.nombre}' no aplica para el rol del usuario asignado.")
 
     fecha_eval = input_data.fecha or date.today()
@@ -195,7 +208,7 @@ def update_evaluation(
             ev = session.get(EvaluacionORM, evaluation_id)
         role = role_lower(current_user)
         uid = int(current_user["user_id"])
-        is_titular = role == "user" and titular_uid is not None and uid == titular_uid
+        is_titular = (role == "user" or is_org_user(current_user)) and titular_uid is not None and uid == titular_uid
         is_assigned_evaluator = role == "evaluator" and ev is not None and ev.id_evaluador == uid
         if not is_titular and not is_assigned_evaluator and role != "admin":
             raise HTTPException(

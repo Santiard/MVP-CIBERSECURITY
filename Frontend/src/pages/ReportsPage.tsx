@@ -76,13 +76,18 @@ const ReportsPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: 24 }}>
-        <h2 style={{ marginTop: 0 }}>Reportes</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+          <h2 style={{ margin: 0 }}>Reportes</h2>
+          <Link to="/results-dashboard" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+            Abrir Dashboard Interactivo (Power BI · ISO 27001)
+          </Link>
+        </div>
         <div className="card">
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
             <select
               value={orgFilter}
               onChange={(e) => setOrgFilter(e.target.value)}
-              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-page)', color: 'var(--text-primary)', flex: '1 1 150px' }}
             >
               <option value="">Todas las organizaciones</option>
               {orgs.map(o => <option key={o} value={o}>{o}</option>)}
@@ -91,13 +96,13 @@ const ReportsPage: React.FC = () => {
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px', color: dateFilter ? 'inherit' : 'var(--muted)' }}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-page)', flex: '1 1 150px', color: dateFilter ? 'var(--text-primary)' : 'var(--muted)' }}
               title="Filtrar por fecha"
             />
             <select
               value={evaluatorFilter}
               onChange={(e) => setEvaluatorFilter(e.target.value)}
-              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-page)', color: 'var(--text-primary)', flex: '1 1 150px' }}
             >
               <option value="">Todos los evaluadores</option>
               {evaluators.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
@@ -105,7 +110,7 @@ const ReportsPage: React.FC = () => {
             <select
               value={estadoFilter}
               onChange={(e) => setEstadoFilter(e.target.value)}
-              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface-light)', flex: '1 1 150px' }}
+              style={{ padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-page)', color: 'var(--text-primary)', flex: '1 1 150px' }}
             >
               <option value="">Todos los estados</option>
               <option value="pendiente">Pendiente</option>
@@ -142,9 +147,12 @@ const ReportsPage: React.FC = () => {
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>{r.date}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', color: r.evaluatorName ? 'inherit' : 'var(--muted)' }}>{r.evaluatorName || 'Sin asignar'}</td>
                   <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', textTransform: 'capitalize' }}>{normalizeEstado(r.estado)}</td>
-                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)' }}>
-                    <Link to={`/reports/${r.id}`} className="btn btn-icon" title="Ver">
+                  <td style={{ padding: '14px 8px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Link to={`/reports/${r.id}`} className="btn btn-icon" title="Ver Resumen">
                       <img src={viewIcon} alt="Ver" width={18} height={18} />
+                    </Link>
+                    <Link to={`/results-dashboard/${r.id}`} className="btn" style={{ textDecoration: 'none', fontSize: 12, padding: '6px 10px' }} title="Analizar en Power BI Dashboard">
+                      Power BI
                     </Link>
                   </td>
                 </tr>

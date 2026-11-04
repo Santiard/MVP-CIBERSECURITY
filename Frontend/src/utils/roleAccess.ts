@@ -21,6 +21,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/questionnaires', label: 'Formularios' },
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/evaluations', label: 'Evaluaciones' },
+  { to: '/results-dashboard', label: 'Resultados (Power BI)' },
   { to: '/reports', label: 'Reportes' },
 ];
 
@@ -34,6 +35,7 @@ const EVALUATOR_NAV: NavItem[] = [
   { to: '/questionnaires', label: 'Mis Formularios' },
   { to: '/asignaciones', label: 'Asignaciones' },
   { to: '/evaluations', label: 'Mis Evaluaciones' },
+  { to: '/results-dashboard', label: 'Resultados (Power BI)' },
   { to: '/reports', label: 'Mis Reportes' },
 ];
 
@@ -41,6 +43,7 @@ const EVALUATOR_NAV: NavItem[] = [
 const USER_NAV: NavItem[] = [
   { to: '/HomePage', label: 'Home' },
   { to: '/evaluations', label: 'Evaluaciones' },
+  { to: '/results-dashboard', label: 'Resultados (Power BI)' },
   { to: '/reports', label: 'Reportes' },
 ];
 
@@ -70,6 +73,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
     if (path === '/questionnaires') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
     if (path === '/reports' || /^\/reports\/[^/]+$/.test(path) || /^\/reports\/[^/]+\/report$/.test(path)) return true;
+    if (path === '/results-dashboard' || /^\/results-dashboard\/[^/]+$/.test(path)) return true;
     if (path === '/asignaciones') return true;
     if (path === '/organizations' || path === '/organizations/new' || /^\/organizations\/\d+$/.test(path)) return true;
     return false;
@@ -79,6 +83,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
     if (path === '/RecoverPage' || path === '/recover-password') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
     if (path === '/reports' || /^\/reports\/[^/]+$/.test(path) || /^\/reports\/[^/]+\/report$/.test(path)) return true;
+    if (path === '/results-dashboard' || /^\/results-dashboard\/[^/]+$/.test(path)) return true;
     return false;
   }
 

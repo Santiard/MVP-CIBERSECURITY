@@ -28,12 +28,17 @@ const ReportDetailPage: React.FC = () => {
           <h2 style={{ margin: 0 }}>Reporte de Evaluación</h2>
           <div style={{ display: 'flex', gap: 8 }}>
             {report && (
-              <Link to={`/reports/${report.id}/report`} className="btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <img src={viewIcon} alt="Ver completo" width={16} height={16} />
-                Vista Completa
-              </Link>
+              <>
+                <Link to={`/results-dashboard/${report.id}`} className="btn btn-primary" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Analizar en Power BI (Individual + 360° Organización)
+                </Link>
+                <Link to={`/reports/${report.id}/report`} className="btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <img src={viewIcon} alt="Ver completo" width={16} height={16} />
+                  Vista Imprimible
+                </Link>
+              </>
             )}
-            <Link to="/reports" className="btn btn-primary" style={{ textDecoration: 'none' }}>Volver</Link>
+            <Link to="/reports" className="btn" style={{ textDecoration: 'none' }}>Volver</Link>
           </div>
         </div>
 

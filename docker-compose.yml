@@ -12,6 +12,7 @@ services:
 
   backend:
     container_name: mvp-backend
+    restart: unless-stopped
     build:
       context: ./Backend
     environment:
@@ -27,6 +28,7 @@ services:
 
   frontend:
     container_name: mvp-frontend
+    restart: unless-stopped
     build:
       context: ./Frontend
     ports:
