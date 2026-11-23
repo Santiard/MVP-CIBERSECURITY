@@ -346,11 +346,11 @@ Al iniciar el contenedor `mvp-backend` con `SEED_DATA=true`, [`Backend/py_backen
 
 | Usuario / Correo | Contraseña | Rol en el Sistema | Evaluación Sembrada en `ACME Ciberseguridad` |
 | :--- | :--- | :--- | :--- |
-| `admin@mvp.local` | `Admin123!` | `admin` | Acceso completo a las 3 evaluaciones y vista 360° |
-| `evaluador@mvp.local` | `Eval123!` | `evaluator` | Auditor asignado a las 3 evaluaciones de ACME |
-| `usuario1@mvp.local` | `User123!` | `user_nivel_bajo` | Evaluación #1 — Cuestionario General (36/36 respondidas · 100%) |
-| `usuario2@mvp.local` | `User123!` | `user_nivel_medio` | Evaluación #2 — Cuestionario Técnico (38/38 respondidas · 100%) |
-| `usuario3@mvp.local` | `User123!` | `user_nivel_alto` | Evaluación #3 — Cuestionario Estratégico (38/38 respondidas · 100%) |
+| `admin@gmail.com` | `Admin2026!Secure*` | `admin` | Acceso completo a las 3 evaluaciones y vista 360° |
+| `evaluador@mvp.local` | `ChangeMe123!` | `evaluator` | Auditor asignado a las 3 evaluaciones de ACME |
+| `usuario1@mvp.local` | `OrgUser123!` | `user_nivel_bajo` | Evaluación #1 — Cuestionario General (36/36 respondidas · 100%) |
+| `usuario2@mvp.local` | `OrgUser123!` | `user_nivel_medio` | Evaluación #2 — Cuestionario Técnico (38/38 respondidas · 100%) |
+| `usuario3@mvp.local` | `OrgUser123!` | `user_nivel_alto` | Evaluación #3 — Cuestionario Estratégico (38/38 respondidas · 100%) |
 
 ---
 
