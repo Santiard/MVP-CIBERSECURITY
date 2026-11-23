@@ -11,6 +11,13 @@ import EvaluationProgress from "./EvaluationProgress";
 import ProgressCell from "./ProgressCell";
 
 type Org = { id_empresa: number; nombre: string };
+type UserRow = { id: string; name: string; email?: string; role?: string };
+type FormRow = { id: string; name: string };
+
+function isEvaluationCompleted(estado?: string | null): boolean {
+  const v = (estado || "").trim().toLowerCase();
+  return v === "finalizada" || v === "finalizado" || v === "completada" || v === "completado";
+}
 
 const EvaluationsTable: React.FC = () => {
   const [filter, setFilter] = useState("");
@@ -19,10 +26,11 @@ const EvaluationsTable: React.FC = () => {
   const [orgFilter, setOrgFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => window.innerWidth < 768 ? 5 : 10);
+  const [pageSize, setPageSize] = useState(() => (window.innerWidth < 768 ? 5 : 10));
   const [rowsData, setRowsData] = useState<EvaluationApiRow[]>([]);
   const [orgs, setOrgs] = useState<Org[]>([]);
-  const [evaluators, setEvaluators] = useState<{ id: number; name: string }[]>([]);
+  const [usersList, setUsersList] = useState<UserRow[]>([]);
+  const [formsList, setFormsList] = useState<FormRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -33,20 +41,20 @@ const EvaluationsTable: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Load evaluations first — this is the critical request
         const data = await listEvaluations();
         setRowsData(data);
 
-        // Orgs & users are supplementary — non-staff roles may get 403, ignore errors
-        const [o, users] = await Promise.all([
+        const [o, users, forms] = await Promise.all([
           dataService.getOrgs().catch(() => [] as Org[]),
-          dataService.getUsers().catch(() => [] as { id: number; name: string }[]),
+          dataService.getUsers().catch(() => [] as UserRow[]),
+          dataService.getQuestionnaires().catch(() => [] as FormRow[]),
         ]);
         setOrgs(o as Org[]);
-        setEvaluators(users);
+        setUsersList(users as UserRow[]);
+        setFormsList(forms as FormRow[]);
 
         if (!isStaffRole(getCurrentRole()) && data.length > 0) {
-          const org = (o as Org[]).find(x => x.id_empresa === data[0].id_empresa);
+          const org = (o as Org[]).find((x) => x.id_empresa === data[0].id_empresa);
           if (org && org.nombre !== localStorage.getItem("userOrgName")) {
             localStorage.setItem("userOrgName", org.nombre);
             window.dispatchEvent(new Event("userOrgNameChanged"));
@@ -68,28 +76,44 @@ const EvaluationsTable: React.FC = () => {
     return m;
   }, [orgs]);
 
-  const evalName = useMemo(() => {
-    const m = new Map<number, string>();
-    evaluators.forEach((u) => m.set(u.id, u.name));
+  const userById = useMemo(() => {
+    const m = new Map<number, UserRow>();
+    usersList.forEach((u) => m.set(Number(u.id), u));
     return m;
-  }, [evaluators]);
+  }, [usersList]);
+
+  const formNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    formsList.forEach((f) => m.set(Number(f.id), f.name));
+    return m;
+  }, [formsList]);
 
   const rows = useMemo(() => {
     const q = filter.trim().toLowerCase();
     return rowsData.filter((r) => {
       if (evaluatorFilter && r.id_evaluador !== Number(evaluatorFilter)) return false;
-      if (statusFilter && r.estado !== statusFilter) return false;
+      if (statusFilter) {
+        const st = (r.estado || "pendiente").trim().toLowerCase();
+        if (statusFilter === "finalizada" && !isEvaluationCompleted(st)) return false;
+        if (statusFilter === "en proceso" && !(st === "en proceso" || st === "en progreso")) return false;
+        if (statusFilter === "pendiente" && st !== "pendiente") return false;
+      }
       if (orgFilter && r.id_empresa !== Number(orgFilter)) return false;
       if (dateFilter && (!r.fecha || String(r.fecha).slice(0, 10) !== dateFilter)) return false;
 
       if (!q) return true;
       const name = (orgName.get(r.id_empresa) ?? "").toLowerCase();
+      const fName = (formNameById.get(r.id_formulario) ?? "").toLowerCase();
+      const uName = (userById.get(r.id_usuario)?.name ?? "").toLowerCase();
       return (
         name.includes(q) ||
+        fName.includes(q) ||
+        uName.includes(q) ||
         String(r.id_evaluacion).includes(q)
       );
     });
-  }, [filter, evaluatorFilter, statusFilter, orgFilter, dateFilter, rowsData, orgName]);
+  }, [filter, evaluatorFilter, statusFilter, orgFilter, dateFilter, rowsData, orgName, formNameById, userById]);
+
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const safePage = Math.min(page, pages);
   const visibleRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -106,17 +130,21 @@ const EvaluationsTable: React.FC = () => {
 
   return (
     <div className="card" style={{ minHeight: 240 }}>
-
-      <h2 style={{ marginTop: 8 }}>Evaluaciones</h2>
+      <h2 style={{ marginTop: 8 }}>{staff ? "Evaluaciones" : "Mis Evaluaciones Asignadas"}</h2>
+      {!staff && (
+        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: -6, marginBottom: 14 }}>
+          Aquí puedes ver el avance de tus cuestionarios asignados y responder las preguntas pendientes. Una vez completada al 100%, la evaluación queda bloqueada y se entrega de forma confidencial al evaluador.
+        </p>
+      )}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div style={{ flex: "1 1 200px" }}>
-          <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por empresa, ID..." />
+          <FilterInput value={filter} onChange={setFilter} placeholder="Buscar por formulario, empresa, ID..." />
         </div>
         {staff && (
           <select
             value={orgFilter}
             onChange={(e) => setOrgFilter(e.target.value)}
-            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px" }}
+            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-page)", color: "var(--text-primary)", flex: "1 1 150px" }}
           >
             <option value="">Todas las empresas</option>
             {orgs.map((o) => (
@@ -124,29 +152,17 @@ const EvaluationsTable: React.FC = () => {
             ))}
           </select>
         )}
-        {!staff && (
-          <select
-            value={evaluatorFilter}
-            onChange={(e) => setEvaluatorFilter(e.target.value)}
-            style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px" }}
-          >
-            <option value="">Todos los evaluadores</option>
-            {evaluators.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
-            ))}
-          </select>
-        )}
-        <input 
-          type="date" 
-          value={dateFilter} 
-          onChange={(e) => setDateFilter(e.target.value)} 
-          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px", color: dateFilter ? 'inherit' : 'var(--muted)' }} 
-          title="Filtrar por fecha" 
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-page)", flex: "1 1 150px", color: dateFilter ? "var(--text-primary)" : "var(--muted)" }}
+          title="Filtrar por fecha"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface-light)", flex: "1 1 150px" }}
+          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-page)", color: "var(--text-primary)", flex: "1 1 150px" }}
         >
           <option value="">Todos los estados</option>
           <option value="pendiente">Pendiente</option>
@@ -160,33 +176,38 @@ const EvaluationsTable: React.FC = () => {
           <thead>
             <tr>
               {staff && <th>Organización</th>}
-              {staff && <th>ID</th>}
+              <th>ID</th>
+              <th>Formulario</th>
+              {staff && <th>Usuario Asignado (Empresa)</th>}
               <th>Fecha</th>
-              {!staff && <th>Evaluador asignado</th>}
-              <th>{staff ? 'Estado' : 'Etapa'}</th>
-              {!staff && <th>Avance</th>}
+              <th>{staff ? "Estado" : "Etapa"}</th>
+              <th>Avance / Pendiente</th>
               <th>Acción</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={staff ? 5 : 4} style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                <td colSpan={staff ? 8 : 6} style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
                   Cargando evaluaciones...
                 </td>
               </tr>
             )}
             {!loading && error && (
               <tr>
-                <td
-                  colSpan={staff ? 5 : 4}
-                  style={{ padding: "32px 16px", borderTop: "1px solid var(--border)" }}
-                >
-                  <div style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-                    background: "rgba(220,38,38,0.05)", border: "1px solid rgba(220,38,38,0.2)",
-                    borderRadius: 10, padding: "20px 24px",
-                  }}>
+                <td colSpan={staff ? 8 : 6} style={{ padding: "32px 16px", borderTop: "1px solid var(--border)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                      background: "rgba(220,38,38,0.05)",
+                      border: "1px solid rgba(220,38,38,0.2)",
+                      borderRadius: 10,
+                      padding: "20px 24px",
+                    }}
+                  >
                     <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: 14 }}>{error}</span>
                   </div>
                 </td>
@@ -194,84 +215,140 @@ const EvaluationsTable: React.FC = () => {
             )}
             {!loading && !error && rowsData.length === 0 && (
               <tr>
-                <td colSpan={staff ? 5 : 4} style={{ padding: "40px 16px", borderTop: "1px solid var(--border)" }}>
-                  <div style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-                    color: "var(--muted)", padding: "24px 8px"
-                  }}>
-                    <span>No hay registros todavía para mostrar.</span>
+                <td colSpan={staff ? 8 : 6} style={{ padding: "40px 16px", borderTop: "1px solid var(--border)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 10,
+                      color: "var(--muted)",
+                      padding: "24px 8px",
+                    }}
+                  >
+                    <span>No hay evaluaciones asignadas para mostrar.</span>
                   </div>
                 </td>
               </tr>
             )}
             {!loading &&
               !error &&
-              visibleRows.map((r) => (
-                <React.Fragment key={r.id_evaluacion}>
-                  <tr>
-                    {staff && (
+              visibleRows.map((r) => {
+                const completed = isEvaluationCompleted(r.estado);
+                const titular = userById.get(r.id_usuario);
+                const formTitle = formNameById.get(r.id_formulario) ?? `Formulario #${r.id_formulario}`;
+
+                return (
+                  <React.Fragment key={r.id_evaluacion}>
+                    <tr>
+                      {staff && (
+                        <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", fontWeight: 600 }}>
+                          {orgName.get(r.id_empresa) ?? `Empresa #${r.id_empresa}`}
+                        </td>
+                      )}
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", fontWeight: 700 }}>
+                        #{r.id_evaluacion}
+                      </td>
                       <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
-                        {orgName.get(r.id_empresa) ?? `Empresa #${r.id_empresa}`}
+                        {formTitle}
                       </td>
-                    )}
-                    {staff && <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.id_evaluacion}</td>}
-                    <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
-                    {!staff && (
-                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", color: r.id_evaluador ? "inherit" : "var(--muted)" }}>
-                        {r.id_evaluador ? evalName.get(r.id_evaluador) ?? `Usuario #${r.id_evaluador}` : "Sin asignar"}
+                      {staff && (
+                        <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                          <div style={{ fontWeight: 600 }}>
+                            {titular ? titular.name : `Usuario #${r.id_usuario}`}
+                          </div>
+                          {titular?.role && (
+                            <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                              {titular.role}
+                            </div>
+                          )}
+                        </td>
+                      )}
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>{r.fecha || "—"}</td>
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
+                        <Badge status={r.estado || "pendiente"} />
                       </td>
-                    )}
-                    <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)" }}>
-                      <Badge status={r.estado || "pendiente"} />
-                    </td>
-                    {!staff && (
-                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", minWidth: 100 }}>
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", minWidth: 120 }}>
                         <ProgressCell evaluationId={r.id_evaluacion} />
                       </td>
-                    )}
-                    <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
-                      {!staff ? (
-                        <Link
-                          to={`/evaluations/${r.id_evaluacion}/workflow`}
-                          className="btn btn-primary"
-                          style={{
-                            padding: "8px 12px",
-                            borderRadius: 8,
-                            textDecoration: "none",
-                            display: "inline-block",
-                            marginRight: 8,
-                          }}
-                        >
-                          Responder
-                        </Link>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={() => setExpandedId(expandedId === r.id_evaluacion ? null : r.id_evaluacion)}
-                          style={{ marginRight: 8 }}
-                        >
-                          {expandedId === r.id_evaluacion ? "Ocultar progreso" : "Ver progreso ▾"}
-                        </button>
-                      )}
-                      <Link
-                        to={`/reports/${r.id_evaluacion}`}
-                        className="btn"
-                        style={{ padding: "8px 12px", borderRadius: 8, textDecoration: "none", display: "inline-block" }}
-                      >
-                        Informe
-                      </Link>
-                    </td>
-                  </tr>
-                  {expandedId === r.id_evaluacion && staff && (
-                    <tr>
-                      <td colSpan={5} style={{ padding: 0 }}>
-                        <EvaluationProgress evaluationId={r.id_evaluacion} />
+                      <td style={{ padding: "14px 8px", borderTop: "1px solid var(--border)", whiteSpace: "nowrap" }}>
+                        {!staff ? (
+                          completed ? (
+                            <button
+                              type="button"
+                              className="btn"
+                              disabled
+                              style={{
+                                padding: "8px 14px",
+                                borderRadius: 8,
+                                opacity: 0.55,
+                                cursor: "not-allowed",
+                                fontWeight: 700,
+                              }}
+                              title="Esta evaluación ya fue completada al 100% y enviada al evaluador"
+                            >
+                              Evaluación Completada
+                            </button>
+                          ) : (
+                            <Link
+                              to={`/evaluations/${r.id_evaluacion}/workflow`}
+                              className="btn btn-primary"
+                              style={{
+                                padding: "8px 14px",
+                                borderRadius: 8,
+                                textDecoration: "none",
+                                display: "inline-block",
+                              }}
+                            >
+                              Responder
+                            </Link>
+                          )
+                        ) : (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <Link
+                              to={`/evaluations/${r.id_evaluacion}/workflow?respond=1`}
+                              className="btn btn-primary"
+                              style={{ padding: "7px 12px", borderRadius: 8, textDecoration: "none", fontSize: 12 }}
+                              title="Responder o auditar preguntas del formulario"
+                            >
+                              Responder / Auditar
+                            </Link>
+                            <button
+                              type="button"
+                              className="btn"
+                              onClick={() => setExpandedId(expandedId === r.id_evaluacion ? null : r.id_evaluacion)}
+                              style={{ padding: "7px 10px", fontSize: 12 }}
+                            >
+                              {expandedId === r.id_evaluacion ? "Ocultar avance" : "Detalle avance"}
+                            </button>
+                            <Link
+                              to={`/reports/${r.id_evaluacion}`}
+                              className="btn"
+                              style={{ padding: "7px 10px", borderRadius: 8, textDecoration: "none", fontSize: 12 }}
+                            >
+                              Informe
+                            </Link>
+                            <Link
+                              to={`/results-dashboard/${r.id_evaluacion}`}
+                              className="btn"
+                              style={{ padding: "7px 10px", borderRadius: 8, textDecoration: "none", fontSize: 12 }}
+                            >
+                              Power BI
+                            </Link>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                    {expandedId === r.id_evaluacion && staff && (
+                      <tr>
+                        <td colSpan={8} style={{ padding: 0 }}>
+                          <EvaluationProgress evaluationId={r.id_evaluacion} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
           </tbody>
         </table>
       </div>

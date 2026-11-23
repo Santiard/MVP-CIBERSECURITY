@@ -39,12 +39,10 @@ const EVALUATOR_NAV: NavItem[] = [
   { to: '/reports', label: 'Mis Reportes' },
 ];
 
-/** Usuario de empresa: trabajo primero (evaluaciones), luego informes. */
+/** Usuario de empresa: solo responde sus evaluaciones asignadas y ve su avance (no ve reportes confidenciales). */
 const USER_NAV: NavItem[] = [
   { to: '/HomePage', label: 'Home' },
-  { to: '/evaluations', label: 'Evaluaciones' },
-  { to: '/results-dashboard', label: 'Resultados (Power BI)' },
-  { to: '/reports', label: 'Reportes' },
+  { to: '/evaluations', label: 'Mis Evaluaciones' },
 ];
 
 export function isStaffRole(role: AppRole | null): boolean {
@@ -82,8 +80,6 @@ export function canAccessPath(role: AppRole, path: string): boolean {
   if (isUserRole(role)) {
     if (path === '/HomePage' || path === '/RecoverPage' || path === '/recover-password') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
-    if (path === '/reports' || /^\/reports\/[^/]+$/.test(path) || /^\/reports\/[^/]+\/report$/.test(path)) return true;
-    if (path === '/results-dashboard' || /^\/results-dashboard\/[^/]+$/.test(path)) return true;
     return false;
   }
 

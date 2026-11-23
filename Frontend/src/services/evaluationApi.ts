@@ -155,11 +155,12 @@ export async function createEvaluation(payload: {
 
 export async function patchEvaluation(
   id: string | number,
-  patch: { id_empresa?: number; id_formulario?: number; id_evaluador?: number; estado?: string; fecha?: string; answers?: Record<string, AnswerValue> },
+  patch: { id_empresa?: number; id_formulario?: number; id_usuario?: number; id_evaluador?: number; estado?: string; fecha?: string; answers?: Record<string, AnswerValue> },
 ): Promise<EvaluationDetail> {
   const body: Record<string, unknown> = {};
   if (patch.id_empresa != null) body.id_empresa = patch.id_empresa;
   if (patch.id_formulario != null) body.id_formulario = patch.id_formulario;
+  if (patch.id_usuario != null) body.id_usuario = patch.id_usuario;
   if (patch.id_evaluador !== undefined) body.evaluator_id = patch.id_evaluador;
   if (patch.estado != null) body.estado = patch.estado;
   if (patch.fecha != null) body.fecha = patch.fecha;

@@ -217,20 +217,9 @@ def generate_random_form(
     return d
 
 @router.get("/questionnaires", name="list_questionnaires", dependencies=[Depends(require_roles("admin", "evaluator"))])
-def list_questionnaires(session: Session = Depends(_get_session), current_user: dict = Depends(auth_middleware)):
-    from infraestructure.database.models import EvaluacionORM, FormularioORM, FormularioRolORM
-    
-    if role_lower(current_user) == "evaluator":
-        uid = int(current_user["user_id"])
-        stmt = (
-            select(FormularioORM)
-            .join(EvaluacionORM, EvaluacionORM.id_formulario == FormularioORM.id_formulario)
-            .where(EvaluacionORM.id_evaluador == uid)
-            .distinct()
-        )
-    else:
-        stmt = select(FormularioORM).order_by(FormularioORM.id_formulario)
-        
+def list_questionnaires(session: Session = Depends(_get_session)):
+    from infraestructure.database.models import FormularioORM, FormularioRolORM
+    stmt = select(FormularioORM).order_by(FormularioORM.id_formulario)
     rows = session.exec(stmt).all()
     out = []
     for row in rows:

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
-import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Layout from "../components/Layout";
 import BackButton from "../components/BackButton";
 import dataService, { type Question } from "../services/dataService";
@@ -14,38 +14,19 @@ import viewIcon from "../images/ojo.svg";
 import saveIcon from "../images/guardar.svg";
 import checkIcon from "../images/listo.svg";
 import { getCurrentRole, getStoredAuthUser } from "../utils/auth";
-
-type QuestionnaireRow = Awaited<ReturnType<typeof dataService.getQuestionnaires>>[number];
-
-async function syncEvaluationControls(evaluationId: number, desiredIds: Set<number>): Promise<void> {
-  const linked = await listEvaluationControls(evaluationId);
-  const linkedIds = new Set(linked.map((c) => c.id_control));
-  const toRemove = [...linkedIds].filter((id) => !desiredIds.has(id));
-  const toAdd = [...desiredIds].filter((id) => !linkedIds.has(id));
-  await Promise.all(toRemove.map((cid) => detachEvaluationControl(evaluationId, cid)));
-  if (toAdd.length > 0) {
-    await linkEvaluationControlsBulk(evaluationId, toAdd);
-  }
-}
+import { isStaffRole } from "../utils/roleAccess";
 
 const EvaluationWorkflowPage: React.FC = () => {
   const { showAlert } = useAlert();
   const { evaluationId } = useParams<{ evaluationId: string }>();
   const idNum = evaluationId ? Number(evaluationId) : NaN;
-  const navigate = useNavigate();
-  const location = useLocation();
-  const respondMode = new URLSearchParams(location.search).get("respond") === "1";
 
-  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<"saved" | "finalized" | null>(null);
 
   const [evaluation, setEvaluation] = useState<EvaluationDetail | null>(null);
-  
-  
-
   const [questionsFlat, setQuestionsFlat] = useState<{ controlName: string; question: Question }[]>([]);
   const [answersForm, setAnswersForm] = useState<Record<string, { valor: string; comentario: string }>>({});
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -54,32 +35,34 @@ const EvaluationWorkflowPage: React.FC = () => {
   const lastSavedAnswers = useRef<Record<string, { valor: string; comentario: string }>>({});
   const [autoSaving, setAutoSaving] = useState(false);
 
+  const authRole = getCurrentRole();
+  const authUser = getStoredAuthUser();
+  const isStaff = isStaffRole(authRole);
+
   const totalQuestions = questionsFlat.length;
   const answeredCount = questionsFlat.filter(({ question: q }) => {
     const id = q.id;
-    // Check local (in-progress) form first
     const localValor = answersForm[id]?.valor;
     if (localValor !== undefined && String(localValor).trim() !== "" && Number(localValor) >= 1) return true;
-    // Fallback to server-saved answers
     const savedValor = evaluation?.answers?.[id]?.valor;
     if (savedValor !== undefined && String(savedValor).trim() !== "" && Number(savedValor) >= 1) return true;
     return false;
   }).length;
+  const pendingCount = Math.max(0, totalQuestions - answeredCount);
   const progressPercent = totalQuestions === 0 ? 0 : Math.round((answeredCount / totalQuestions) * 100);
 
-  const isResolved = (evaluation?.estado ?? "").toLowerCase().includes("final");
+  const estadoLower = (evaluation?.estado ?? "").trim().toLowerCase();
+  const isResolved =
+    estadoLower.includes("final") || estadoLower.includes("complet");
 
-  const authRole = getCurrentRole();
-  const authUser = getStoredAuthUser();
+  // Para usuario de empresa se bloquea cuando ya está finalizada; el Evaluador/Admin sí puede auditar o responder
+  const isLockedForCurrentUser = !isStaff && isResolved;
+
   const isAssignee =
     evaluation != null && authUser != null && Number(authUser.id) === evaluation.id_usuario;
-  /** El usuario empresa titular Y el evaluador asignado (en modo responder) pueden completar el cuestionario. */
-  const isEvaluatorResponding = authRole === "evaluator" && respondMode;
-  const canRespondToQuestionnaire = (authRole?.startsWith('user') && isAssignee) || isEvaluatorResponding;
-  /** Staff assignor = admin o evaluador gestionando el alcance (NO cuando está respondiendo). */
-  const isStaffAssignor = authRole === "admin" || (authRole === "evaluator" && !respondMode);
+  const canRespondToQuestionnaire = (authRole?.startsWith("user") && isAssignee) || isStaff;
 
-    const loadBase = useCallback(async () => {
+  const loadBase = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
     setLoading(true);
     setError(null);
@@ -87,11 +70,9 @@ const EvaluationWorkflowPage: React.FC = () => {
       const ev = await getEvaluationById(idNum);
       setEvaluation(ev);
 
-      if (authRole?.startsWith('user') || (authRole === "evaluator" && respondMode)) {
-        const qs2 = await dataService.getQuestionsByControl(String(ev.id_formulario));
-        const pairs = qs2.map(q => ({ controlName: "Formulario", question: q }));
-        setQuestionsFlat(pairs);
-      }
+      const qs2 = await dataService.getQuestionsByControl(String(ev.id_formulario));
+      const pairs = qs2.map((q) => ({ controlName: q.dimension || "Control ISO 27001", question: q }));
+      setQuestionsFlat(pairs);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cargar la evaluación");
     } finally {
@@ -103,9 +84,8 @@ const EvaluationWorkflowPage: React.FC = () => {
     void loadBase();
   }, [loadBase]);
 
-    useEffect(() => {
-    if (!canRespondToQuestionnaire) return;
-    if (false || questionsFlat.length === 0 || !evaluation) return;
+  useEffect(() => {
+    if (!canRespondToQuestionnaire || questionsFlat.length === 0 || !evaluation) return;
     setAnswersForm((prev) => {
       const next = { ...prev };
       for (const { question: q } of questionsFlat) {
@@ -118,12 +98,12 @@ const EvaluationWorkflowPage: React.FC = () => {
       }
       return next;
     });
-  }, [step, questionsFlat, evaluation, canRespondToQuestionnaire]);
+  }, [questionsFlat, evaluation, canRespondToQuestionnaire]);
 
   const handleSaveAnswers = async () => {
     if (!Number.isFinite(idNum) || !evaluation) return;
     if (!canRespondToQuestionnaire) return;
-    if (isResolved) return;
+    if (isLockedForCurrentUser) return;
     setSaving(true);
     setError(null);
     try {
@@ -142,7 +122,6 @@ const EvaluationWorkflowPage: React.FC = () => {
           delete merged[q.id];
         }
       }
-      // Determine status: only finalize when ALL questions have a valid valor
       const allAnswered = questionsFlat.every(({ question: q }) => {
         const v = merged[q.id]?.valor;
         return v !== undefined && Number(v) >= 1;
@@ -154,8 +133,7 @@ const EvaluationWorkflowPage: React.FC = () => {
       });
       setEvaluation(updated);
       setLastSavedAt(new Date().toLocaleString("es-CO"));
-      
-      // Show success screen based on completion status
+
       if (allAnswered) {
         setSuccessMessage("finalized");
       } else {
@@ -178,7 +156,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   const saveAnswersPartial = async () => {
     if (!Number.isFinite(idNum) || !evaluation) return;
     if (!canRespondToQuestionnaire) return;
-    if (isResolved) return;
+    if (isLockedForCurrentUser) return;
     const merged: Record<string, AnswerValue> = { ...evaluation.answers };
     for (const { question: q } of questionsFlat) {
       const row = answersForm[q.id] ?? { valor: "", comentario: "" };
@@ -186,7 +164,6 @@ const EvaluationWorkflowPage: React.FC = () => {
       const valor = vStr === "" ? undefined : Number(vStr);
       const comentario = row.comentario.trim() === "" ? undefined : row.comentario.trim();
       if (valor !== undefined && (Number.isNaN(valor) || valor < 1 || valor > 5)) {
-        // don't autosave invalid entries
         setError(`La pregunta "${q.text.slice(0, 48)}…" requiere un valor entre 1 y 5 o vacío.`);
         return;
       }
@@ -198,7 +175,10 @@ const EvaluationWorkflowPage: React.FC = () => {
     }
     setAutoSaving(true);
     try {
-      const updated = await patchEvaluation(idNum, { answers: merged, estado: "En progreso" });
+      const updated = await patchEvaluation(idNum, {
+        answers: merged,
+        estado: isResolved ? evaluation.estado : "En progreso",
+      });
       setEvaluation(updated);
       setLastSavedAt(new Date().toLocaleString("es-CO"));
       setError(null);
@@ -210,15 +190,7 @@ const EvaluationWorkflowPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Set up interval autosave every 5 seconds if there are unsaved changes
-    if (!canRespondToQuestionnaire || false || isResolved) {
-      if (autoSaveTimer.current) {
-        window.clearInterval(autoSaveTimer.current);
-        autoSaveTimer.current = null;
-      }
-      return;
-    }
-    if (questionsFlat.length === 0) {
+    if (!canRespondToQuestionnaire || isLockedForCurrentUser || questionsFlat.length === 0) {
       if (autoSaveTimer.current) {
         window.clearInterval(autoSaveTimer.current);
         autoSaveTimer.current = null;
@@ -227,7 +199,6 @@ const EvaluationWorkflowPage: React.FC = () => {
     }
 
     autoSaveTimer.current = window.setInterval(() => {
-      // Only save if answers have changed since last save
       const hasChanges = JSON.stringify(answersForm) !== JSON.stringify(lastSavedAnswers.current);
       if (hasChanges) {
         lastSavedAnswers.current = JSON.parse(JSON.stringify(answersForm));
@@ -241,20 +212,44 @@ const EvaluationWorkflowPage: React.FC = () => {
         autoSaveTimer.current = null;
       }
     };
-  }, [step, canRespondToQuestionnaire, isResolved, questionsFlat]);
+  }, [canRespondToQuestionnaire, isLockedForCurrentUser, questionsFlat, answersForm]);
 
   if (!Number.isFinite(idNum)) {
     return (
       <Layout>
         <div style={{ padding: 24 }}>
           <p>Identificador de evaluación no válido.</p>
-          <Link to="/asignaciones">Volver a asignaciones</Link>
+          <Link to={isStaff ? "/asignaciones" : "/evaluations"}>Volver</Link>
         </div>
       </Layout>
     );
   }
 
-  // Success screen when evaluation is saved or finalized
+  // Si un usuario de empresa intenta entrar por URL a una evaluación que ya fue finalizada
+  if (!loading && evaluation && !isStaff && isResolved && !successMessage) {
+    return (
+      <Layout>
+        <div style={{ padding: 24 }}>
+          <div className="card" style={{ maxWidth: 620, margin: "40px auto", padding: 32, textAlign: "center" }}>
+            <div style={{ marginBottom: 16 }}>
+              <img src={checkIcon} alt="Completada" width={56} height={56} />
+            </div>
+            <h2 style={{ margin: "0 0 10px 0", color: "var(--success)" }}>
+              Evaluación Completada y Entregada
+            </h2>
+            <p style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.5, marginBottom: 24 }}>
+              Este cuestionario ya fue respondido en su totalidad (100%) y entregado de manera confidencial al evaluador asignado a tu organización. Las respuestas se encuentran cerradas y no admiten modificaciones posteriores.
+            </p>
+            <Link to="/evaluations" className="btn btn-primary" style={{ textDecoration: "none", padding: "10px 22px" }}>
+              Volver a Mis Evaluaciones
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Pantalla de confirmación tras guardar avance o finalizar
   if (successMessage) {
     const isFinalized = successMessage === "finalized";
     return (
@@ -282,43 +277,38 @@ const EvaluationWorkflowPage: React.FC = () => {
             </h2>
             <p style={{ fontSize: 16, color: "var(--muted)", margin: "0 0 32px 0" }}>
               {isFinalized
-                ? "Tu evaluación se ha guardado y finalizado exitosamente."
-                : "Tus respuestas se han guardado correctamente. Puedes continuar completando las preguntas pendientes."}
+                ? isStaff
+                  ? "La evaluación ha quedado finalizada al 100% y lista para análisis de resultados."
+                  : "Tu cuestionario se ha completado al 100% y fue enviado de forma confidencial al evaluador asignado."
+                : `Tus respuestas se han guardado correctamente. Te faltan ${pendingCount} preguntas por responder para finalizar.`}
             </p>
 
             {evaluation && (
               <div
+                className="card"
                 style={{
-                  background: isFinalized
-                    ? "linear-gradient(135deg, rgba(25,118,210,0.08), rgba(46,161,255,0.08))"
-                    : "linear-gradient(135deg, rgba(25,118,210,0.04), rgba(46,161,255,0.04))",
-                  border: `1px solid ${isFinalized ? "var(--blue-400)" : "var(--blue-300)"}`,
+                  border: `1px solid ${isFinalized ? "var(--success)" : "var(--blue-400)"}`,
                   borderRadius: 12,
                   padding: 24,
                   marginBottom: 32,
                   textAlign: "left",
                 }}
               >
-                <h3 style={{ marginTop: 0, marginBottom: 16, color: "var(--blue-700)" }}>
-                  Resumen de la Evaluación
+                <h3 style={{ marginTop: 0, marginBottom: 16, color: "var(--blue-400, #3b82f6)" }}>
+                  Estado de tu Cuestionario
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                   <div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Empresa</div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-on-light)" }}>
-                      #{evaluation.id_empresa}
-                    </div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Evaluación</div>
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>#{evaluation.id_evaluacion}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Estado</div>
                     <div
                       style={{
                         fontSize: 16,
-                        fontWeight: 600,
+                        fontWeight: 700,
                         color: isFinalized ? "var(--success)" : "var(--warning)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
                       }}
                     >
                       {isFinalized ? "Finalizada" : "En progreso"}
@@ -326,48 +316,64 @@ const EvaluationWorkflowPage: React.FC = () => {
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Preguntas Respondidas</div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-on-light)" }}>
-                      {answeredCount}/{totalQuestions}
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>
+                      {answeredCount} de {totalQuestions} ({pendingCount} pendientes)
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Progreso</div>
-                    <div style={{ fontSize: 16, fontWeight: 600, color: "var(--blue-500)" }}>{progressPercent}%</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--blue-500)" }}>{progressPercent}%</div>
                   </div>
                 </div>
 
-                <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
-                  <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Guardado</div>
-                  <div style={{ fontSize: 14, color: "var(--text-on-light)" }}>{lastSavedAt}</div>
-                </div>
+                {lastSavedAt && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>Último guardado</div>
+                    <div style={{ fontSize: 14 }}>{lastSavedAt}</div>
+                  </div>
+                )}
               </div>
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* Solo Evaluador y Admin pueden ver los reportes y el Power BI */}
+              {isStaff && (
+                <>
+                  <Link
+                    to={`/results-dashboard/${idNum}`}
+                    className="btn btn-primary"
+                    style={{ textDecoration: "none", display: "block", padding: 12, fontSize: 16, fontWeight: 600 }}
+                  >
+                    Analizar Resultados en Power BI
+                  </Link>
+                  <Link
+                    to={`/reports/${idNum}`}
+                    className="btn"
+                    style={{ textDecoration: "none", display: "block", padding: 12, fontSize: 16, fontWeight: 600 }}
+                  >
+                    {isFinalized ? "Ver Reporte Ejecutivo Completo" : "Ver Reporte Parcial"}
+                  </Link>
+                </>
+              )}
+
+              {!isFinalized && (
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => setSuccessMessage(null)}
+                  style={{ padding: 12, fontSize: 16, fontWeight: 600 }}
+                >
+                  Continuar Respondiendo ({pendingCount} pendientes)
+                </button>
+              )}
+
               <Link
-                to={`/reports/${idNum}`}
-                className="btn btn-primary"
+                to={isStaff ? "/asignaciones" : "/evaluations"}
+                className={isFinalized && !isStaff ? "btn btn-primary" : "btn"}
                 style={{ textDecoration: "none", display: "block", padding: 12, fontSize: 16, fontWeight: 600 }}
               >
-                {isFinalized ? "Ver Reporte Completo" : "Ver Reporte Parcial"}
+                {isStaff ? "Volver a Asignaciones" : "Volver a Mis Evaluaciones"}
               </Link>
-              <button
-                type="button"
-                className={isFinalized ? "btn" : "btn btn-primary"}
-                onClick={() => setSuccessMessage(null)}
-                style={{ padding: 12, fontSize: 16, fontWeight: 600 }}
-              >
-                {isFinalized ? "Volver a Asignaciones" : "Continuar Respondiendo"}
-              </button>
-              {isFinalized && (
-                <Link
-                  to="/asignaciones"
-                  className="btn"
-                  style={{ textDecoration: "none", display: "block", padding: 12, fontSize: 16 }}
-                >
-                  O volver a Asignaciones
-                </Link>
-              )}
             </div>
           </div>
         </div>
@@ -378,58 +384,100 @@ const EvaluationWorkflowPage: React.FC = () => {
   return (
     <Layout>
       <div style={{ padding: 24 }}>
-        {true && totalQuestions > 0 && (
-          <>
-            <style>{`@keyframes moveGradient { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }`}</style>
-            <div style={{ position: "sticky", top: 0, zIndex: 40, background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85))", padding: "10px 0", marginTop: 12, boxShadow: "0 2px 6px rgba(0,0,0,0.04)" }}>
-              <div style={{ margin: "0 auto", padding: "0 24px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <div style={{ flex: 1, marginRight: 12 }}>
-                    <div style={{ background: "rgba(0,0,0,0.06)", height: 12, borderRadius: 999, overflow: "hidden", border: "1px solid rgba(0,0,0,0.04)" }}>
-                      <div
-                        style={{
-                          width: `${progressPercent}%`,
-                          height: "100%",
-                          background: "var(--blue-500)",
-                          transition: "width 400ms ease",
-                          borderRadius: 999,
-                        }}
-                      />
-                    </div>
+        {totalQuestions > 0 && (
+          <div
+            className="card"
+            style={{
+              position: "sticky",
+              top: 8,
+              zIndex: 40,
+              padding: "12px 20px",
+              marginBottom: 18,
+              borderTop: "4px solid var(--blue-500)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+                  <span>Progreso del Cuestionario</span>
+                  <span>
+                    {answeredCount} respondidas ·{" "}
+                    <strong style={{ color: pendingCount > 0 ? "#d97706" : "#16a34a" }}>
+                      {pendingCount} pendientes por responder
+                    </strong>
+                  </span>
+                </div>
+                <div
+                  style={{
+                    background: "color-mix(in srgb, var(--text-primary) 14%, transparent)",
+                    height: 12,
+                    borderRadius: 999,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${progressPercent}%`,
+                      height: "100%",
+                      background: progressPercent === 100 ? "var(--success)" : "var(--blue-500)",
+                      transition: "width 400ms ease",
+                      borderRadius: 999,
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{progressPercent}% completado</div>
+                  <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                    {autoSaving ? "Autoguardando…" : lastSavedAt ? `Guardado: ${lastSavedAt}` : "Autoguardado activo"}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ textAlign: "right", minWidth: 160 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{progressPercent}% completo</div>
-                      <div style={{ fontSize: 12, color: "var(--muted)" }}>{answeredCount}/{totalQuestions} preguntas respondidas</div>
-                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>{autoSaving ? "Guardando…" : lastSavedAt ? `Guardado: ${lastSavedAt}` : "Sin guardar"}</div>
-                    </div>
-                    <div style={{ width: 48, height: 48, borderRadius: 999, display: "grid", placeItems: "center", background: "linear-gradient(135deg, #fff, rgba(255,255,255,0.6))", boxShadow: "0 2px 8px rgba(2,6,23,0.08)", border: "1px solid rgba(0,0,0,0.06)" }}>
-                      <div style={{ fontWeight: 700, color: "var(--blue-700)" }}>{progressPercent}%</div>
-                    </div>
-                  </div>
+                </div>
+                <div
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 999,
+                    display: "grid",
+                    placeItems: "center",
+                    background: "var(--bg-page)",
+                    border: "1px solid var(--border)",
+                    fontWeight: 800,
+                    color: progressPercent === 100 ? "var(--success)" : "var(--blue-500)",
+                  }}
+                >
+                  {progressPercent}%
                 </div>
               </div>
             </div>
-          </>
+          </div>
         )}
+
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <BackButton fallback="/asignaciones" />
-            <h2 style={{ margin: 0 }}>Flujo de evaluación #{idNum}</h2>
+            <BackButton fallback={isStaff ? "/asignaciones" : "/evaluations"} />
+            <h2 style={{ margin: 0 }}>
+              {isStaff ? `Auditoría y Respuesta de Evaluación #${idNum}` : `Cuestionario de Evaluación #${idNum}`}
+            </h2>
           </div>
-          <Link to="/asignaciones" className="btn" style={{ textDecoration: "none" }}>
-            Asignaciones
+          <Link to={isStaff ? "/asignaciones" : "/evaluations"} className="btn" style={{ textDecoration: "none" }}>
+            {isStaff ? "Volver a Asignaciones" : "Mis Evaluaciones"}
           </Link>
         </div>
+
         {evaluation && (
           <p style={{ color: "var(--muted)", fontSize: 14 }}>
-            Empresa #{evaluation.id_empresa} · Estado:{" "}
+            Estado actual:{" "}
             <strong style={{ color: isResolved ? "var(--success)" : "var(--warning)" }}>
               {evaluation.estado || "Pendiente"}
             </strong>
+            {pendingCount > 0
+              ? ` · Faltan ${pendingCount} de ${totalQuestions} preguntas por responder`
+              : " · Todas las preguntas han sido respondidas"}
           </p>
         )}
-        {evaluation && authRole?.startsWith('user') && !isAssignee && (
+
+        {evaluation && !isStaff && !isAssignee && (
           <div
             role="alert"
             style={{
@@ -441,144 +489,146 @@ const EvaluationWorkflowPage: React.FC = () => {
               fontSize: 14,
             }}
           >
-            Esta evaluación tiene otro usuario como titular. Solo esa cuenta puede responder el cuestionario. Si
-            necesitáis ajustar el alcance, hacedlo con una sesión de administrador o evaluador.
+            Esta evaluación tiene otro usuario como titular. Solo el usuario asignado o el evaluador supervisor pueden responder este cuestionario.
           </div>
         )}
 
-        
-
-        {loading && <p style={{ marginTop: 16 }}>Cargando…</p>}
+        {loading && <p style={{ marginTop: 16 }}>Cargando preguntas…</p>}
         {error && (
           <p style={{ marginTop: 16, color: "var(--danger)" }} role="alert">
             {error}
           </p>
         )}
 
-        
-
-        {!loading && evaluation && true && canRespondToQuestionnaire && (
+        {!loading && evaluation && canRespondToQuestionnaire && (
           <div className="card" style={{ marginTop: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Responder preguntas</h3>
+            <h3 style={{ marginTop: 0 }}>Preguntas del Cuestionario</h3>
             <p style={{ fontSize: 14, color: "var(--muted)" }}>
-              Seleccione un valor del 1 al 5 por cada pregunta y agregue un comentario si lo considera necesario.
+              Selecciona una calificación del 1 al 5 para cada control y agrega observaciones o evidencias en el campo de comentario si aplica.
             </p>
-            {isResolved && (
-              <div
-                style={{
-                  marginTop: 8,
-                  marginBottom: 8,
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  background: "color-mix(in srgb, var(--success) 16%, var(--surface))",
-                  border: "1px solid color-mix(in srgb, var(--success) 35%, var(--border))",
-                  color: "var(--on-success)",
-                  fontSize: 13,
-                }}
-              >
-                Cuestionario resuelto. Las respuestas estan bloqueadas.
-                {lastSavedAt ? ` Ultimo guardado: ${lastSavedAt}.` : ""}
-              </div>
-            )}
+
             {questionsFlat.length === 0 ? (
               <p style={{ color: "var(--muted)" }}>
-                No hay preguntas en los controles seleccionados. Revise el catálogo o la semilla de datos.
+                No hay preguntas vinculadas a este formulario.
               </p>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 16 }}>
-                {questionsFlat.map(({ controlName, question: q }) => (
-                  <div
-                    key={q.id}
-                    style={{
-                      padding: 16,
-                      borderRadius: 8,
-                      border: "1px solid var(--border)",
-                      background: "var(--surface-muted, rgba(0,0,0,0.02))",
-                    }}
-                  >
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>{controlName}</div>
-                    <div style={{ fontWeight: 600, marginBottom: 12 }}>{q.text}</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
-                      <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
-                        Valor (1–5)
-                        <div style={{ display: "flex", gap: 6 }}>
-                          {[1, 2, 3, 4, 5].map((v) => {
-                            const current = Number(answersForm[q.id]?.valor ?? evaluation?.answers?.[q.id]?.valor ?? 0);
-                            const selected = current === v;
-                            return (
-                              <button
-                                key={v}
-                                type="button"
-                                disabled={saving || isResolved}
-                                onClick={() =>
-                                  setAnswersForm((prev) => ({
-                                    ...prev,
-                                    [q.id]: { valor: String(v), comentario: prev[q.id]?.comentario ?? "" },
-                                  }))
-                                }
-                                style={{
-                                  width: 36,
-                                  height: 36,
-                                  borderRadius: 8,
-                                  border: selected ? "2px solid var(--blue-500)" : "1px solid var(--blue-400)",
-                                  background: selected ? "var(--blue-500)" : "var(--white)",
-                                  color: selected ? "#fff" : "var(--blue-500)",
-                                  fontWeight: selected ? 700 : 600,
-                                  fontSize: 14,
-                                  cursor: saving || isResolved ? "not-allowed" : "pointer",
-                                  transition: "all 0.15s",
-                                  outline: "none",
-                                  appearance: "none" as const,
-                                  WebkitAppearance: "none" as const,
-                                  flexShrink: 0,
-                                }}
-                                onMouseDown={(e) => e.preventDefault()}
-                              >
-                                {v}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </label>
-                      <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 200, fontSize: 13 }}>
-                        Comentario
-                        <input
-                          type="text"
-                          value={answersForm[q.id]?.comentario ?? ""}
-                          disabled={saving || isResolved}
-                          onChange={(e) =>
-                            setAnswersForm((prev) => ({
-                              ...prev,
-                              [q.id]: { valor: prev[q.id]?.valor ?? "", comentario: e.target.value },
-                            }))
-                          }
-                          style={{ padding: 8, borderRadius: 8, border: "1px solid var(--border)" }}
-                        />
-                      </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
+                {questionsFlat.map(({ controlName, question: q }, index) => {
+                  const currentVal = Number(answersForm[q.id]?.valor ?? evaluation?.answers?.[q.id]?.valor ?? 0);
+                  const isAnswered = currentVal >= 1 && currentVal <= 5;
+                  return (
+                    <div
+                      key={q.id}
+                      style={{
+                        padding: 16,
+                        borderRadius: 8,
+                        border: isAnswered ? "1px solid var(--border)" : "1px solid rgba(217,119,6,0.45)",
+                        background: "var(--bg-page)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)" }}>
+                          Pregunta #{index + 1} · {controlName}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: isAnswered ? "var(--success)" : "#d97706",
+                          }}
+                        >
+                          {isAnswered ? `Respondida (${currentVal}/5)` : "Pendiente por responder"}
+                        </span>
+                      </div>
+                      <div style={{ fontWeight: 600, marginBottom: 12, lineHeight: 1.45 }}>{q.text}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
+                        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13 }}>
+                          Valor (1–5)
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {[1, 2, 3, 4, 5].map((v) => {
+                              const selected = currentVal === v;
+                              return (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  disabled={saving || isLockedForCurrentUser}
+                                  onClick={() =>
+                                    setAnswersForm((prev) => ({
+                                      ...prev,
+                                      [q.id]: { valor: String(v), comentario: prev[q.id]?.comentario ?? "" },
+                                    }))
+                                  }
+                                  style={{
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 8,
+                                    border: selected ? "2px solid var(--blue-500)" : "1px solid var(--border)",
+                                    background: selected ? "var(--blue-500)" : "var(--surface)",
+                                    color: selected ? "#fff" : "var(--text-primary)",
+                                    fontWeight: selected ? 700 : 600,
+                                    fontSize: 14,
+                                    cursor: saving || isLockedForCurrentUser ? "not-allowed" : "pointer",
+                                    transition: "all 0.15s",
+                                    outline: "none",
+                                    flexShrink: 0,
+                                  }}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                >
+                                  {v}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </label>
+                        <label style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 200, fontSize: 13 }}>
+                          Comentario / Evidencia (Opcional)
+                          <input
+                            type="text"
+                            value={answersForm[q.id]?.comentario ?? ""}
+                            disabled={saving || isLockedForCurrentUser}
+                            onChange={(e) =>
+                              setAnswersForm((prev) => ({
+                                ...prev,
+                                [q.id]: { valor: prev[q.id]?.valor ?? "", comentario: e.target.value },
+                              }))
+                            }
+                            style={{
+                              padding: 8,
+                              borderRadius: 8,
+                              border: "1px solid var(--border)",
+                              background: "var(--surface)",
+                              color: "var(--text-primary)",
+                            }}
+                          />
+                        </label>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
+
             <div style={{ marginTop: 20, display: "flex", flexWrap: "wrap", gap: 8 }}>
-              
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={saving || questionsFlat.length === 0 || isResolved}
+                disabled={saving || questionsFlat.length === 0 || isLockedForCurrentUser}
                 onClick={() => void handleSaveAnswers()}
               >
-                {isResolved
+                {isLockedForCurrentUser
                   ? "Evaluación finalizada"
                   : saving
                     ? "Guardando…"
                     : progressPercent === 100
-                      ? "Finalizar evaluación"
-                      : "Guardar avance"}
+                      ? "Finalizar y Enviar Evaluación"
+                      : `Guardar Avance (${pendingCount} pendientes)`}
               </button>
-              <Link to={`/reports/${idNum}`} className="btn btn-icon" style={{ textDecoration: "none" }} title="Ver informe">
-                <img src={viewIcon} alt="Ver informe" width={18} height={18} />
-              </Link>
+
+              {isStaff && (
+                <Link to={`/reports/${idNum}`} className="btn btn-icon" style={{ textDecoration: "none" }} title="Ver informe confidencial">
+                  <img src={viewIcon} alt="Ver informe" width={18} height={18} />
+                </Link>
+              )}
             </div>
           </div>
         )}

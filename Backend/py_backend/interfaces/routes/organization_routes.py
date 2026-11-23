@@ -109,16 +109,7 @@ def list_organizations(current_user=Depends(auth_middleware)):
                 return []
             stmt = select(EmpresaORM).where(EmpresaORM.id_empresa.in_(allowed_ids))
             return session.exec(stmt).all()
-        elif role_lower(current_user) == "evaluator":
-            uid = int(current_user["user_id"])
-            stmt = (
-                select(EmpresaORM)
-                .join(EvaluacionORM, EmpresaORM.id_empresa == EvaluacionORM.id_empresa)
-                .where(EvaluacionORM.id_evaluador == uid)
-                .distinct()
-            )
-            return session.exec(stmt).all()
-        elif is_admin(current_user):
+        elif is_staff(current_user):
             return session.exec(select(EmpresaORM)).all()
         else:
             return []

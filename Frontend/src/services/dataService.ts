@@ -17,6 +17,8 @@ type User = {
   email: string;
   phone?: string;
   role: string;
+  id_rol?: number;
+  id_empresa?: number | null;
   active?: boolean;
   password?: string;
 };
@@ -50,6 +52,7 @@ type UserApi = {
   telefono?: string;
   activo?: boolean;
   id_rol: number;
+  id_empresa?: number | null;
   password?: string;
 };
 type QuestionnaireApi = {
@@ -251,6 +254,8 @@ const dataService = {
       email: u.correo,
       phone: u.telefono,
       role: roleById.get(u.id_rol) || 'user_nivel_bajo',
+      id_rol: u.id_rol,
+      id_empresa: u.id_empresa ?? null,
       active: u.activo ?? true,
     }));
   },
