@@ -80,7 +80,7 @@ export function canAccessPath(role: AppRole, path: string): boolean {
   }
 
   if (isUserRole(role)) {
-    if (path === '/RecoverPage' || path === '/recover-password') return true;
+    if (path === '/HomePage' || path === '/RecoverPage' || path === '/recover-password') return true;
     if (path === '/evaluations' || /^\/evaluations\/\d+\/workflow$/.test(path)) return true;
     if (path === '/reports' || /^\/reports\/[^/]+$/.test(path) || /^\/reports\/[^/]+\/report$/.test(path)) return true;
     if (path === '/results-dashboard' || /^\/results-dashboard\/[^/]+$/.test(path)) return true;
